@@ -1,31 +1,35 @@
-import React from "react";
 import { render } from "react-dom";
 import { Provider } from "react-redux";
 // ##### TODO: Investigate if HashRouter is really required
 import { HashRouter as Router } from "react-router-dom";
 
-import store from "./store";
-import App from "./App";
-import api from "./API";
 import { cleanObj } from "utils/objects";
+import api from "./API";
+import App from "./App";
+import store from "./store";
 
 // Init css
 import "react-toastify/dist/ReactToastify.css";
 // Boostrap loaders
-import * as $ from "jquery";
-import Tether from "tether";
-import Popper from "popper.js";
 import "bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./layout.css";
-import "./dappnode_styles.css";
-import "./dappnode_colors.css";
+import * as $ from "jquery";
+import Popper from "popper.js";
+import Tether from "tether";
 import "./avado_styles.css";
+import "./dappnode_colors.css";
+import "./dappnode_styles.css";
+import "./layout.css";
+import "./theme.css";
 
 // Initialize boostrap dependencies
 window.jQuery = window.$ = $;
 window.Tether = Tether;
 window.Popper = Popper;
+
+// Set default theme on load
+const savedTheme = localStorage.getItem("theme") || "dark";
+document.documentElement.setAttribute("data-theme", savedTheme);
 
 /**
  * `yarn dev` REACT_APP_MOCK_DATA = true
@@ -39,7 +43,7 @@ if (process.env.REACT_APP_MOCK_DATA) {
     .then(({ mockState }) =>
       store.dispatch({ type: "DEV_ONLY_REPLACE_STATE", state: mockState })
     )
-    .catch(e => console.log(`Error loading mockContent: ${e.stack}`));
+    .catch((e) => console.log(`Error loading mockContent: ${e.stack}`));
 } else {
   api.start();
 }
@@ -49,7 +53,7 @@ if (process.env.REACT_APP_MOCK_DATA) {
 window.versionData = cleanObj({
   version: process.env.REACT_APP_VERSION,
   branch: process.env.REACT_APP_BRANCH,
-  commit: process.env.REACT_APP_COMMIT
+  commit: process.env.REACT_APP_COMMIT,
 });
 
 render(

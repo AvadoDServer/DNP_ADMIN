@@ -16,7 +16,7 @@
 .switch input + label {
   position: relative;
   min-width: calc(calc(2.375rem * 0.8) * 2);
-  border-radius: calc(2.375rem * 0.8);
+  border-radius: var(--radius-full);
   height: calc(2.375rem * 0.8);
   line-height: calc(2.375rem * 0.8);
   display: inline-block;
@@ -38,9 +38,9 @@
 }
 .switch input + label::before {
   right: 0;
-  background-color: #dee2e6;
-  border-radius: calc(2.375rem * 0.8);
-  transition: 0.2s all;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  transition: 0.25s all ease;
 }
 .switch input + label::after {
   top: 2px;
@@ -49,24 +49,26 @@
   height: calc(calc(2.375rem * 0.8) - calc(2px * 2));
   border-radius: 50%;
   background-color: white;
-  transition: 0.2s all;
+  box-shadow: var(--shadow-sm);
+  transition: 0.25s all ease;
 }
 .switch input:checked + label::before {
-  background-color: var(--dappnode-color);
+  background: var(--gradient-primary);
 }
 .switch input:checked + label::after {
   margin-left: calc(2.375rem * 0.8);
 }
 .switch input:focus + label::before {
   outline: none;
-  box-shadow: 0 0 0 0.2rem rgba(0, 136, 221, 0.25);
+  box-shadow: 0 0 0 3px var(--accent-primary-alpha);
 }
 .switch input:disabled + label {
-  color: #868e96;
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 .switch input:disabled + label::before {
-  background-color: #e9ecef;
+  background-color: var(--bg-tertiary);
+  opacity: 0.5;
 }
 .switch.switch-sm input + label {
   min-width: calc(calc(1.9375rem * 0.8) * 2);

@@ -4,28 +4,40 @@
 }
 
 .standalone-container > .toplogo {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .standalone-container > .separator {
   width: 25rem;
-  border-top: var(--border-style);
+  max-width: 90%;
+  border-top: 1px solid var(--border-color);
 }
 
 .standalone-container > .logo {
   width: 15em;
   filter: grayscale(100%);
+  opacity: 0.6;
 }
 
 .standalone-container > .title {
-  font-size: 3em;
+  font-size: 2.5em;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .standalone-container > .text {
   max-width: 35em;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 /* For the links in NoConnection */
 .standalone-container a {
-  color: gray;
+  color: var(--accent-primary);
+  transition: color 0.2s ease;
+}
+
+.standalone-container a:hover {
+  color: var(--accent-secondary);
 }

@@ -1,4 +1,67 @@
-input .lock {
-  background-color: #f3f3f3;
-  color: #737373;
+/* Input field styling */
+input,
+.form-control {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.625rem 0.875rem;
+  transition: all 0.2s ease;
+}
+
+input:focus,
+.form-control:focus {
+  background-color: var(--bg-input);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-alpha);
+  color: var(--text-primary);
+  outline: none;
+}
+
+input::placeholder,
+.form-control::placeholder {
+  color: var(--text-muted);
+}
+
+input.lock,
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: var(--bg-tertiary);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Select styling */
+select,
+.custom-select {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.625rem 0.875rem;
+  transition: all 0.2s ease;
+}
+
+select:focus,
+.custom-select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-alpha);
+  outline: none;
+}
+
+/* Textarea styling */
+textarea {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.625rem 0.875rem;
+  transition: all 0.2s ease;
+  resize: vertical;
+}
+
+textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-alpha);
+  outline: none;
 }

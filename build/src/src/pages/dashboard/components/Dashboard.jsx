@@ -1,17 +1,15 @@
-import React, { useEffect } from "react";
 import PropTypes from "prop-types";
+import { useEffect } from "react";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
 import { fetchDappnodeStats } from "services/dappnodeStatus/actions";
 // Selectors
-import { getDappnodeVolumes } from "services/dnpInstalled/selectors";
 import { getChainData } from "services/chainData/selectors";
 import { getDappnodeStats } from "services/dappnodeStatus/selectors";
+import { getDappnodeVolumes } from "services/dnpInstalled/selectors";
 // Own module
-import { title } from "../data";
 import ChainCard from "./ChainCard";
 import StatsCard from "./StatsCard";
-import VolumeCard from "./VolumeCard";
 import "./dashboard.css";
 // Components
 import SubTitle from "components/SubTitle";
@@ -19,12 +17,9 @@ import Title from "components/Title";
 import * as s from "../../packages/selectors.js";
 
 import "../../installer/components/installer.css";
-import errorAvatar from "img/errorAvatar.png";
-import ipfsLogo from "img/IPFS-badge-small.png";
-import defaultAvatar from "img/defaultAvatar.png";
 // Utility components
-import Card from "components/Card";
 import Button from "components/Button";
+import Card from "components/Card";
 import { stringIncludes } from "utils/strings";
 
 
@@ -62,6 +57,7 @@ function Dashboard({
             clearInterval(interval);
         };
     }, []);
+    console.log(dappnodeStats)
 
     const hashToUrl = (hash) => {
         if (!hash) {
@@ -81,9 +77,23 @@ function Dashboard({
 
             <SubTitle>Health</SubTitle>
             <div className="dashboard-cards">
-                {Object.entries(dappnodeStats).map(([id, percent], i) => (
-                    <StatsCard key={i} id={id} percent={percent} />
-                ))}
+                <StatsCard 
+                    id="Cpu" 
+                    percent={dappnodeStats?.cpu || "0%"} 
+                    subtitle={dappnodeStats?.cpuName}
+                />
+                <StatsCard 
+                    id="Memory" 
+                    percent={dappnodeStats?.memory || "0%"} 
+                    used={dappnodeStats?.memUsed} 
+                    total={dappnodeStats?.memTotal} 
+                />
+                <StatsCard 
+                    id="Disk" 
+                    percent={dappnodeStats?.disk || "0%"} 
+                    used={dappnodeStats?.diskUsed} 
+                    total={dappnodeStats?.diskTotal} 
+                />
             </div>
 
             {chainData && chainData.length > 0 && (

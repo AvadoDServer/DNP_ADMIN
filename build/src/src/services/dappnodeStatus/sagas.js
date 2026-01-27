@@ -1,12 +1,12 @@
-import { put, call, all } from "redux-saga/effects";
-import { rootWatcher } from "utils/redux";
 import api from "API/rpcMethods";
+import { all, call, put } from "redux-saga/effects";
+import { CONNECTION_OPEN } from "services/connectionStatus/actionTypes";
+import * as loadingIds from "services/loadingStatus/loadingIds";
+import { wrapErrorsAndLoading } from "services/loadingStatus/sagas";
+import { rootWatcher } from "utils/redux";
 import * as a from "./actions";
 import * as t from "./actionTypes";
 import checkIpfsConnection from "./diagnoseFunctions/checkIpfsNode";
-import { CONNECTION_OPEN } from "services/connectionStatus/actionTypes";
-import { wrapErrorsAndLoading } from "services/loadingStatus/sagas";
-import * as loadingIds from "services/loadingStatus/loadingIds";
 // Utils
 import { assertConnectionOpen } from "utils/redux";
 
@@ -21,7 +21,7 @@ import { assertConnectionOpen } from "utils/redux";
  */
 export const fetchDappnodeParams = wrapErrorsAndLoading(
   loadingIds.dappnodeParams,
-  function*() {
+  function* () {
     const dappnodeParams = yield call(api.getParams);
     yield put(a.updateDappnodeParams(dappnodeParams));
   }
@@ -32,12 +32,16 @@ export const fetchDappnodeParams = wrapErrorsAndLoading(
  * stats = {
  *   cpu: "58%",
  *   memory: "25%",
- *   disk: "86%""
+ *   memTotal: "16.00 GB",
+ *   memUsed: "4.00 GB",
+ *   disk: "86%",
+ *   diskTotal: "1.50 TB",
+ *   diskUsed: "1.29 TB"
  * }
  */
 const fetchDappnodeStats = wrapErrorsAndLoading(
   loadingIds.dappnodeStats,
-  function*() {
+  function* () {
     const dappnodeStats = yield call(api.getStats);
     yield put(a.updateDappnodeStats(dappnodeStats));
   }
@@ -50,7 +54,7 @@ const fetchDappnodeStats = wrapErrorsAndLoading(
  */
 const fetchDappnodeDiagnose = wrapErrorsAndLoading(
   loadingIds.dappnodeDiagnose,
-  function*() {
+  function* () {
     const dappnoseDiagnose = yield call(api.diagnose);
     yield put(a.updateDappnodeDiagnose(dappnoseDiagnose));
   }
@@ -64,7 +68,7 @@ const fetchDappnodeDiagnose = wrapErrorsAndLoading(
  */
 const pingDappnodeDnps = wrapErrorsAndLoading(
   loadingIds.pingDappnodeDnps,
-  function*() {
+  function* () {
     yield call(assertConnectionOpen);
     for (const dnp of ["dappmanager", "vpn"]) {
       try {
@@ -81,7 +85,7 @@ const pingDappnodeDnps = wrapErrorsAndLoading(
 
 const getDnpsVersionData = wrapErrorsAndLoading(
   loadingIds.versionData,
-  function*() {
+  function* () {
     yield call(assertConnectionOpen);
     for (const dnp of ["dappmanager", "vpn"]) {
       try {
@@ -102,7 +106,7 @@ const getDnpsVersionData = wrapErrorsAndLoading(
  */
 const checkIpfsConnectionStatus = wrapErrorsAndLoading(
   loadingIds.ipfsConnectionStatus,
-  function*() {
+  function* () {
     const { resolves, error } = yield call(checkIpfsConnection);
     yield put(a.updateIpfsConnectionStatus({ resolves, error }));
   }
@@ -119,7 +123,7 @@ function* fetchAllDappnodeStatus() {
       call(fetchDappnodeDiagnose),
       call(pingDappnodeDnps),
       call(getDnpsVersionData),
-      call(checkIpfsConnectionStatus)
+      call(checkIpfsConnectionStatus),
     ]);
   } catch (e) {
     console.error(`Error on fetchAllDappnodeStatus: ${e.stack}`);
@@ -138,5 +142,5 @@ export default rootWatcher([
   // [t.FETCH_DAPPNODE_PARAMS, fetchDappnodeParams],
   [t.FETCH_DAPPNODE_STATS, fetchDappnodeStats],
   [t.FETCH_DAPPNODE_DIAGNOSE, fetchDappnodeDiagnose],
-  [t.PING_DAPPNODE_DNPS, pingDappnodeDnps]
+  [t.PING_DAPPNODE_DNPS, pingDappnodeDnps],
 ]);

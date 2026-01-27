@@ -65,9 +65,14 @@
 
 .control-item {
   display: grid;
-  grid-template-columns: auto 100px;
-  align-items: start;
+  grid-template-columns: 1fr auto;
+  align-items: center;
   grid-gap: var(--default-spacing);
+}
+
+.control-item button {
+  white-space: nowrap;
+  min-width: 90px;
 }
 
 /* Details list */

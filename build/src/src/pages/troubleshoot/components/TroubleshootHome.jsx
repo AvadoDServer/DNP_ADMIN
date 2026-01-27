@@ -1,10 +1,8 @@
-import React, { useEffect } from "react";
 import PropTypes from "prop-types";
+import { useEffect } from "react";
+import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
 import * as s from "../selectors";
-import { connect } from "react-redux";
-import { title } from "../data";
-import marked from "marked";
 // Components
 import Card from "components/Card";
 import SubTitle from "components/SubTitle";
@@ -12,7 +10,6 @@ import Title from "components/Title";
 // Actions
 import { fetchAllDappnodeStatus } from "services/dappnodeStatus/actions";
 // Icon
-import Github from "Icons/Github";
 import Ok from "components/Ok";
 // Styles
 import "./troubleshoot.css";
@@ -61,8 +58,8 @@ function TroubleshootHome({
                 <p>Need more help ? We have following resources available for you</p>
                 <p><a target="_blank" href="https://docs.ava.do">Docs</a> : Tutorials, getting started guides and information on how to set up specific packages.</p>
                 <p><a target="_blank" href="https://www.youtube.com/avadocloud">YouTube</a> : Our YouTube channel has a number of tutorial video's available. Just follow along and get set up in no time.</p>
-                <p><a target="_blank" href="https://t.me/joinchat/F_LlkBLEoDrFioPNviEpsQ">Telegram</a> : You can meet other AVADO users in Telegram channel, and ask a question to a more experienced user.</p>
-                <p><a href="mailto:saskia@ava.do">saskia@ava.do</a> : Send an e-mail to our support team</p>
+                <p><a target="_blank" href="https://t.me/+a1nlCfF41gA4M2Y0">Telegram</a> : You can meet other AVADO users in Telegram channel, and ask a question to a more experienced user.</p>
+                <p><a href="mailto:ziga@ava.do">ziga@ava.do</a> : Send an e-mail to our support team</p>
             </Card>
             {/* <SubTitle>Report</SubTitle>
 

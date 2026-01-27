@@ -1,19 +1,21 @@
-import React from "react";
-import PropTypes from "prop-types";
 import Card from "components/Card";
+import PropTypes from "prop-types";
 import ProgressBar from "react-bootstrap/ProgressBar";
 
 function ChainCard({ name, message, progress, error, syncing }) {
-  const progressPercent = Math.floor(100 * progress);
+  // Handle invalid progress values - default to 0 if NaN, undefined, or null
+  const progressValue = typeof progress === 'number' && !isNaN(progress) ? progress : 0;
+  const progressPercent = Math.floor(100 * progressValue);
+  
   return (
     <Card className="chain-card">
-      <div className="name">{name == "Mainnet" ? "Ethereum" : name}</div>
+      <div className="name">{name === "Mainnet" ? "Ethereum" : name}</div>
 
       {syncing ? (
         <ProgressBar
           now={progressPercent}
           animated={true}
-          label={`${progressPercent}%`}
+          label={progressPercent > 0 ? `${progressPercent}%` : ''}
         />
       ) : error ? (
         <ProgressBar now={100} variant="danger" />

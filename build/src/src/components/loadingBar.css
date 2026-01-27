@@ -3,11 +3,12 @@
   position: relative;
   display: block;
   width: 100%;
-  background-color: #dae5e4;
-  border-radius: 2px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-full);
   background-clip: padding-box;
   margin: 0.5rem 0 1rem 0;
   overflow: hidden;
+  height: 0.5rem;
 }
 .progress .success {
   position: absolute;
@@ -15,19 +16,22 @@
   top: 0;
   bottom: 0;
   width: 100%;
-  background-color: #2bff00;
+  background: var(--success-color);
   transition: width 0.3s linear;
+  border-radius: var(--radius-full);
 }
 .progress .determinate {
   position: absolute;
   background-color: inherit;
   top: 0;
   bottom: 0;
-  background-color: #2fbcb2;
+  background: var(--gradient-primary);
   transition: width 0.3s linear;
+  border-radius: var(--radius-full);
 }
 .progress .indeterminate {
-  background-color: #2fbcb2;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-full);
 }
 .progress .indeterminate:before {
   content: "";
@@ -38,6 +42,7 @@
   bottom: 0;
   will-change: left, right;
   animation: indeterminate 5s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+  border-radius: var(--radius-full);
 }
 .progress .indeterminate:after {
   content: "";
@@ -49,6 +54,7 @@
   will-change: left, right;
   animation: indeterminate-short 5s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
   animation-delay: 3s;
+  border-radius: var(--radius-full);
 }
 
 @keyframes indeterminate {

@@ -1,19 +1,34 @@
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
-  grid-gap: 1rem;
+  grid-gap: 1.25rem;
 }
 
 .dashboard-cards.half {
   grid-template-columns: repeat(auto-fill, minmax(7.5em, 1fr));
 }
 
+.dashboard-cards .dnp-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  cursor: pointer;
+}
+
+.dashboard-cards .dnp-card img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md, 12px);
+  object-fit: cover;
+}
+
 .dashboard-cards .dnp-card > .info > * {
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    text-transform: capitalize;
-  }
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-transform: capitalize;
+}
 
 /* Chain cards */
 
@@ -21,21 +36,62 @@
 .stats-card .id,
 .volume-card .name {
   text-transform: capitalize;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 1rem;
 }
 .chain-card .message,
 .stats-card .usage,
 .volume-card .size {
-  opacity: 0.7;
+  opacity: 0.6;
+  font-weight: 400;
 }
 .chain-card .progress {
-  margin: 0.3rem 0 0.5rem;
+  margin: 0.5rem 0 0.75rem;
 }
 
 /* Stats cards */
 
+.stats-card {
+  padding: 1.5rem;
+}
+
+.stats-card .header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.stats-card .header .label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.stats-card .header .percent {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
 .stats-card .progress {
-  margin: 0.3rem 0 0rem;
+  margin: 0;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--progress-bg, #334155);
+}
+
+.stats-card .progress-bar {
+  border-radius: 999px;
+  background: var(--gradient-primary, linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%));
+}
+
+.stats-card .details {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  opacity: 0.7;
+  text-align: center;
+  font-weight: 500;
 }
 
 /* Volumes cards */

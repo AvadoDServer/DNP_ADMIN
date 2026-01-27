@@ -1,16 +1,19 @@
 :root {
-    --avado-bg-color: #2e4e72;
-    --avado-bg-light-color: #51759f;
+    /* Legacy colors - now handled by theme.css */
+    --avado-bg-color: var(--bg-primary, #0f172a);
+    --avado-bg-light-color: var(--bg-card, #1e293b);
 }
 
 body {
-    background-color: var(--avado-bg-color);
+    background-color: var(--bg-primary);
+    transition: background-color 0.3s ease;
 }
 
 .card {
-    background-color: var(--avado-bg-light-color);
+    background-color: var(--bg-card);
+    transition: background-color 0.3s ease;
 }
 
 a {
-    text-decoration: underline;
+    text-decoration: none;
 }

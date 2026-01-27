@@ -1,11 +1,11 @@
-FROM --platform=linux/amd64  node:14.17.0 as build-deps-adminui
+FROM --platform=linux/amd64 node:16-bookworm-slim as build-deps-adminui
 RUN echo "====================Building Admin website===================="
 WORKDIR /usr/src/app
 COPY build/src/package.json ./
 COPY build/src/yarn.lock ./
 RUN yarn 
 COPY build/src .
-RUN apt-get update && apt-get --yes install git jq
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::AllowInsecureRepositories=true && apt-get --yes install git jq --allow-unauthenticated
 ADD .git .git
 ADD dappnode_package.json .
 RUN ./getVersionData.sh

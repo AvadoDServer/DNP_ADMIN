@@ -1,15 +1,11 @@
 :root {
   --sidebar-breakpoint: 40rem;
-  --sidenav-width: 12.5rem;
+  --sidenav-width: 14rem;
   --transition-time: 0.25s;
-  --topbar-height: 3.5rem;
-  --container-padding: 1.5rem;
-  --color-white: #2e4e72;
-  --color-border: #3d6696;
-  --color-background: #2e4e72;
-  --border-size: 0.08rem;
-  --border-style: var(--border-size) solid var(--color-border);
-  --default-spacing: 1.25rem;
+  --topbar-height: 4rem;
+  --container-padding: 2rem;
+  --border-size: 1px;
+  --default-spacing: 1.5rem;
 }
 /* MUST ONLY defined z-index properties here 
    Variable definitions are ordered from front to back
@@ -24,12 +20,12 @@
 /* 
   TEXT STYLES 
 */
-@import url("https://fonts.googleapis.com/css?family=Exo+2:400,700");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 
 
 body {
-  font-family: overpass, sans-serif !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 /* Reset margins and underlying sizes. 
@@ -42,8 +38,10 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: 'Exo 2', sans-serif;
-  color:white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 
@@ -72,7 +70,7 @@ body,
   bottom: 0;
   left: 0;
   width: var(--sidenav-width);
-  transition: width var(--transition-time);
+  transition: width var(--transition-time), background-color 0.3s ease, border-color 0.3s ease;
   /* When the screen height is really small, show scrolling
      When the sidenav collapses, hide its content
    */
@@ -81,9 +79,9 @@ body,
   /* While the sidenav is collapsing, make sure the content stays straight */
   white-space: nowrap;
   /* Colors */
-  background-color: var(--color-white);
-  border-right: var(--border-style);
-  box-shadow: rgba(0, 0, 0, 0.1) 1px 0px 15px;
+  background-color: var(--bg-sidebar);
+  border-right: var(--border-size) solid var(--border-color);
+  box-shadow: var(--shadow-md);
   /* place sidebar on top of the header and content */
   z-index: var(--z-index-sidebar);
 }
@@ -126,7 +124,7 @@ body,
 /* SIDEBAR > TOP */
 .sidenav-item.top {
   height: var(--topbar-height);
-  border-bottom: var(--border-style);
+  border-bottom: var(--border-size) solid var(--border-color);
   /* Prevent the item from shrinking */
   flex-shrink: 0;
 }
@@ -154,11 +152,12 @@ body,
   grid-template-columns: auto auto;
   grid-gap: 1em;
   /* Colors */
-  background-color: var(--color-white);
-  border-bottom: var(--border-style);
+  background-color: var(--bg-topbar);
+  border-bottom: var(--border-size) solid var(--border-color);
   padding: 0 var(--container-padding);
   /* place topbar between the sidebar (2) and the main (0) */
   z-index: var(--z-index-topbar);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 #topbar .right,
 #topbar .left {
@@ -195,8 +194,10 @@ body,
   position: relative;
   margin-top: var(--topbar-height);
   margin-left: var(--sidenav-width);
-  background-color: var(--color-background);
+  background-color: var(--bg-primary);
   padding: var(--container-padding);
+  min-height: calc(100vh - var(--topbar-height));
+  transition: background-color 0.3s ease;
 }
 
 #main > div {
@@ -239,5 +240,8 @@ body,
   padding: 5em;
   padding: 5em 1em;
   text-align: center;
-  background-color: var(--color-background);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

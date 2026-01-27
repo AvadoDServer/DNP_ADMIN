@@ -10,10 +10,10 @@
   display: block;
   position: absolute;
   margin: 0.25rem;
-  border: 0.15rem solid #fff;
+  border: 0.15rem solid transparent;
   border-radius: 50%;
   animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  border-color: var(--dappnode-color) transparent transparent transparent;
+  border-color: var(--accent-primary) transparent transparent transparent;
   width: 1rem;
   height: 1rem;
 }

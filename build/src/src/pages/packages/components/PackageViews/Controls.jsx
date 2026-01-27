@@ -1,16 +1,15 @@
-import React from "react";
 import { connect } from "react-redux";
 import * as action from "../../actions";
 // Components
+import Button from "components/Button";
 import CardList from "components/CardList";
 import SubTitle from "components/SubTitle";
-import Button from "components/Button";
 // Confirm UI
-import confirmRemovePackage from "../confirmRemovePackage";
-import confirmRestartPackage from "../confirmRestartPackage";
 import { confirm } from "components/ConfirmDialog";
 import { shortNameCapitalized } from "utils/format";
 import { toLowercase } from "utils/strings";
+import confirmRemovePackage from "../confirmRemovePackage";
+import confirmRestartPackage from "../confirmRestartPackage";
 
 function PackageControls({
   dnp,
@@ -86,7 +85,6 @@ function PackageControls({
               <Button
                 variant={`outline-${type}`}
                 onClick={action}
-                style={{ whiteSpace: "normal" }}
               >
                 {name}
               </Button>

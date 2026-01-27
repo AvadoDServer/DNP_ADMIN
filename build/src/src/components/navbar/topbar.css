@@ -5,18 +5,20 @@
 
 .topnav-icon-separator {
   /* Since the div is empty, show only one side of the border */
-  border-right: var(--border-style);
+  border-right: 1px solid var(--border-color);
   height: var(--icon-size);
+  opacity: 0.5;
 }
 
 /* General topnav styles */
 
 .topnav {
-  background-color: white;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--bg-topbar);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   padding: 0.5rem 1rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .dappnode-name {
@@ -24,12 +26,15 @@
   /* white-space: nowrap; */
   /* overflow: hidden; */
   text-overflow: ellipsis;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .blockies-icon {
-  border-radius: var(--icon-size);
+  border-radius: var(--radius-full);
   width: var(--icon-size);
   height: var(--icon-size);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Sidenav toggler */
@@ -38,16 +43,20 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 0.5rem;
   opacity: 0.7;
   /* Increase clickable area */
   min-height: calc(var(--topbar-height) / 2);
   /* Center icon vertically */
   display: flex;
   align-items: center;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  color: var(--text-primary);
 }
 .sidenav-toggler:hover {
   opacity: 1;
+  background-color: var(--bg-hover);
 }
 
 #topbar .avado.right {
