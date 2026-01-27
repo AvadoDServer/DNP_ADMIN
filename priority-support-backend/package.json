@@ -9,22 +9,26 @@
     "init-db": "node src/init-db.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["avado", "priority-support", "subscription", "api"],
+  "keywords": [
+    "avado",
+    "priority-support",
+    "subscription",
+    "api"
+  ],
   "author": "AVADO",
   "license": "GPL-3.0",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
-    "helmet": "^7.0.0",
-    "express-rate-limit": "^6.7.0",
-    "jsonwebtoken": "^9.0.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^9.2.2",
-    "uuid": "^9.0.0",
-    "crypto": "^1.0.1"
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "nodemon": "^3.1.11"
   }
 }
