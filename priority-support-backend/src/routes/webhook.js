@@ -56,10 +56,13 @@ router.post('/shopify', async (req, res, next) => {
         // Store the code in the database
         SubscriptionCode.create(code, planType, orderId.toString());
         
+        // Mask code for audit log (only if code is long enough)
+        const maskedCode = code.length >= 4 ? code.substring(0, 4) + '***' : '***';
+        
         auditLog(customer?.email || 'unknown', 'code_generated_from_shopify', {
           orderId,
           planType,
-          code: code.substring(0, 4) + '***'
+          code: maskedCode
         }, req.ip);
         
         // TODO: Send the code to the customer via email
@@ -80,7 +83,13 @@ router.post('/shopify', async (req, res, next) => {
  * Generate a unique subscription code
  * Format: XXXX-XXXX-XXXX-XXXX (16 characters)
  */
-function generateSubscriptionCode() {
+function generateSubscriptionCode(attempt = 0) {
+  const MAX_ATTEMPTS = 10;
+  
+  if (attempt >= MAX_ATTEMPTS) {
+    throw new Error('Failed to generate unique subscription code after maximum attempts');
+  }
+  
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluding confusing characters
   const segments = 4;
   const segmentLength = 4;
@@ -96,7 +105,7 @@ function generateSubscriptionCode() {
   // Check if code already exists (very unlikely but good practice)
   const existing = SubscriptionCode.getByCode(code);
   if (existing) {
-    return generateSubscriptionCode(); // Recursive call to generate a new code
+    return generateSubscriptionCode(attempt + 1); // Recursive call with incremented attempt
   }
   
   return code;

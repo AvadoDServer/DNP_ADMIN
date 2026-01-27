@@ -60,8 +60,11 @@ router.post('/validate', authenticateUser, async (req, res, next) => {
     
     const validation = SubscriptionCode.validateCode(code);
     
+    // Mask code for audit log (only if code is long enough)
+    const maskedCode = code.length >= 4 ? code.substring(0, 4) + '***' : '***';
+    
     auditLog(req.user?.userId, 'code_validation', {
-      code: code.substring(0, 4) + '***',
+      code: maskedCode,
       valid: validation.valid
     }, req.ip);
     

@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET must be set in production environment');
+}
 
 /**
  * Middleware to authenticate users
@@ -34,9 +37,9 @@ function authenticateUser(req, res, next) {
     }
   }
   
-  // In development mode, allow requests without authentication
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('WARNING: Request allowed without authentication (development mode)');
+  // Only allow bypassing auth if explicitly enabled (not just dev mode)
+  if (process.env.DISABLE_AUTH === 'true') {
+    console.warn('WARNING: Authentication disabled - only use for local development!');
     req.user = { authenticated: true, userId: req.params.userId || req.body.userId };
     return next();
   }

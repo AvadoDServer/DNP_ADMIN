@@ -7,7 +7,10 @@ let db;
 
 function getDb() {
   if (!db) {
-    db = new Database(DB_PATH, { verbose: console.log });
+    const options = process.env.NODE_ENV === 'development' 
+      ? { verbose: console.log } 
+      : {};
+    db = new Database(DB_PATH, options);
     db.pragma('journal_mode = WAL');
   }
   return db;
