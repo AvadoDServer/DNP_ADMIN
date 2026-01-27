@@ -1,0 +1,293 @@
+.priority-container {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.priority-card {
+  margin-top: 20px;
+}
+
+.subscription-active,
+.subscription-inactive {
+  padding: 20px;
+}
+
+.subscription-active .status-icon {
+  width: 60px;
+  height: 60px;
+  background-color: #28a745;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32px;
+  margin: 0 auto 20px;
+}
+
+.subscription-info {
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 30px;
+  color: #666;
+}
+
+.subscription-details {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.subscription-details p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.subscription-details strong {
+  color: #333;
+  margin-right: 8px;
+}
+
+.benefits-section {
+  margin: 30px 0;
+}
+
+.benefits-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefits-list li {
+  padding: 12px 0;
+  padding-left: 30px;
+  position: relative;
+  font-size: 15px;
+  color: #555;
+  border-bottom: 1px solid #eee;
+}
+
+.benefits-list li:last-child {
+  border-bottom: none;
+}
+
+.benefits-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #28a745;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.support-contact {
+  margin-top: 30px;
+  padding: 15px;
+  background-color: #e7f3ff;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.support-contact a {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.support-contact a:hover {
+  text-decoration: underline;
+}
+
+.intro-text {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.pricing-section {
+  margin: 30px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.pricing-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.pricing-options {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.price-option {
+  flex: 1;
+  min-width: 200px;
+  max-width: 250px;
+  padding: 20px;
+  background-color: white;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  position: relative;
+}
+
+.price-option.highlighted {
+  border-color: #007bff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+.price-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #007bff;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.price-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  margin: 10px 0;
+}
+
+.price-description {
+  font-size: 14px;
+  color: #666;
+}
+
+.purchase-section {
+  margin: 30px 0;
+  padding: 20px;
+  background-color: #fff3cd;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.purchase-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.purchase-section p {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.shop-link {
+  display: inline-block;
+}
+
+.activation-section {
+  margin: 30px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.activation-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.activation-section > p {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.activation-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.subscription-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.subscription-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.subscription-input:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.error-message {
+  padding: 12px 16px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.success-message {
+  padding: 12px 16px;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .priority-container {
+    padding: 15px;
+  }
+
+  .pricing-options {
+    flex-direction: column;
+  }
+
+  .price-option {
+    max-width: 100%;
+  }
+
+  .activation-form {
+    flex-direction: column;
+  }
+
+  .subscription-input {
+    min-width: 100%;
+  }
+}
