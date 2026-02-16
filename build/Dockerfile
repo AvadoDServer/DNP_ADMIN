@@ -1,15 +1,17 @@
-FROM --platform=linux/amd64 node:16-bookworm-slim as build-deps-adminui
+FROM --platform=linux/amd64 node:20-bookworm-slim as build-deps-adminui
+ARG YARN_NO_LOCKFILE
 RUN echo "====================Building Admin website===================="
 WORKDIR /usr/src/app
 COPY build/src/package.json ./
 COPY build/src/yarn.lock ./
-RUN yarn 
+RUN if [ -n "$YARN_NO_LOCKFILE" ]; then yarn install --no-lockfile; else yarn; fi 
 COPY build/src .
 RUN rm -f /etc/apt/apt.conf.d/docker-clean && apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::AllowInsecureRepositories=true && apt-get --yes install git jq --allow-unauthenticated
 ADD .git .git
 ADD dappnode_package.json .
 RUN ./getVersionData.sh
-RUN NODE_OPTIONS="--max-old-space-size=4048" yarn run build
+# react-scripts + webpack on Node 20 needs legacy OpenSSL provider
+RUN NODE_OPTIONS="--max-old-space-size=4048 --openssl-legacy-provider" yarn run build
 RUN echo "====================Finished building Admin website===================="
 
 FROM --platform=linux/amd64 nginx:1.23.1-alpine

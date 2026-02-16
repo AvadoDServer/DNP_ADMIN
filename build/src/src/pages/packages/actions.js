@@ -1,6 +1,6 @@
 // INSTALLER
-import { shortName as sn } from "utils/format";
 import api from "API/rpcMethods";
+import { shortName as sn } from "utils/format";
 
 /* Notice: togglePackage, restartPackage, etc use redux-thunk
    Since there is no return value, and the state change
@@ -18,28 +18,37 @@ import api from "API/rpcMethods";
 export const updatePackageEnv = (id, envs) => () =>
   api.updatePackageEnv(
     { id, envs, restart: true },
-    { toastMessage: `Updating ${id} envs: ${JSON.stringify(envs)}...` }
+    { toastMessage: `Updating ${id} envs: ${JSON.stringify(envs)}...` },
   );
 
 // Used in package interface / controls
 
-export const togglePackage = id => () =>
+export const togglePackage = (id) => () =>
   api.togglePackage({ id }, { toastMessage: `Toggling ${sn(id)}...` });
 
+export const setAutoUpdate = (id, autoUpdate) => () => {
+  console.log(`setting ${id} to ${autoUpdate}`);
+  api.setAutoUpdate(
+    { id, autoUpdate },
+    { toastMessage: `Changing Auto-update to ${autoUpdate}` },
+  );
+};
 
-export const setAutoUpdate = (id,autoUpdate) => () => {
-    console.log(`setting ${id} to ${autoUpdate}`);
-    api.setAutoUpdate({ id , autoUpdate}, { toastMessage: `Changing Auto-update to ${autoUpdate}` });
-}
-
-
-export const restartPackage = id => () =>
+export const restartPackage = (id) => () =>
   api.restartPackage({ id }, { toastMessage: `Restarting ${sn(id)}...` });
 
-export const restartPackageVolumes = id => () =>
+export const restartPackageVolumes = (id) => () =>
   api.restartPackageVolumes(
     { id },
-    { toastMessage: `Restarting ${sn(id)} volumes...` }
+    { toastMessage: `Restarting ${sn(id)} volumes...` },
+  );
+
+export const resyncPackage = (id) => () =>
+  api.resyncPackage(
+    { id },
+    {
+      toastMessage: `Resyncing ${sn(id)} chain data (preserving validators)...`,
+    },
   );
 
 export const removePackage = (id, deleteVolumes) => () =>
@@ -48,14 +57,16 @@ export const removePackage = (id, deleteVolumes) => () =>
     {
       toastMessage: `Removing ${sn(id)} ${
         deleteVolumes ? " and volumes" : ""
-      }...`
-    }
+      }...`,
+    },
   );
 
 // File manager
 
-export const copyFileTo = ({ id, dataUri, filename, toPath }) => () =>
-  api.copyFileTo(
-    { id, dataUri, filename, toPath },
-    { toastMessage: `Copying file ${filename} to ${sn(id)} ${toPath}...` }
-  );
+export const copyFileTo =
+  ({ id, dataUri, filename, toPath }) =>
+  () =>
+    api.copyFileTo(
+      { id, dataUri, filename, toPath },
+      { toastMessage: `Copying file ${filename} to ${sn(id)} ${toPath}...` },
+    );

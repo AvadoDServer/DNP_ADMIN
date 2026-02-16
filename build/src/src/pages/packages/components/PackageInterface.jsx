@@ -1,89 +1,89 @@
-import React from "react";
-import { connect } from "react-redux";
-import * as s from "../selectors";
-import { createStructuredSelector } from "reselect";
 import PropTypes from "prop-types";
+import { connect } from "react-redux";
+import { createStructuredSelector } from "reselect";
+import * as s from "../selectors";
 // Components
+import NoDnpInstalled from "./NoDnpInstalled";
+import Controls from "./PackageViews/Controls";
 import Details from "./PackageViews/Details";
-import Logs from "./PackageViews/Logs";
 import Envs from "./PackageViews/Envs";
 import FileManager from "./PackageViews/FileManager";
-import Controls from "./PackageViews/Controls";
-import NoDnpInstalled from "./NoDnpInstalled";
+import Logs from "./PackageViews/Logs";
 // Components
 import Title from "components/Title";
-import Loading from "components/generic/Loading";
 import Error from "components/generic/Error";
+import Loading from "components/generic/Loading";
 // Selectors
 import {
     getIsLoading,
-    getLoadingError
+    getLoadingError,
 } from "services/loadingStatus/selectors";
-import DnpStore from "pages/installer/components/ManifestStore";
 
 const PackageInterface = ({
-    dnp,
-    id,
-    moduleName,
-    areThereDnps,
-    loading,
-    error,
-    showControls = true,
-    showReset,
-    showRemove
+  dnp,
+  id,
+  moduleName,
+  areThereDnps,
+  loading,
+  error,
+  showControls = true,
+  showReset,
+  showRemove,
 }) => {
-    return (
+  const isTeku = dnp && dnp.name && dnp.name.includes("teku");
+  return (
+    <>
+      {dnp ? (
         <>
-            {dnp ? (
-                <>
-                    <Title title={`${moduleName} - `} subtitle={`${dnp.title || dnp.id}`} />
-                    {showControls && (
-                        <Controls
-                            dnp={dnp}
-                            showReset={showReset}
-                            showRemove={showRemove}
-                        />
-                    )}
-                    <Details dnp={dnp} />
-                    <Envs dnp={dnp} />
-                    <FileManager dnp={dnp} />
-                    <Logs id={dnp.name} />
-                </>
-            ) : loading ? (
-                <Loading msg="Loading installed Package..." />
-            ) : error ? (
-                <Error msg={`Error loading installed Package: ${error}`} />
-            ) : areThereDnps ? (
-                <NoDnpInstalled id={id} moduleName={moduleName} />
-            ) : null}
+          <Title
+            title={`${moduleName} - `}
+            subtitle={`${dnp.title || dnp.id}`}
+          />
+          {showControls && (
+            <Controls
+              dnp={dnp}
+              showReset={showReset}
+              showRemove={showRemove}
+              showResync={isTeku}
+            />
+          )}
+          <Details dnp={dnp} />
+          <Envs dnp={dnp} />
+          <FileManager dnp={dnp} />
+          <Logs id={dnp.name} />
         </>
-    )
+      ) : loading ? (
+        <Loading msg="Loading installed Package..." />
+      ) : error ? (
+        <Error msg={`Error loading installed Package: ${error}`} />
+      ) : areThereDnps ? (
+        <NoDnpInstalled id={id} moduleName={moduleName} />
+      ) : null}
+    </>
+  );
 };
 
 PackageInterface.propTypes = {
-    dnp: PropTypes.object,
-    id: PropTypes.string,
-    moduleName: PropTypes.string.isRequired,
-    loading: PropTypes.bool.isRequired,
-    error: PropTypes.string.isRequired
+  dnp: PropTypes.object,
+  id: PropTypes.string,
+  moduleName: PropTypes.string.isRequired,
+  loading: PropTypes.bool.isRequired,
+  error: PropTypes.string.isRequired,
 };
 
 // Container
 
 const mapStateToProps = createStructuredSelector({
-    dnp: s.getDnp,
-    // id and moduleName are parsed from the url at the selector (with the router state)
-    id: s.getUrlId,
-    moduleName: s.getModuleName,
-    areThereDnps: s.areThereDnps,
-    loadingDnps: getIsLoading.dnpInstalled,
-    loading: getIsLoading.dnpInstalled,
-    error: getLoadingError.dnpInstalled
+  dnp: s.getDnp,
+  // id and moduleName are parsed from the url at the selector (with the router state)
+  id: s.getUrlId,
+  moduleName: s.getModuleName,
+  areThereDnps: s.areThereDnps,
+  loadingDnps: getIsLoading.dnpInstalled,
+  loading: getIsLoading.dnpInstalled,
+  error: getLoadingError.dnpInstalled,
 });
 
 const mapDispatchToProps = null;
 
-export default connect(
-    mapStateToProps,
-    mapDispatchToProps
-)(PackageInterface);
+export default connect(mapStateToProps, mapDispatchToProps)(PackageInterface);

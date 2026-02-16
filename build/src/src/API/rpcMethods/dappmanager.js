@@ -24,7 +24,7 @@ export default {
    * @param {(string|number)} timeout new IPFS timeout in ms
    */
   changeIpfsTimeout: {
-    manadatoryKwargs: ["timeout"]
+    manadatoryKwargs: ["timeout"],
   },
 
   /**
@@ -43,7 +43,7 @@ export default {
    * @returns {string} dataUri = "data:application/zip;base64,UEsDBBQAAAg..."
    */
   copyFileFrom: {
-    manadatoryKwargs: ["id", "fromPath"]
+    manadatoryKwargs: ["id", "fromPath"],
   },
 
   /**
@@ -64,7 +64,7 @@ export default {
    *   Same for relative paths to directories.
    */
   copyFileTo: {
-    manadatoryKwargs: ["id", "dataUri", "filename", "toPath"]
+    manadatoryKwargs: ["id", "dataUri", "filename", "toPath"],
   },
 
   /**
@@ -98,7 +98,7 @@ export default {
    * }
    */
   diskSpaceAvailable: {
-    manadatoryKwargs: ["path"]
+    manadatoryKwargs: ["path"],
   },
 
   /**
@@ -127,7 +127,7 @@ export default {
    * }
    */
   fetchPackageData: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -141,7 +141,7 @@ export default {
    * }, ... ]
    */
   fetchPackageVersions: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -230,7 +230,7 @@ export default {
    * options = { BYPASS_RESOLVER: true, BYPASS_CORE_RESTRICTION: true }
    */
   installPackage: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -244,7 +244,7 @@ export default {
    * options = { BYPASS_CORE_RESTRICTION: true }
    */
   installPackageSafe: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -299,7 +299,7 @@ export default {
    * @returns {string} logs: <string with escape codes>
    */
   logPackage: {
-    manadatoryKwargs: ["id", "options"]
+    manadatoryKwargs: ["id", "options"],
   },
 
   /**
@@ -311,7 +311,7 @@ export default {
    * ports = [ { number: 30303, type: TCP }, ... ]
    */
   managePorts: {
-    manadatoryKwargs: ["ports", "action"]
+    manadatoryKwargs: ["ports", "action"],
   },
 
   /**
@@ -338,7 +338,7 @@ export default {
    * ids = [ "notification-id1", "notification-id2" ]
    */
   notificationsRemove: {
-    manadatoryKwargs: ["ids"]
+    manadatoryKwargs: ["ids"],
   },
 
   /**
@@ -364,7 +364,7 @@ export default {
    * @param {bool} deleteVolumes flag to also clear permanent package data
    */
   removePackage: {
-    manadatoryKwargs: ["id", "deleteVolumes"]
+    manadatoryKwargs: ["id", "deleteVolumes"],
   },
 
   /**
@@ -390,7 +390,7 @@ export default {
    * }
    */
   resolveRequest: {
-    manadatoryKwargs: ["req"]
+    manadatoryKwargs: ["req"],
   },
 
   /**
@@ -400,7 +400,7 @@ export default {
    * @param {string} id DNP .eth name
    */
   restartPackage: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -410,7 +410,19 @@ export default {
    * @param {string} id DNP .eth name
    */
   restartPackageVolumes: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
+  },
+
+  /**
+   * [resyncPackage]
+   * Removes only the blockchain/chain data volumes of a package,
+   * preserving validator keys and other critical data.
+   * Then re-ups the package so it resyncs from scratch.
+   *
+   * @param {string} id DNP .eth name
+   */
+  resyncPackage: {
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -421,7 +433,7 @@ export default {
    * @param {number} timeout seconds to stop the package
    */
   togglePackage: {
-    manadatoryKwargs: ["id"]
+    manadatoryKwargs: ["id"],
   },
 
   /**
@@ -436,19 +448,19 @@ export default {
    * @param {bool} restart flag to restart the DNP
    */
   updatePackageEnv: {
-    manadatoryKwargs: ["id", "envs", "restart"]
+    manadatoryKwargs: ["id", "envs", "restart"],
   },
 
   // @param {string} id DNP .eth name
   // @param {bool} autoupdate flag to set the autoupdate property of this package
   setAutoUpdate: {
-    manadatoryKwargs: ["id","autoUpdate"]
+    manadatoryKwargs: ["id", "autoUpdate"],
   },
 
   // Set the name of this AVADO
   // @param {string} id DNP name
   setName: {
-    manadatoryKwargs: ["name"]
+    manadatoryKwargs: ["name"],
   },
 
   rebootHost: {
@@ -470,10 +482,10 @@ export default {
    * }
    */
   runSignedCmd: {
-    manadatoryKwargs: ["cmd"]
+    manadatoryKwargs: ["cmd"],
   },
 
-    /**
+  /**
    * [getParams]
    * Returns the current DAppNode identity
    *
@@ -488,7 +500,5 @@ export default {
    *   internalIp: 192.168.0.1,
    * }
    */
-     getParams: {},
-
-
+  getParams: {},
 };
