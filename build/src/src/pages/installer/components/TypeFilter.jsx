@@ -1,18 +1,20 @@
 import React from "react";
 import PropTypes from "prop-types";
-import Button from "components/Button";
+import Button from "components/ui/Button";
 
 function TypeFilter({ types, onTypeChange }) {
   if (Object.keys(types).length === 0) return null;
 
   return (
-    <div className="type-filter">
-      <span>Filter by type:</span>
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      <span className="text-sm font-medium text-fg-muted">Filter by type:</span>
       {Object.entries(types).map(([type, checked]) => (
         <Button
           key={type}
+          size="sm"
+          pill
+          variant={checked ? "primary" : "secondary"}
           onClick={() => onTypeChange(type)}
-          variant={checked ? "secondary" : "outline-secondary"}
         >
           {type}
         </Button>
@@ -27,9 +29,9 @@ function TypeFilter({ types, onTypeChange }) {
  *   "service": false
  * }
  */
-TypeFilter.protoTypes = {
+TypeFilter.propTypes = {
   types: PropTypes.objectOf(PropTypes.bool.isRequired).isRequired,
-  onTypeChange: PropTypes.func.isRequired
+  onTypeChange: PropTypes.func.isRequired,
 };
 
 export default TypeFilter;
