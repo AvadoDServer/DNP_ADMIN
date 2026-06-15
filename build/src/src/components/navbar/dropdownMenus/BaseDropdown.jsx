@@ -1,23 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
-import ProgressBar from "react-bootstrap/ProgressBar";
-import "./dropdown.css";
+// UI kit
+import ProgressBar from "components/ui/ProgressBar";
+import { cn } from "components/ui/cn";
 
 // Utilities
 
-const ProgressBarWrapper = ({ progress }) => {
-  const progressPercent = Math.floor(100 * progress);
-  return (
-    <ProgressBar
-      now={progressPercent}
-      animated={true}
-      label={`${progressPercent}%`}
-    />
-  );
-};
-
 function parseMessagesType(messages) {
-  let globalType = "light"; // Light is a white circle
+  let globalType = "neutral";
   const messageTypes = messages
     .filter(message => !message.viewed)
     .map(message => message.type || "");
@@ -31,6 +21,21 @@ function areMessagesUnread(messages) {
   const unreadMessages = messages.filter(message => message && !message.viewed);
   return Boolean(unreadMessages.length);
 }
+
+// Bubble color per status, token-driven.
+const BUBBLE = {
+  neutral: "",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger"
+};
+
+// Map legacy message "type" onto token text colors for titles.
+const TITLE_COLOR = {
+  danger: "text-danger",
+  warning: "text-warning",
+  success: "text-success"
+};
 
 function BaseDropdown({
   name,
@@ -82,38 +87,75 @@ function BaseDropdown({
   const messagesAvailable = areMessagesUnread(messages);
 
   const attentionGrab = moreVisible && messagesAvailable;
+
   return (
-    <div ref={dropdownEl} className={`tn-dropdown ${className}`}>
-      <div
+    <div ref={dropdownEl} className={cn("relative", className)}>
+      <button
+        type="button"
         onClick={onToggle}
-        className={
-          "tn-dropdown-toggle" + (attentionGrab ? " atention-grab" : "")
-        }
-        data-toggle="tooltip"
-        data-placement="bottom"
+        aria-haspopup="true"
+        aria-expanded={!collapsed}
         title={name}
-        data-delay="300"
+        className={cn(
+          "relative flex h-9 w-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus",
+          attentionGrab && "animate-pulse-soft text-fg"
+        )}
       >
         <Icon />
-        <div className={`icon-bubble ${globalType}`} />
-      </div>
-
-      {/* offset controls the position of the dropdown menu.
-        It's purpose is to control clipping on small screens, 
-        by placing them as right as possible */}
-      <div className={`menu ${collapsed ? "" : "show"}`}>
-        <div className="section-subtitle">{name}</div>
-        {messages.map(({ type, title, body, progress, showProgress }, i) => (
-          <div key={i}>
-            {title ? <div className={`title text-${type}`}>{title}</div> : null}
-            {body ? <div className="text">{body}</div> : null}
-            {showProgress ? <ProgressBarWrapper progress={progress} /> : null}
-          </div>
-        ))}
-        {!messages.length && placeholder && (
-          <div className="placeholder">{placeholder}</div>
+        {BUBBLE[globalType] && (
+          <span
+            className={cn(
+              "absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-bg",
+              BUBBLE[globalType]
+            )}
+            aria-hidden="true"
+          />
         )}
-      </div>
+      </button>
+
+      {!collapsed && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-[1100] mt-2 max-h-[30rem] w-[min(22.5rem,90vw)] overflow-y-auto rounded-lg border border-border bg-surface text-fg shadow-xl"
+        >
+          <div className="border-b border-border px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-fg-subtle">
+            {name}
+          </div>
+          {messages.map(({ type, title, body, progress, showProgress }, i) => (
+            <div
+              key={i}
+              className="border-b border-border px-4 py-3 last:border-b-0"
+            >
+              {title ? (
+                <div
+                  className={cn(
+                    "text-sm font-semibold",
+                    TITLE_COLOR[type] || "text-fg"
+                  )}
+                >
+                  {title}
+                </div>
+              ) : null}
+              {body ? (
+                <div className="mt-0.5 break-words text-sm text-fg-muted">
+                  {body}
+                </div>
+              ) : null}
+              {showProgress ? (
+                <ProgressBar
+                  className="mt-2"
+                  size="sm"
+                  variant={type === "danger" ? "danger" : "accent"}
+                  value={Math.floor(100 * (progress || 0))}
+                />
+              ) : null}
+            </div>
+          ))}
+          {!messages.length && placeholder && (
+            <div className="px-4 py-3 text-sm text-fg-muted">{placeholder}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
