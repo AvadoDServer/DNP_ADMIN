@@ -7,29 +7,35 @@ import { cleanObj } from "utils/objects";
 import api from "./API";
 import App from "./App";
 import store from "./store";
+import ThemeProvider, {
+  applyTheme,
+  resolveInitialTheme
+} from "./theme/ThemeProvider";
 
 // Init css
 import "react-toastify/dist/ReactToastify.css";
-// Boostrap loaders
+// Boostrap loaders (kept for not-yet-migrated pages)
 import "bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as $ from "jquery";
 import Popper from "popper.js";
 import Tether from "tether";
+// Design tokens first, then Tailwind base/utilities, then legacy overrides.
+import "./theme.css";
+import "./index.css";
 import "./avado_styles.css";
 import "./dappnode_colors.css";
 import "./dappnode_styles.css";
 import "./layout.css";
-import "./theme.css";
 
 // Initialize boostrap dependencies
 window.jQuery = window.$ = $;
 window.Tether = Tether;
 window.Popper = Popper;
 
-// Set default theme on load
-const savedTheme = localStorage.getItem("theme") || "dark";
-document.documentElement.setAttribute("data-theme", savedTheme);
+// Paint the correct theme synchronously before React mounts (no flash).
+// The ThemeProvider then owns it for the rest of the app's lifetime.
+applyTheme(resolveInitialTheme());
 
 /**
  * `yarn dev` REACT_APP_MOCK_DATA = true
@@ -60,8 +66,10 @@ const container = document.getElementById("root");
 const root = createRoot(container);
 root.render(
   <Provider store={store}>
-    <Router>
-      <App />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <App />
+      </Router>
+    </ThemeProvider>
   </Provider>
 );
