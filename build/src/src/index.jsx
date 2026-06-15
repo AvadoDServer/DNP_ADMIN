@@ -1,4 +1,4 @@
-import { render } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 // ##### TODO: Investigate if HashRouter is really required
 import { HashRouter as Router } from "react-router-dom";
@@ -56,11 +56,12 @@ window.versionData = cleanObj({
   commit: process.env.REACT_APP_COMMIT,
 });
 
-render(
+const container = document.getElementById("root");
+const root = createRoot(container);
+root.render(
   <Provider store={store}>
     <Router>
       <App />
     </Router>
-  </Provider>,
-  document.getElementById("root")
+  </Provider>
 );
