@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import api from "API/rpcMethods";
-// Components
-import Input from "components/Input";
-import { ButtonLight } from "components/Button";
+// UI kit
+import { Input } from "components/ui/Input";
+import Button from "components/ui/Button";
 // Utils
 import { shortName } from "utils/format";
 import dataUriToBlob from "utils/dataUriToBlob";
@@ -45,19 +45,26 @@ function From({ id }) {
   }
 
   return (
-    <div className="card-subgroup">
-      <div className="section-card-subtitle">Download from DNP</div>
-      {/* FROM, chose path */}
-      <Input
-        placeholder="Container from path"
-        value={fromPath}
-        onValueChange={setFromPath}
-        append={
-          <ButtonLight onClick={downloadFile} disabled={!fromPath}>
-            Download
-          </ButtonLight>
-        }
-      />
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-semibold text-fg">Download from DApp</h3>
+      <form
+        className="flex items-stretch gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (fromPath) downloadFile();
+        }}
+      >
+        <Input
+          className="flex-1"
+          aria-label="Container path to download from"
+          placeholder="Container from path"
+          value={fromPath}
+          onChange={(e) => setFromPath(e.target.value)}
+        />
+        <Button type="submit" variant="secondary" disabled={!fromPath}>
+          Download
+        </Button>
+      </form>
     </div>
   );
 }

@@ -1,31 +1,38 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
-// Components
-import { ButtonLight } from "components/Button";
-// Modules
-import { rootPath as installerRootPath } from "pages/installer";
-// Utils
-import { shortNameCapitalized } from "utils/format";
+import { useHistory } from "react-router-dom";
+// UI kit
+import Button from "components/ui/Button";
+import { EmptyState } from "./PackagePresentation";
 
-const NoPackagesYet = ({ id, moduleName }) => (
-  <div className="centered-container">
-    <h4>{id} is not installed</h4>
-    {/* <p>Go back to {moduleName} or click below to install it</p> */}
-    <Link style={{ margin: "0 10px" }} to={"/" + moduleName}>
-      <ButtonLight style={{ textTransform: "capitalize" }}>
-        to {moduleName}
-      </ButtonLight>
-    </Link>
-    {/* <Link style={{ margin: "0 10px" }} to={installerRootPath + "/" + id}>
-      <ButtonLight>Install {shortNameCapitalized(id)}</ButtonLight>
-    </Link> */}
-  </div>
-);
-
-NoPackagesYet.propTypes = {
-  id: PropTypes.string.isRequired,
-  moduleName: PropTypes.string.isRequired
+const NoDnpInstalled = ({ id, moduleName }) => {
+  const history = useHistory();
+  return (
+    <EmptyState
+      icon={
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      }
+      title={`${id} is not installed`}
+      action={
+        <Button
+          variant="secondary"
+          size="sm"
+          className="capitalize"
+          onClick={() => history.push("/" + moduleName)}
+        >
+          Back to {moduleName}
+        </Button>
+      }
+    />
+  );
 };
 
-export default NoPackagesYet;
+NoDnpInstalled.propTypes = {
+  id: PropTypes.string.isRequired,
+  moduleName: PropTypes.string.isRequired,
+};
+
+export default NoDnpInstalled;

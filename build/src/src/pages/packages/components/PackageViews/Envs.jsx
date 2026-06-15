@@ -2,18 +2,18 @@ import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
 import * as action from "../../actions";
 import { createStructuredSelector } from "reselect";
-// Components
-import Card from "components/Card";
-import SubTitle from "components/SubTitle";
-import TableInputs from "components/TableInputs";
-import { ButtonLight } from "components/Button";
+// UI kit
+import Card from "components/ui/Card";
+import Button from "components/ui/Button";
+import { Input } from "components/ui/Input";
+import { SectionHeader } from "../PackagePresentation";
 // Utils
 import parseManifestEnvs from "pages/installer/parsers/parseManifestEnvs";
 
 function parseEnvs(dnp) {
   return {
     ...parseManifestEnvs(dnp.manifest),
-    ...(dnp.envs || {})
+    ...(dnp.envs || {}),
   };
 }
 
@@ -27,25 +27,37 @@ function Envs({ dnp, updateEnvs }) {
   if (!Object.keys(dnpEnvs).length) return null;
 
   return (
-    <>
-      <SubTitle>Enviroment variables</SubTitle>
-      <Card spacing>
-        <TableInputs
-          headers={["Name", "Value"]}
-          content={Object.entries(envs).map(([key, value]) => [
-            { lock: true, value: key },
-            {
-              placeholder: "enter value...",
-              value: value || "",
-              onValueChange: value => setEnvs({ ...envs, [key]: value })
-            }
-          ])}
-        />
-        <ButtonLight onClick={() => updateEnvs(dnp.name, envs)}>
-          Update environment variables
-        </ButtonLight>
+    <section>
+      <SectionHeader title="Environment variables" />
+      <Card padding="lg" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
+          {Object.entries(envs).map(([key, value]) => (
+            <div
+              key={key}
+              className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center sm:gap-4"
+            >
+              <label
+                htmlFor={`env-${key}`}
+                className="break-all font-mono text-sm font-medium text-fg-muted"
+              >
+                {key}
+              </label>
+              <Input
+                id={`env-${key}`}
+                placeholder="enter value…"
+                value={value || ""}
+                onChange={(e) => setEnvs({ ...envs, [key]: e.target.value })}
+              />
+            </div>
+          ))}
+        </div>
+        <div>
+          <Button variant="secondary" size="sm" onClick={() => updateEnvs(dnp.name, envs)}>
+            Update environment variables
+          </Button>
+        </div>
       </Card>
-    </>
+    </section>
   );
 }
 
@@ -54,10 +66,7 @@ function Envs({ dnp, updateEnvs }) {
 const mapStateToProps = createStructuredSelector({});
 
 const mapDispatchToProps = {
-  updateEnvs: action.updatePackageEnv
+  updateEnvs: action.updatePackageEnv,
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Envs);
+export default connect(mapStateToProps, mapDispatchToProps)(Envs);

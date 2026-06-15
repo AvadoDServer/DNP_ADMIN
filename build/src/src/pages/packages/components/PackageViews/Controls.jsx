@@ -1,9 +1,9 @@
 import { connect } from "react-redux";
 import * as action from "../../actions";
-// Components
-import Button from "components/Button";
-import CardList from "components/CardList";
-import SubTitle from "components/SubTitle";
+// UI kit
+import Button from "components/ui/Button";
+import Card from "components/ui/Card";
+import { SectionHeader } from "../PackagePresentation";
 // Confirm UI
 import { confirm } from "components/ConfirmDialog";
 import { shortNameCapitalized } from "utils/format";
@@ -87,26 +87,40 @@ function PackageControls({
       type: "danger",
     });
 
-  // Table style -> Removes the space below the table, only for tables in cards
+  // Map the legacy action "type" onto design-system Button variants.
+  const VARIANT = {
+    secondary: "secondary",
+    warning: "outline",
+    danger: "danger",
+  };
+
   return (
-    <>
-      <SubTitle>Controls</SubTitle>
-      <CardList>
-        {actions
-          //   .filter(action => action.availableForCore || !dnp.isCore)
-          .map(({ name, text, type, action }) => (
-            <div key={name} className="control-item">
-              <div>
-                <strong>{name}</strong>
-                <div>{text}</div>
+    <section>
+      <SectionHeader title="Controls" />
+      <Card padding="none">
+        <ul className="divide-y divide-border">
+          {actions.map(({ name, text, type, action }) => (
+            <li
+              key={name}
+              className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="font-semibold text-fg">{name.trim()}</div>
+                <p className="mt-0.5 text-sm text-fg-muted">{text}</p>
               </div>
-              <Button variant={`outline-${type}`} onClick={action}>
-                {name}
+              <Button
+                variant={VARIANT[type] || "secondary"}
+                size="sm"
+                onClick={action}
+                className="flex-shrink-0 sm:min-w-[7rem]"
+              >
+                {name.trim()}
               </Button>
-            </div>
+            </li>
           ))}
-      </CardList>
-    </>
+        </ul>
+      </Card>
+    </section>
   );
 }
 

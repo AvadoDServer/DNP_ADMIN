@@ -10,9 +10,7 @@ import Envs from "./PackageViews/Envs";
 import FileManager from "./PackageViews/FileManager";
 import Logs from "./PackageViews/Logs";
 // Components
-import Title from "components/Title";
-import Error from "components/generic/Error";
-import Loading from "components/generic/Loading";
+import { PageHeader, LoadingState, EmptyState } from "./PackagePresentation";
 // Selectors
 import {
     getIsLoading,
@@ -34,11 +32,12 @@ const PackageInterface = ({
   return (
     <>
       {dnp ? (
-        <>
-          <Title
-            title={`${moduleName} - `}
-            subtitle={`${dnp.title || dnp.id}`}
-          />
+        <div className="animate-fade-in flex flex-col gap-2">
+          <PageHeader title={dnp.title || dnp.id}>
+            <span className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              {moduleName}
+            </span>
+          </PageHeader>
           {showControls && (
             <Controls
               dnp={dnp}
@@ -51,11 +50,22 @@ const PackageInterface = ({
           <Envs dnp={dnp} />
           <FileManager dnp={dnp} />
           <Logs id={dnp.name} />
-        </>
+        </div>
       ) : loading ? (
-        <Loading msg="Loading installed Package..." />
+        <LoadingState label="Loading installed package…" />
       ) : error ? (
-        <Error msg={`Error loading installed Package: ${error}`} />
+        <EmptyState
+          tone="danger"
+          icon={
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+          }
+          title="Could not load package"
+        >
+          {String(error)}
+        </EmptyState>
       ) : areThereDnps ? (
         <NoDnpInstalled id={id} moduleName={moduleName} />
       ) : null}

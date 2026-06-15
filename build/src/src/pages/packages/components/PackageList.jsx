@@ -8,9 +8,11 @@ import { NavLink } from "react-router-dom";
 // Components
 import NoPackagesYet from "./NoPackagesYet";
 import StateBadge from "./PackageViews/StateBadge";
-import Card from "components/Card";
-import Loading from "components/generic/Loading";
-import Error from "components/generic/Error";
+import { LoadingState, EmptyState } from "./PackagePresentation";
+// UI kit
+import Card from "components/ui/Card";
+import { Table, THead, TBody, TR, TH, TD } from "components/ui/Table";
+import { cn } from "components/ui/cn";
 import Switch from "components/Switch";
 import axios from "axios";
 // Selectors
@@ -22,8 +24,6 @@ import {
 import confirmRestartPackage from "./confirmRestartPackage";
 // Icons
 import { MdRefresh, MdOpenInNew, MdTune } from "react-icons/md";
-// Styles
-import "./packages.css";
 
 const xnor = (a, b) => Boolean(a) === Boolean(b);
 
@@ -80,12 +80,26 @@ const PackagesList = ({
     // if a local cached state exists - use that.
     // when a package reload is done - this will be overwritten
     const getAutoUpdateState = (dnp) => {
-        // if (!dnp) return false;
+        if (!dnp) return false;
         return buttonState[dnp.name] === undefined ? dnp.autoupdate : buttonState[dnp.name]
     }
 
-    if (loading) return <Loading msg="Loading installed DNPs..." />;
-    if (error) return <Error msg={`Error loading installed DNPs: ${error}`} />;
+    if (loading) return <LoadingState label="Loading installed DApps…" />;
+    if (error)
+        return (
+            <EmptyState
+                tone="danger"
+                icon={
+                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 8v4M12 16h.01" />
+                    </svg>
+                }
+                title="Could not load your DApps"
+            >
+                {String(error)}
+            </EmptyState>
+        );
 
     //   const filteredDnps = dnps; //.filter(dnp => xnor(coreDnps, dnp.isCore));
     const filteredDnps = dnps.filter(dnp => xnor(coreDnps, dnp.isCore)).map((p) => {
@@ -100,61 +114,99 @@ const PackagesList = ({
 
     if (!filteredDnps.length) return <NoPackagesYet />;
 
-    return (
-        <Card className="list-grid dnps no-a-style">
-            <header className="center">Status</header>
-            <header>Name</header>
-            {/* <header>Version</header> */}
-            {showOpen ? (<header>Open</header>) : (<header />)}
-            <header>Manage</header>
-            {showRestart ? (<header>Restart</header>) : (<header />)}
-            <header>Auto-update</header>
-            {filteredDnps.map(({ version, id, name, title, state, manifest }) => {
-                let navLinkTitle, navLinkIcon;
-                // If the manifest file tells the UI to open its wizard in a seperate window, then display an a href
-                // otherwise display a NavLink
-                if (manifest && manifest.ui && manifest.ui.OnboardingWizard && manifest.ui.OnboardingWizard.external) {
-                    navLinkTitle = (<a className="name" href={manifest.ui.OnboardingWizard.url} target="_blank">{title || name} ({version})</a>);
-                    navLinkIcon = (<a className="open" href={manifest.ui.OnboardingWizard.url} target="_blank"><MdOpenInNew /></a>);
-                } else {
-                    navLinkTitle = (
-                        <NavLink className="name" to={`/${moduleName}/${name}`}>
-                            {title || name} ({version})
-                        </NavLink>
-                    );
-                    navLinkIcon = (
-                        <NavLink className="open" to={`/${moduleName}/${name}`}>
-                            <MdOpenInNew />
-                        </NavLink>
-                    );
-                }
-                return (
-                    <React.Fragment key={name}>
-                        <StateBadge state={state} />
-                        {navLinkTitle}
-                        {showOpen ? (<>{ navLinkIcon }</>): (<div></div>)}
-                        {/* <NavLink className="name" to={`/${moduleName}/${name}`}>
-                            {title || name} ({version})
-                        </NavLink>
-                        <NavLink className="open" to={`/${moduleName}/${name}`}>
-                            <MdOpenInNew />
-                        </NavLink> */}
+    const iconBtn =
+        "inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-accent focus:outline-none focus-visible:shadow-focus";
 
-                        <NavLink className="open" to={`/${moduleName}/${name}/detail`}>
-                            <MdTune />
-                        </NavLink>
-                        {showRestart ? (
-                            <MdRefresh
-                                onClick={() => confirmRestartPackage(name, restartPackage)}
-                            />) : (<div></div>)}
-                        <Switch
-                            checked={getAutoUpdateState(manifest)}
-                            onToggle={() => { setAutoUpdateWrapper(name, !getAutoUpdateState(manifest)) }}
-                        />
-                        <hr />
-                    </React.Fragment>
-                )
-            })}
+    return (
+        <Card padding="none" className="overflow-hidden">
+            <Table>
+                <THead>
+                    <TR className="border-b border-border">
+                        <TH>Status</TH>
+                        <TH>Name</TH>
+                        {showOpen && <TH align="center">Open</TH>}
+                        <TH align="center">Manage</TH>
+                        {showRestart && <TH align="center">Restart</TH>}
+                        <TH align="center">Auto-update</TH>
+                    </TR>
+                </THead>
+                <TBody>
+                    {filteredDnps.map(({ version, id, name, title, state, manifest }) => {
+                        const external =
+                            manifest && manifest.ui && manifest.ui.OnboardingWizard && manifest.ui.OnboardingWizard.external;
+                        const openUrl = external ? manifest.ui.OnboardingWizard.url : null;
+                        const label = `${title || name} (${version})`;
+                        return (
+                            <TR key={name}>
+                                <TD>
+                                    <StateBadge state={state} />
+                                </TD>
+                                <TD>
+                                    {external ? (
+                                        <a
+                                            href={openUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-medium capitalize text-fg transition-colors hover:text-accent"
+                                            title={label}
+                                        >
+                                            {label}
+                                        </a>
+                                    ) : (
+                                        <NavLink
+                                            to={`/${moduleName}/${name}`}
+                                            className="font-medium capitalize text-fg transition-colors hover:text-accent"
+                                            title={label}
+                                        >
+                                            {label}
+                                        </NavLink>
+                                    )}
+                                </TD>
+                                {showOpen && (
+                                    <TD align="center">
+                                        {external ? (
+                                            <a href={openUrl} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label={`Open ${title || name}`}>
+                                                <MdOpenInNew />
+                                            </a>
+                                        ) : (
+                                            <NavLink to={`/${moduleName}/${name}`} className={iconBtn} aria-label={`Open ${title || name}`}>
+                                                <MdOpenInNew />
+                                            </NavLink>
+                                        )}
+                                    </TD>
+                                )}
+                                <TD align="center">
+                                    <NavLink to={`/${moduleName}/${name}/detail`} className={iconBtn} aria-label={`Manage ${title || name}`}>
+                                        <MdTune />
+                                    </NavLink>
+                                </TD>
+                                {showRestart && (
+                                    <TD align="center">
+                                        <button
+                                            type="button"
+                                            className={cn(iconBtn, "hover:text-warning")}
+                                            aria-label={`Restart ${title || name}`}
+                                            onClick={() => confirmRestartPackage(name, restartPackage)}
+                                        >
+                                            <MdRefresh />
+                                        </button>
+                                    </TD>
+                                )}
+                                <TD align="center">
+                                    <div className="inline-flex">
+                                        <Switch
+                                            checked={getAutoUpdateState(manifest)}
+                                            onToggle={() => {
+                                                setAutoUpdateWrapper(name, !getAutoUpdateState(manifest));
+                                            }}
+                                        />
+                                    </div>
+                                </TD>
+                            </TR>
+                        );
+                    })}
+                </TBody>
+            </Table>
         </Card>
     );
 };

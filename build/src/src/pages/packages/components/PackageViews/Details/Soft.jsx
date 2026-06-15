@@ -1,7 +1,9 @@
-import styled from "styled-components";
+import React from "react";
 
-const Soft = styled.span`
-  opacity: 0.5;
-`;
+const Soft = ({ children, ...props }) => (
+  <span className="text-fg-subtle" {...props}>
+    {children}
+  </span>
+);
 
 export default Soft;
