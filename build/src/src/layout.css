@@ -1,3 +1,9 @@
+/*
+  TEXT STYLES
+  (font @import must precede all other statements per CSS spec / Vite)
+*/
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
 :root {
   --sidebar-breakpoint: 40rem;
   --sidenav-width: 14rem;
@@ -17,10 +23,9 @@
   --z-index-topbar: 1000;
 }
 
-/* 
-  TEXT STYLES 
+/*
+  TEXT STYLES
 */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 
 

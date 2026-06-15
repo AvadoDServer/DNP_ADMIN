@@ -1,4 +1,4 @@
-const semver = require("semver");
+import semver from "semver";
 
 /**
  *
@@ -14,4 +14,4 @@ function shouldUpdate(v1, v2) {
   return semver.lt(v1, v2);
 }
 
-module.exports = shouldUpdate;
+export default shouldUpdate;

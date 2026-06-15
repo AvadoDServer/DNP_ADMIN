@@ -26,7 +26,7 @@ function Ports({ dnp }) {
         })
         .map(({ PrivatePort, PublicPort, Type, locked }) => (
           <>
-            {PrivatePort} -> {PublicPort} {Type ? Type.toUpperCase() : Type}{" "}
+            {PrivatePort} {"->"} {PublicPort} {Type ? Type.toUpperCase() : Type}{" "}
             {locked ? <span style={{ opacity: 0.5 }}>(locked)</span> : null}
           </>
         ))}
