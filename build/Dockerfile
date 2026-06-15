@@ -10,8 +10,8 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean && apt-get update -o Acquire::Check-V
 ADD .git .git
 ADD dappnode_package.json .
 RUN ./getVersionData.sh
-# react-scripts + webpack on Node 20 needs legacy OpenSSL provider
-RUN NODE_OPTIONS="--max-old-space-size=4048 --openssl-legacy-provider" yarn run build
+# Vite build (Node 20, no legacy OpenSSL provider needed). Memory bump kept for headroom.
+RUN NODE_OPTIONS="--max-old-space-size=4048" yarn run build
 RUN echo "====================Finished building Admin website===================="
 
 FROM --platform=linux/amd64 nginx:1.23.1-alpine
