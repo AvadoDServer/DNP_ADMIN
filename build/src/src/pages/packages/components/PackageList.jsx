@@ -64,7 +64,6 @@ const PackagesList = ({
             }).catch(error => {
                 //debugger;
             });
-        ;
 
     }, []);
 

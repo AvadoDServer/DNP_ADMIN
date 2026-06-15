@@ -51,6 +51,7 @@
     "start": "vite",
     "dev": "REACT_APP_MOCK_DATA=true vite",
     "build": "vite build",
+    "lint": "eslint \"src/**/*.{js,jsx}\"",
     "preview": "vite preview",
     "gzip": "gzip -r -k build",
     "test": "echo \"No test runner configured after CRA->Vite migration (CRA jest tests were not present/ported)\" && exit 0"
@@ -70,6 +71,9 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4",
     "autoprefixer": "^10.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "postcss": "^8.4",
     "tailwindcss": "^3.4",
     "vite": "^5",

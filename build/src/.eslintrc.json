@@ -1,0 +1,69 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "plugins": ["react", "react-hooks"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended"
+  ],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-uses-react": "off",
+    "react/prop-types": "off",
+    "react/display-name": "off",
+    "react/no-unescaped-entities": "off",
+    "react/no-children-prop": "warn",
+    "react/jsx-no-target-blank": "warn",
+    "react/no-deprecated": "warn",
+    "react/no-direct-mutation-state": "warn",
+    "react/no-string-refs": "warn",
+    "react/no-find-dom-node": "warn",
+    "react/no-unknown-property": "warn",
+    "react-hooks/exhaustive-deps": "warn",
+    "no-unused-vars": [
+      "warn",
+      {
+        "args": "none",
+        "ignoreRestSiblings": true,
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "no-empty": ["warn", { "allowEmptyCatch": true }],
+    "no-prototype-builtins": "off",
+    "no-cond-assign": ["error", "except-parens"],
+    "no-async-promise-executor": "warn",
+    "no-fallthrough": "warn",
+    "no-useless-escape": "warn",
+    "no-control-regex": "off",
+    "no-constant-condition": ["warn", { "checkLoops": false }]
+  },
+  "ignorePatterns": [
+    "build/",
+    "node_modules/",
+    "public/",
+    "coverage/",
+    "*.min.js",
+    "vite.config.mjs",
+    "postcss.config.js",
+    "tailwind.config.js",
+    "src/contracts/**",
+    "**/abi.js"
+  ]
+}

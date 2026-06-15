@@ -20,7 +20,7 @@ import Joi from "joi";
  */
 export default function(state = {}, action) {
   switch (action.type) {
-    case t.UPDATE_IS_INSTALLING_LOG:
+    case t.UPDATE_IS_INSTALLING_LOG: {
       assertAction(
         action,
         Joi.object({
@@ -45,6 +45,7 @@ export default function(state = {}, action) {
           id: action.id
         }
       };
+    }
 
     case t.CLEAR_IS_INSTALLING_LOGS_OF_ID:
       assertAction(action, Joi.object({ id: Joi.string().required() }));

@@ -26,7 +26,7 @@ const mergeOverwriteArrays = (a, b) =>
 export default (state = {}, action) => {
   const assertActionSchema = obj => assertAction(action, Joi.object(obj));
   switch (action.type) {
-    case t.UPDATE_DNP_DIRECTORY:
+    case t.UPDATE_DNP_DIRECTORY: {
       assertActionSchema({
         dnps: Joi.array()
           .items(schemas.dnpDirectoryItem)
@@ -39,6 +39,7 @@ export default (state = {}, action) => {
        */
       const dnps = action.dnps.map(dnp => ({ ...dnp, whitelisted: true }));
       return mergeOverwriteArrays(state, arrayToObj(dnps, "name"));
+    }
 
     case t.UPDATE_DNP_DIRECTORY_BY_ID:
       // #### TODO: the dnp object changes way too much
