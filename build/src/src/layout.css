@@ -101,23 +101,23 @@ body,
 }
 .sidenav-item {
   display: grid;
-  grid-template-columns: 1rem 2rem auto;
-  grid-gap: 0.6rem;
+  grid-template-columns: 1.5rem auto;
+  grid-gap: 0.75rem;
   place-items: center start;
-  transition: all 0.5s;
+  padding: 0 0.875rem;
   width: 100%;
 }
 .sidenav-item:not(.top) {
-  height: 2.5rem;
+  height: 2.6rem;
 }
 .sidenav-item .icon,
 .sidenav-item svg {
-  grid-column: 2/3;
-  opacity: 0.3;
+  grid-column: 1/2;
+  opacity: 0.55;
 }
 .sidenav-item .header,
 .sidenav-item .subheader {
-  grid-column: 2/4;
+  grid-column: 1/3;
 }
 /* Make this section dissapear small heights */
 #sidebar > .funded-by {
@@ -128,10 +128,15 @@ body,
 
 /* SIDEBAR > TOP */
 .sidenav-item.top {
+  display: flex;
+  align-items: center;
   height: var(--topbar-height);
   border-bottom: var(--border-size) solid var(--border-color);
   /* Prevent the item from shrinking */
   flex-shrink: 0;
+}
+.sidenav-item.top:hover {
+  background: transparent;
 }
 
 /* Styles below apply when screen width big */
@@ -156,8 +161,10 @@ body,
   display: grid;
   grid-template-columns: auto auto;
   grid-gap: 1em;
-  /* Colors */
+  /* Colors — translucent glass */
   background-color: var(--bg-topbar);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  backdrop-filter: saturate(160%) blur(12px);
   border-bottom: var(--border-size) solid var(--border-color);
   padding: 0 var(--container-padding);
   /* place topbar between the sidebar (2) and the main (0) */

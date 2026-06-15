@@ -99,9 +99,7 @@ const SideBar = ({
       </NavLink>
 
       <div className="nav">
-        {/* <div className="sidenav-item">
-          <div className="subheader">ADMIN UI</div>
-        </div> */}
+        <div className="sidenav-section-label">Menu</div>
 
         {filteredSidenavItems.map(item => (
           <NavLink
