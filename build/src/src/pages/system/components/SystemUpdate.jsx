@@ -9,17 +9,21 @@ import { getProgressLogsByDnp } from "services/isInstallingLogs/selectors";
 import { coreName } from "services/coreUpdate/data";
 // Components
 import SystemUpdateDetails from "./SystemUpdateDetails";
-import Title from "components/Title";
+import { PageHeader } from "./SystemPresentation";
 
 const SystemUpdate = ({ coreProgressLogs }) => (
-  <React.Fragment>
-    <Title title={title} subtitle={"Update"} />
+  <div className="animate-fade-in">
+    <PageHeader
+      title={title}
+      eyebrow="Update"
+      subtitle="Review and approve the available AVADO core update."
+    />
 
     {/* This component will automatically hide if logs are empty */}
     <installer.components.ProgressLogs progressLogs={coreProgressLogs} />
 
     <SystemUpdateDetails />
-  </React.Fragment>
+  </div>
 );
 
 // Container

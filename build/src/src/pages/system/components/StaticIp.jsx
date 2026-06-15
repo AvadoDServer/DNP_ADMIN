@@ -4,11 +4,12 @@ import { createStructuredSelector } from "reselect";
 import { connect } from "react-redux";
 import * as a from "../actions";
 import isIpv4 from "utils/isIpv4";
+// UI kit
+import Card from "components/ui/Card";
+import Button from "components/ui/Button";
+import { Input } from "components/ui/Input";
 // Components
-import Card from "components/Card";
-import SubTitle from "components/SubTitle";
-import Input from "components/Input";
-import { ButtonLight, ButtonDanger } from "components/Button";
+import { SectionHeader } from "./SystemPresentation";
 // External
 import { getStaticIp } from "services/dappnodeStatus/selectors";
 
@@ -19,36 +20,39 @@ function StaticIp({ staticIp = "", setStaticIp }) {
     setInput(staticIp);
   }, [staticIp]);
 
+  const valid = isIpv4(input);
   const update = () => {
-    if (isIpv4(input)) setStaticIp(input);
+    if (valid) setStaticIp(input);
   };
 
   return (
-    <>
-      <SubTitle>Static IP</SubTitle>
-      <Card>
-        <div className="input-group">
+    <section>
+      <SectionHeader title="Static IP" />
+      <Card padding="lg">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <Input
-            placeholder="Your static ip..."
+            className="flex-1"
+            label="Static IP"
+            placeholder="Your static ip…"
             value={input}
-            onValueChange={setInput}
-            onEnterPress={update}
-            append={
-              <>
-                <ButtonLight disabled={!isIpv4(input)} onClick={update}>
-                  {staticIp ? "Update" : "Enable"}
-                </ButtonLight>
-                {staticIp && (
-                  <ButtonDanger onClick={() => setStaticIp(null)}>
-                    Disable
-                  </ButtonDanger>
-                )}
-              </>
-            }
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") update();
+            }}
           />
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={!valid} onClick={update}>
+              {staticIp ? "Update" : "Enable"}
+            </Button>
+            {staticIp && (
+              <Button variant="danger" onClick={() => setStaticIp(null)}>
+                Disable
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
-    </>
+    </section>
   );
 }
 

@@ -5,8 +5,6 @@ import { title, rootPath, updatePath } from "../data";
 import SystemHome from "./SystemHome";
 import SystemUpdate from "./SystemUpdate";
 import packages from "pages/packages";
-// Styles
-import "./system.css";
 
 const PackageInterface = packages.components.PackageInterface;
 
