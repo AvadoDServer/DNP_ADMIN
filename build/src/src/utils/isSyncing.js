@@ -55,7 +55,7 @@ const isSyncingCache = {
  */
 async function isSyncingWrap() {
   // Prevent logging errors on offline development
-  if (process.env.REACT_APP_MOCK_DATA) return false;
+  if (import.meta.env.REACT_APP_MOCK_DATA) return false;
 
   if (Date.now() - isSyncingCache.lastCheck > cacheTime) {
     isSyncingCache.lastCheck = Date.now();

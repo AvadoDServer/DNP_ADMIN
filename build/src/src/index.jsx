@@ -44,7 +44,9 @@ applyTheme(resolveInitialTheme());
  * `yarn start` / [Production] REACT_APP_MOCK_DATA = false
  * - Starts the api, subscribing to WAMP
  */
-if (process.env.REACT_APP_MOCK_DATA) {
+// import.meta.env.REACT_APP_MOCK_DATA is "true" in dev (from .env.development)
+// and undefined in production builds — see vite.config.mjs.
+if (import.meta.env.REACT_APP_MOCK_DATA) {
   import("./mockState")
     .then(({ mockState }) =>
       store.dispatch({ type: "DEV_ONLY_REPLACE_STATE", state: mockState })
@@ -54,12 +56,12 @@ if (process.env.REACT_APP_MOCK_DATA) {
   api.start();
 }
 
-// This process.env. vars will be substituted at build time
-// The REACT_APP_ prefix is mandatory for the substitution to work
+// Statically inlined by Vite from REACT_APP_* env (getVersionData.sh writes
+// .env.production at build time; empty in dev).
 window.versionData = cleanObj({
-  version: process.env.REACT_APP_VERSION,
-  branch: process.env.REACT_APP_BRANCH,
-  commit: process.env.REACT_APP_COMMIT,
+  version: import.meta.env.REACT_APP_VERSION,
+  branch: import.meta.env.REACT_APP_BRANCH,
+  commit: import.meta.env.REACT_APP_COMMIT,
 });
 
 const container = document.getElementById("root");

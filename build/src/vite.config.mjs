@@ -20,15 +20,29 @@ export default defineConfig(({ mode }) => {
 
   // Build the static replacement map so existing `process.env.REACT_APP_*` references
   // (the codebase predates import.meta.env) keep resolving at build time, exactly like CRA did.
+  // CRA injected REACT_APP_* vars from BOTH .env files and the shell environment, so we merge
+  // both here (shell wins). This is what makes `REACT_APP_MOCK_DATA=true yarn dev` actually take
+  // the mock-data branch in index.jsx instead of falling through to the live WAMP connection.
+  const mergedEnv = { ...env };
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.startsWith("REACT_APP_") && value !== undefined) mergedEnv[key] = value;
+  }
+
   const processEnvDefine = {
     "process.env.NODE_ENV": JSON.stringify(mode === "development" ? "development" : "production"),
     "process.env.PUBLIC_URL": JSON.stringify(""),
   };
-  for (const [key, value] of Object.entries(env)) {
+  for (const [key, value] of Object.entries(mergedEnv)) {
     if (key.startsWith("REACT_APP_")) {
       processEnvDefine[`process.env.${key}`] = JSON.stringify(value);
     }
   }
+  // NOTE: vite-plugin-node-polyfills clears the user `define` map in dev (it
+  // injects a real `process`), so `process.env.*` / custom defines do NOT resolve
+  // during `vite dev`. Anything needed at the synchronous top level in dev (the
+  // mock-data gate, version stamps) therefore reads `import.meta.env.REACT_APP_*`,
+  // which is handled by Vite core and is unaffected by the polyfill. The dev-only
+  // mock flag lives in `.env.development`.
 
   return {
     // Vite root is build/src (where this config + index.html live).
