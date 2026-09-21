@@ -153,6 +153,21 @@ a:hover {
   font-weight: 500;
 }
 
+/* Pending / neutral toasts: react-toastify's default is white with #aaa text,
+   unreadable in both themes. Coloured variants keep their white text. */
+.Toastify__toast--default {
+  background: rgb(var(--surface-raised)) !important;
+  color: rgb(var(--fg)) !important;
+  border: 1px solid rgb(var(--border-strong));
+}
+.Toastify__toast--default .Toastify__close-button {
+  color: rgb(var(--fg-muted));
+  opacity: 0.8;
+}
+.Toastify__toast--default .Toastify__progress-bar {
+  background: rgb(var(--accent));
+}
+
 .Toastify__toast--success {
   background: var(--success-color) !important;
 }

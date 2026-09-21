@@ -70,7 +70,7 @@ function BenefitList({ items }) {
 function Notice({ variant, children }) {
   const styles = {
     danger: "border-danger/40 bg-danger/10 text-danger",
-    warning: "border-warning/40 bg-warning/10 text-warning",
+    warning: "border-warning/50 bg-warning/10 text-fg",
     success: "border-success/40 bg-success/10 text-success",
     neutral: "border-border bg-bg-subtle text-fg-muted"
   };

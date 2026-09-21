@@ -77,12 +77,12 @@ function Dashboard({
       {/* Hero header */}
       <div className="mb-2 flex flex-col gap-1 border-b border-border pb-5">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight text-fg">Home</h1>
+          <h1 className="mb-0 text-3xl font-bold tracking-tight text-fg">Home</h1>
           <Badge variant="success" dot>
             Online
           </Badge>
         </div>
-        <p className="text-sm text-fg-muted">
+        <p className="mb-0 text-sm text-fg-muted">
           System health, chain sync status, and your active applications at a glance.
         </p>
       </div>
@@ -159,7 +159,9 @@ function Dashboard({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {activePackages.map((dnp, i) => {
             const { manifest, origin, tag } = dnp || {};
-            const { name, title } = manifest || {};
+            const { title } = manifest || {};
+            // A package whose manifest lacks a name still has a container name
+            const name = (manifest || {}).name || dnp.name;
             /* Show the button as disabled (gray) if it's updated */
             const disabled = stringIncludes(tag, "updated");
             const avatarUrl = hashToUrl(manifest.avatar) || defaultAvatar;
