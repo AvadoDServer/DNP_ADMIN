@@ -28,7 +28,6 @@ const PackageInterface = ({
   showReset,
   showRemove,
 }) => {
-  const isTeku = dnp && dnp.name && dnp.name.includes("teku");
   return (
     <>
       {dnp ? (
@@ -38,12 +37,13 @@ const PackageInterface = ({
               {moduleName}
             </span>
           </PageHeader>
+          {/* Resync stays hidden until resyncPackage's preserve logic is fixed */}
           {showControls && (
             <Controls
               dnp={dnp}
               showReset={showReset}
               showRemove={showRemove}
-              showResync={isTeku}
+              showResync={false}
             />
           )}
           <Details dnp={dnp} />
