@@ -152,12 +152,14 @@ function Priority({ dappnodeParams = {} }) {
       return;
     }
 
-    let stopped = false;
+    // No effect cleanup here: history.replace above clears checkoutResult, which
+    // re-runs this effect, and a cleanup would cancel the polling just started.
+    // Polling ends on its own and stops when the page unmounts.
     const startedAt = Date.now();
     setConfirming(true);
     (async function poll() {
       const current = await loadStatus().catch(() => null);
-      if (stopped || !mounted.current) return;
+      if (!mounted.current) return;
       if (current) {
         setConfirming(false);
         setNotice("Thank you! Your Priority Support subscription is active.");
@@ -170,9 +172,6 @@ function Priority({ dappnodeParams = {} }) {
         setTimeout(poll, POLL_INTERVAL_MS);
       }
     })();
-    return () => {
-      stopped = true;
-    };
     // Runs once per return from Stripe; history.replace clears checkoutResult
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkoutResult, identityReady]);
