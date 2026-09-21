@@ -501,4 +501,23 @@ export default {
    * }
    */
   getParams: {},
+
+  /**
+   * [signPrioritySupportRequest]
+   * Signs a Priority Support billing request with the box identity key, so the
+   * billing backend knows it comes from the box that owns the nodeid.
+   *
+   * @param {string} action "checkout" | "portal"
+   * @param {string} plan "monthly" | "yearly", only for "checkout"
+   * @param {number} timestamp unix seconds, the billing backend's serverTime
+   * @returns {object} result: {
+   *   nodeid: "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+   *   timestamp: 1790000000,
+   *   message: "avado-priority-support:v1\naction:...",
+   *   signature: "0xd61c45..."
+   * }
+   */
+  signPrioritySupportRequest: {
+    manadatoryKwargs: ["action"],
+  },
 };
