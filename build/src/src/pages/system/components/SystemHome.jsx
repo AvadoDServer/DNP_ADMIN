@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { connect } from "react-redux";
+import store from "../../../store";
+import { getConnectionStatus } from "services/connectionStatus/selectors";
 import { createStructuredSelector } from "reselect";
 import { confirmAlert } from "react-confirm-alert"; // Import
 import { title } from "../data";
@@ -36,31 +38,49 @@ function Dialog({ heading, text, children }) {
   );
 }
 
+/**
+ * Shown while the box reboots. react-confirm-alert renders outside the app's
+ * React tree, so this watches the store directly: once the connection has been
+ * lost and is open again, the box is back and the dialog closes itself.
+ */
+function RebootingDialog({ onClose }) {
+  const wentDown = useRef(false);
+  useEffect(
+    () =>
+      store.subscribe(() => {
+        const { isOpen } = getConnectionStatus(store.getState()) || {};
+        if (!isOpen) wentDown.current = true;
+        else if (wentDown.current) onClose();
+      }),
+    [onClose]
+  );
+
+  return (
+    <Dialog
+      heading="Rebooting"
+      text={
+        <>
+          Your AVADO is now rebooting.
+          <br />
+          You will be disconnected for a few minutes. This page reconnects by
+          itself once your AVADO is back. If you are connected over WiFi or VPN,
+          you may have to reconnect first.
+        </>
+      }
+    >
+      <Button variant="secondary" onClick={onClose}>
+        Dismiss
+      </Button>
+    </Dialog>
+  );
+}
+
 const SystemHome = ({ rebootHost, runSignedCmd }) => {
   const rebooting = () => {
+    // Outside customUI: that function runs on every render of the dialog
+    rebootHost();
     confirmAlert({
-      customUI: ({ onClose }) => {
-        rebootHost();
-        return (
-          <Dialog
-            heading="Rebooting"
-            text={
-              <>
-                Your AVADO is now rebooting.
-                <br />
-                You will be disconnected from the VPN or Wifi.
-                <br />
-                Please wait a few minutes and re-connect to the WiFi or VPN and
-                refresh this page.
-              </>
-            }
-          >
-            <Button variant="secondary" onClick={onClose}>
-              Dismiss
-            </Button>
-          </Dialog>
-        );
-      },
+      customUI: ({ onClose }) => <RebootingDialog onClose={onClose} />,
     });
   };
 
