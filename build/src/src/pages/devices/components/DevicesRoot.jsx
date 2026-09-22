@@ -4,6 +4,7 @@ import { rootPath } from "../data";
 // Components
 import DeviceSettings from "./DeviceSettings";
 import DevicesHome from "./DevicesHome";
+import DevicesLoadError from "./DevicesLoadError";
 import withLoading from "components/hoc/withLoading";
 
 const DevicesRoot = () => (
@@ -14,4 +15,6 @@ const DevicesRoot = () => (
 );
 
 // Use `compose` from "redux" if you need multiple HOC
-export default withLoading("devices")(DevicesRoot);
+export default withLoading("devices", undefined, loadingError => (
+  <DevicesLoadError loadingError={loadingError} />
+))(DevicesRoot);
