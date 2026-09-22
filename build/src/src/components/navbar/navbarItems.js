@@ -1,6 +1,7 @@
 // Icons
 import Dashboard from "Icons/Dashboard";
 import Activity from "Icons/Activity";
+import Chain from "Icons/Chain";
 import Devices from "Icons/Devices";
 import Folder from "Icons/Folder";
 import NewFolder from "Icons/NewFolder";
@@ -23,6 +24,11 @@ export const sidenavItems = [
     name: "My DApps",
     href: "/packages",
     icon: Folder
+  },
+  {
+    name: "Staking setup",
+    href: "/staking",
+    icon: Chain
   },
   {
     name: "Connect (VPN)",
