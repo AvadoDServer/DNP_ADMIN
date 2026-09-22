@@ -35,4 +35,10 @@ describe("buildReport", () => {
     expect(url.startsWith("mailto:ziga@ava.do?subject=")).toBe(true);
     expect(url.length).toBeLessThanOrEqual(1800);
   });
+  it("asks the user to attach the downloaded report, since a mailto link can't attach files", () => {
+    const url = mailtoReport(r, input.verdict, input.findings);
+    const body = decodeURIComponent(url.split("&body=")[1]);
+    expect(body).toContain("Please attach the diagnostics report you downloaded (Help → Download report).");
+    expect(body).not.toContain("is attached");
+  });
 });

@@ -36,7 +36,7 @@ export function mailtoReport(report, verdict, findings) {
     `Health: ${verdict.label}`,
     ...findings.slice(0, 8).map(f => `- [${f.severity}] ${f.title}`),
     "",
-    "The full diagnostics report is attached (Help > Download report).",
+    "Please attach the diagnostics report you downloaded (Help → Download report).",
   ].join("\n");
   let body = summary;
   let url = `mailto:ziga@ava.do?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

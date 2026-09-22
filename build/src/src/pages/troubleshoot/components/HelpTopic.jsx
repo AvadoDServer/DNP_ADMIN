@@ -8,6 +8,7 @@ import FindingRow from "components/health/FindingRow";
 import { useHealth } from "health/HealthProvider";
 import { TOPICS } from "../topics";
 import ReportPanel from "./ReportPanel";
+import PrioritySupportNote from "./PrioritySupportNote";
 
 export default function HelpTopic({ match }) {
   const { allFindings } = useHealth();
@@ -44,7 +45,7 @@ export default function HelpTopic({ match }) {
 
       <Card padding="lg" className="mt-6">
         <h2 className="mb-3 text-sm font-semibold text-fg-muted">Steps</h2>
-        <ol className="flex list-decimal flex-col gap-4 pl-5">
+        <ol className="list-decimal space-y-4 pl-5">
           {topic.steps.map((step, i) => (
             <li key={i} className="pl-1">
               <p className="mb-0 font-medium text-fg">{step.title}</p>
@@ -61,6 +62,7 @@ export default function HelpTopic({ match }) {
 
       <h2 className="mb-3 mt-8 text-sm font-semibold text-fg-muted">Still stuck?</h2>
       <ReportPanel compact />
+      <PrioritySupportNote />
     </div>
   );
 }

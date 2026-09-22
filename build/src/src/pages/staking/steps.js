@@ -1,7 +1,7 @@
 import { clientsByRole, ROLES, GRAFANA_PACKAGE } from "health/clients";
 
 export function stakingSteps(packages, manual = {}) {
-  const has = role => clientsByRole(packages, role).filter(x => x.client.network === "mainnet" || role === ROLES.MONITORING);
+  const has = role => clientsByRole(packages, role).filter(x => x.client.network === "mainnet");
   const cc = has(ROLES.CONSENSUS)[0];
   const ccSetup = cc ? { label: `Open ${cc.client.label} setup`, to: `/packages/${cc.pkg.name}?tab=setup` } : null;
   const installed = name => (packages || []).some(x => x.name === name);

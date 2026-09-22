@@ -1,6 +1,14 @@
+import Fingerprint from "Icons/Fingerprint";
+import Sync from "Icons/Sync";
+import Bell from "Icons/Bell";
+import Publish from "Icons/Publish";
+import Link from "Icons/Link";
+import Folder from "Icons/Folder";
+
 export const TOPICS = [
   {
     id: "setup", title: "Validator setup", when: "Choosing clients, importing keys, fee recipient.",
+    icon: Fingerprint,
     findingTopics: ["setup"],
     steps: [
       { title: "Install an execution client and a consensus client", body: "Your validator needs both, on the same network. Staking setup checks which ones you have.", action: { label: "Open Staking setup", to: "/staking" } },
@@ -11,6 +19,7 @@ export const TOPICS = [
   },
   {
     id: "sync", title: "Not syncing or not working", when: "An app is stopped, restarting, or behind the chain.",
+    icon: Sync,
     findingTopics: ["sync", "core"],
     steps: [
       { title: "Look at the findings above", body: "They show which app is affected and offer a fix." },
@@ -21,16 +30,18 @@ export const TOPICS = [
   },
   {
     id: "attestations", title: "Missed attestations", when: "Rewards lower than expected, or attestations missed.",
+    icon: Bell,
     findingTopics: ["attestations", "sync"],
     steps: [
       { title: "Install monitoring if you haven't", body: "The monitoring package lets your AVADO count missed attestations and show them here.", action: { label: "Install monitoring", to: "/installer/grafana.avado.dappnode.eth" } },
       { title: "Make sure both clients are synced", body: "A consensus client that follows an unsynced execution client cannot attest correctly." },
-      { title: "Check peers and ports", body: "Fewer than 10 peers makes attestations arrive late.", action: { label: "Network help", to: "/help/access" } },
+      { title: "Check peers and ports", body: "Fewer than 10 peers makes attestations arrive late.", action: { label: "Open Access and network", to: "/help/access" } },
       { title: "Check that the box clock is right", body: "Attestations are time-sensitive. Reboot the box if its time was wrong after a power cut." },
     ],
   },
   {
     id: "updates", title: "Updates and versions", when: "An update didn't install, or you're not sure what version you run.",
+    icon: Publish,
     findingTopics: ["updates"],
     steps: [
       { title: "See what can be updated", body: "System → Updates lists every app with a newer version.", action: { label: "Open Updates", to: "/system/updates" } },
@@ -40,6 +51,7 @@ export const TOPICS = [
   },
   {
     id: "access", title: "Access and network", when: "Can't reach my.ava.do, Wi-Fi, Remote Connect, ports.",
+    icon: Link,
     findingTopics: ["access"],
     steps: [
       { title: "Reaching your AVADO at home", body: "Use http://my.ava.do from a device on the same network, or the AVADO's Wi-Fi hotspot." },
@@ -49,6 +61,7 @@ export const TOPICS = [
   },
   {
     id: "storage", title: "Disk space", when: "Disk almost full, or an app uses a lot of space.",
+    icon: Folder,
     findingTopics: ["storage"],
     steps: [
       { title: "See what uses the space", body: "System → Storage lists each app's disk use.", action: { label: "Open Storage", to: "/system/storage" } },

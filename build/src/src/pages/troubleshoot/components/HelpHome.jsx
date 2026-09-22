@@ -6,6 +6,7 @@ import { cn } from "components/ui/cn";
 import { useHealth } from "health/HealthProvider";
 import { TOPICS } from "../topics";
 import ReportPanel from "./ReportPanel";
+import PrioritySupportNote from "./PrioritySupportNote";
 
 const RESOURCES = [
   {
@@ -42,28 +43,39 @@ export default function HelpHome() {
     <div className="animate-fade-in">
       <PageHeader title="Help" subtitle="Find what's wrong and fix it, or get in touch with us." />
 
+      <SectionHeader title="Topics" first />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TOPICS.map(topic => {
           const severity = severityFor(topic.findingTopics, allFindings);
+          const Icon = topic.icon;
           return (
             <Card
               key={topic.id}
               as={Link}
               to={`/help/${topic.id}`}
               interactive
-              className="flex flex-col gap-2"
+              className="flex flex-col gap-3"
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="mb-0 min-w-0 break-words font-display text-base font-semibold text-fg">
-                  {topic.title}
-                </h3>
                 <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"
+                >
+                  <Icon />
+                </span>
+                <span
+                  data-testid={`severity-dot-${topic.id}`}
                   className={cn("mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full", DOT[severity])}
                   aria-hidden="true"
                 />
                 <span className="sr-only">{DOT_LABEL[severity]}</span>
               </div>
-              <p className="mb-0 text-sm text-fg-muted">{topic.when}</p>
+              <div>
+                <h3 className="mb-0 min-w-0 break-words font-display text-base font-semibold text-fg">
+                  {topic.title}
+                </h3>
+                <p className="mb-0 mt-1 text-sm text-fg-muted">{topic.when}</p>
+              </div>
             </Card>
           );
         })}
@@ -90,13 +102,7 @@ export default function HelpHome() {
         </ul>
       </Card>
 
-      <p className="mt-4 text-sm text-fg-muted">
-        Priority support subscribers get faster answers — manage it in{" "}
-        <Link to="/priority" className="font-medium text-accent hover:underline">
-          Priority
-        </Link>
-        .
-      </p>
+      <PrioritySupportNote />
     </div>
   );
 }
