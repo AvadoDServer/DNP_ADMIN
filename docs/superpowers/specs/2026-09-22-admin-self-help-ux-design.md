@@ -72,6 +72,9 @@ The dead `home` page is removed; `/` redirects to `/dashboard`. `activity` moves
     steps?: ["…", "…"],                        // steps
   },
   learnMore?: "https://docs.ava.do/…",
+  secondary?: { kind: "link", to, label },   // a second, quieter action (e.g. "See why in the logs")
+  steps?: ["…"],                            // guided steps shown under the finding
+  dismissable?: true,                        // info findings that may be hidden ("Hide")
 }
 ```
 
@@ -86,6 +89,7 @@ The dead `home` page is removed; `/` redirects to `/dashboard`. `activity` moves
   updates,         // store getUpdates → { [name]: latestVersion } | null when unreachable
   coreUpdate,      // services/coreUpdate selectors
   metrics,         // Prometheus results | null when monitoring is not installed or unreachable
+  sources,         // { updates: "loading" | "ok" | "failed", metrics: "not-installed" | "ok" | "failed" }, read by store-unreachable
   now,             // Date.now(), injected for testability
 }
 ```
