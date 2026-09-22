@@ -22,7 +22,10 @@ export function* fetchDevices() {
   } catch (e) {
     // Without the VPN package there is no listDevices procedure: record the
     // error so the page stops showing "Loading devices..." forever
-    yield put(updateLoading(loadingId, false, e.message));
+    const message = /no callee registered/i.test(e.message || "")
+      ? "the VPN package is not installed on this AVADO"
+      : e.message;
+    yield put(updateLoading(loadingId, false, message));
   }
 }
 
