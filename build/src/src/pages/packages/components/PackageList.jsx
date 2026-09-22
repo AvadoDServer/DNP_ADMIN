@@ -39,6 +39,10 @@ const PackagesList = ({
     showOpen = true,
 }) => {
 
+    // `moduleName` ("Packages" / "System") is capitalized for display, but
+    // routes are lower case — build links from a lower-cased copy.
+    const moduleNamePath = moduleName.toLowerCase();
+
     const [storeManifest, setStoreManifest] = useState();
     const [buttonState, setButtonState] = useState({});
 
@@ -153,7 +157,7 @@ const PackagesList = ({
                                         </a>
                                     ) : (
                                         <NavLink
-                                            to={`/${moduleName}/${name}`}
+                                            to={`/${moduleNamePath}/${name}`}
                                             className="font-medium capitalize text-fg transition-colors hover:text-accent"
                                             title={label}
                                         >
@@ -168,14 +172,14 @@ const PackagesList = ({
                                                 <MdOpenInNew />
                                             </a>
                                         ) : (
-                                            <NavLink to={`/${moduleName}/${name}`} className={iconBtn} aria-label={`Open ${title || name}`}>
+                                            <NavLink to={`/${moduleNamePath}/${name}`} className={iconBtn} aria-label={`Open ${title || name}`}>
                                                 <MdOpenInNew />
                                             </NavLink>
                                         )}
                                     </TD>
                                 )}
                                 <TD align="center">
-                                    <NavLink to={`/${moduleName}/${name}/detail`} className={iconBtn} aria-label={`Manage ${title || name}`}>
+                                    <NavLink to={`/${moduleNamePath}/${name}/detail`} className={iconBtn} aria-label={`Manage ${title || name}`}>
                                         <MdTune />
                                     </NavLink>
                                 </TD>

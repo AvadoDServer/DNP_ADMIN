@@ -90,7 +90,6 @@ function InstallerInterface({
 
     const toWizard = () => {
         history.push(`${packagesRootPath}/${name}`);
-        // history.push(`/Packages/${manifest.name}`);
     }
 
     const manage = (name) => {

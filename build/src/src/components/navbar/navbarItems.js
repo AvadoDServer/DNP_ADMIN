@@ -33,7 +33,7 @@ export const sidenavItems = [
   },
   {
     name: "Remote Connect",
-    href: "/Packages/remoteconnect.avado.dnp.dappnode.eth",
+    href: "/packages/remoteconnect.avado.dnp.dappnode.eth",
     icon: Devices,
     package: "remoteconnect.avado.dnp.dappnode.eth",
   },
@@ -43,8 +43,8 @@ export const sidenavItems = [
     icon: Priority
   },
   {
-    name: "Support",
-    href: "/troubleshoot",
+    name: "Help",
+    href: "/help",
     icon: Activity
   },
 

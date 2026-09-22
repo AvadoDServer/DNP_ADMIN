@@ -48,7 +48,7 @@ function Dashboard({
   };
 
   const openDnp = (name) => {
-    history.push(`/Packages/${name}`);
+    history.push(`/packages/${name}`);
   };
 
   const activePackages = installedpackages.filter(

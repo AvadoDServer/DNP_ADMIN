@@ -16,6 +16,7 @@ const ChainData = ({ chainData }) => {
   return (
     <BaseDropdown
       name="Chain status"
+      label="Chain"
       messages={chainData.map(
         ({ name, message, error, syncing, progress } = {}) => ({
           title: name,

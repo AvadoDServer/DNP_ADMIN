@@ -29,7 +29,12 @@ export default defineConfig(({ mode }) => {
   }
 
   const processEnvDefine = {
-    "process.env.NODE_ENV": JSON.stringify(mode === "development" ? "development" : "production"),
+    // Only an actual `vite build` (mode "production") gets the production define.
+    // Vitest defaults to mode "test" and previously fell into the "else" branch
+    // here, which forced React's production build into the test bundle — and
+    // React's production build throws on `act(...)`, breaking any test that
+    // renders with @testing-library/react. Dev and test both want the dev build.
+    "process.env.NODE_ENV": JSON.stringify(mode === "production" ? "production" : "development"),
     "process.env.PUBLIC_URL": JSON.stringify(""),
   };
   for (const [key, value] of Object.entries(mergedEnv)) {
