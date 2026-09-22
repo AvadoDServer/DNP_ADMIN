@@ -33,6 +33,7 @@ const SIZES = {
 
 const Button = forwardRef(function Button(
   {
+    as: Tag = "button",
     variant = "primary",
     size = "md",
     pill = false,
@@ -49,9 +50,9 @@ const Button = forwardRef(function Button(
 ) {
   const isDisabled = disabled || loading;
   return (
-    <button
+    <Tag
       ref={ref}
-      type={type}
+      {...(Tag === "button" ? { type } : {})}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       className={cn(
@@ -69,7 +70,7 @@ const Button = forwardRef(function Button(
       {!loading && leftIcon}
       {children != null && <span className={loading ? "opacity-90" : undefined}>{children}</span>}
       {!loading && rightIcon}
-    </button>
+    </Tag>
   );
 });
 

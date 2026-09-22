@@ -17,3 +17,6 @@ export {
 } from "./Table";
 export { cn } from "./cn";
 export { PageHeader, SectionHeader } from "./PageHeader";
+export { default as StatusPill } from "./StatusPill";
+export { default as AppAvatar } from "./AppAvatar";
+export { default as Tabs } from "./Tabs";
