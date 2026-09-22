@@ -8,7 +8,7 @@ function IsSyncing({ message }) {
   return (
     <Card padding="lg" className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-fg-muted">
+        <h2 className="text-sm font-bold text-fg-muted">
           Mainnet is syncing
         </h2>
         <Badge variant="warning" dot>

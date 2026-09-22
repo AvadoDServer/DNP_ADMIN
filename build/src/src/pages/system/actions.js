@@ -12,6 +12,12 @@ export const rebootHost = () => () => {
   api.rebootHost();
 }
 
-export const runSignedCmd = (cmd) => () => {
-  api.runSignedCmd({ cmd }, { toastMessage: `Running command ${cmd.description}` });
+// `cmd` ({ command, sig }) is sent to the backend as-is and must not gain
+// extra keys (the whole object is transmitted, not just the signed
+// `command` string) — the human label for the toast is passed separately.
+export const runSignedCmd = (cmd, label) => () => {
+  api.runSignedCmd(
+    { cmd },
+    { toastMessage: label ? `Running command: ${label}` : "Running command" }
+  );
 }

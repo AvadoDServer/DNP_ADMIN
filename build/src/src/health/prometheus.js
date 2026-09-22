@@ -32,7 +32,7 @@ export async function fetchMetrics(fetchImpl = fetch) {
     );
     return Object.fromEntries(entries);
   } catch (e) {
-    console.log(`Prometheus unavailable: ${e.message}`);
+    console.warn(`Prometheus unavailable: ${e.message}`);
     return null;
   }
 }

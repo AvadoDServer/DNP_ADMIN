@@ -114,7 +114,8 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
             title: "Clean up disk",
             text: "Are you sure you want to perform a disk cleanup?",
           },
-          runSignedCmd
+          runSignedCmd,
+          "Disk cleanup"
         ),
     },
     {
@@ -129,7 +130,8 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
             title: "Shut down your AVADO",
             text: "Are you sure you want to shut down your AVADO?",
           },
-          runSignedCmd
+          runSignedCmd,
+          "Shut down"
         ),
     },
   ];

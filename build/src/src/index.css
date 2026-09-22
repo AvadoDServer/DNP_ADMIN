@@ -1,4 +1,5 @@
-/* Font import must precede the Tailwind directives */
+/* Fonts (Inter, Sen, JetBrains Mono) are bundled via @fontsource imports in
+   index.jsx, loaded ahead of this stylesheet — no @import needed here. */
 
 @tailwind base;
 @tailwind components;

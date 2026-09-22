@@ -122,7 +122,7 @@ function BaseDropdown({
           role="menu"
           className="absolute right-0 top-full z-[1100] mt-2 max-h-[30rem] w-[min(22.5rem,90vw)] overflow-y-auto rounded-lg border border-border bg-surface text-fg shadow-xl"
         >
-          <div className="border-b border-border px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-fg-subtle">
+          <div className="border-b border-border px-4 py-2.5 text-xs font-bold text-fg-subtle">
             {name}
           </div>
           {messages.map(({ type, title, body, progress, showProgress }, i) => (

@@ -25,7 +25,7 @@ function ProgressLogs({ progressLogs }) {
 
   return (
     <Card padding="lg" className="mb-4 flex flex-col gap-4">
-      <h2 className="text-sm font-bold uppercase tracking-wider text-fg-muted">
+      <h2 className="text-sm font-bold text-fg-muted">
         Installing
       </h2>
       <div className="flex flex-col gap-4">

@@ -66,8 +66,13 @@ export function Dialog({ heading, text, children }) {
  * `pages/system/signedCommands.js`) through `runSignedCmd`. Same "Cancel" /
  * "Start!" dialog every destructive maintenance action has always used —
  * only the command data moved, not the confirmation behaviour.
+ *
+ * `label` is a short human name for the command ("Disk cleanup", "Shut
+ * down") used only for the "Running command…" toast. It is passed
+ * separately rather than added to `cmd`, since `cmd` is sent to the backend
+ * as-is and its signature only covers `command`.
  */
-export function confirmSignedCmd(cmd, desc, runSignedCmd) {
+export function confirmSignedCmd(cmd, desc, runSignedCmd, label) {
   confirmAlert({
     customUI: ({ onClose }) => (
       <Dialog heading={desc.title} text={desc.text}>
@@ -77,7 +82,7 @@ export function confirmSignedCmd(cmd, desc, runSignedCmd) {
         <Button
           variant="danger"
           onClick={() => {
-            runSignedCmd(cmd);
+            runSignedCmd(cmd, label);
             onClose();
           }}
         >

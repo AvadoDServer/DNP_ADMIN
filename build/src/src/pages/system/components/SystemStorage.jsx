@@ -74,7 +74,8 @@ function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
         title: "Clean up disk",
         text: "Are you sure you want to perform a disk cleanup?",
       },
-      runSignedCmd
+      runSignedCmd,
+      "Disk cleanup"
     );
 
   return (
