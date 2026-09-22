@@ -57,6 +57,15 @@ export default defineConfig(({ mode }) => {
       nodePolyfills({
         globals: { Buffer: true, global: true, process: true },
         protocolImports: true,
+        // A handful of tests (e.g. src/theme/__tests__/contrast.test.js) opt
+        // into the real Node environment via a `// @vitest-environment node`
+        // pragma so they can read fixtures off disk with real `fs`. This
+        // plugin's `fs` shim is aliased for every resolution context (not
+        // just the browser one), which would otherwise still shadow the real
+        // module there. Excluding it only when VITEST is set (set by Vitest
+        // itself) leaves dev/build behavior — where the shim is needed —
+        // untouched.
+        exclude: process.env.VITEST ? ["fs"] : [],
       }),
     ],
     define: processEnvDefine,
