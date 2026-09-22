@@ -51,4 +51,23 @@ describe("Dashboard apps section", () => {
     renderDashboard();
     expect(screen.getByText("Your AVADO is ready")).toBeInTheDocument();
   });
+
+  it("includes a non-core package with no manifest, using the package-name fallback", () => {
+    useHealthMock.mockReturnValue({
+      findings: [],
+      updates: {},
+      verdict: { level: "ok", label: "All good" },
+      checkedAt: new Date(0),
+      refresh: () => {},
+      checksPassed: 5,
+      ready: true,
+    });
+    renderDashboard({
+      installedpackages: [
+        { name: "weird.public.dappnode.eth", isCore: false, state: "running", running: true },
+      ],
+    });
+    expect(screen.queryByText("Your AVADO is ready")).not.toBeInTheDocument();
+    expect(screen.getByText("weird")).toBeInTheDocument();
+  });
 });

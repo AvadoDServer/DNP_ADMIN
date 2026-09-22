@@ -62,8 +62,11 @@ function Dashboard({
     };
   }, []);
 
+  // A manifest-less package (e.g. its manifest failed to fetch) still shows
+  // up here — AppCard/AppAvatar/appTitle all fall back to the package name
+  // when there's no manifest, so there's no reason to hide it from "Your apps".
   const activePackages = installedpackages.filter(
-    (dnp) => dnp && dnp.isCore === false && dnp.manifest
+    (dnp) => dnp && dnp.isCore === false
   );
 
   return (
