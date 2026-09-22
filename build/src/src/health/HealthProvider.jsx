@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getDappnodeStats, getDappnodeParams } from "services/dappnodeStatus/selectors";
@@ -31,10 +31,16 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
   const [tick, setTick] = useState(0);
   const [dismissVersion, setDismissVersion] = useState(0);
 
+  // A string derived from installed name@version pairs. Used as an effect
+  // dependency instead of the `packages` array itself, whose identity changes
+  // on every WAMP push (running/stopped, stats, ...) even when no version
+  // actually changed.
   const packageKey = packages.map(p => `${p.name}@${p.version}`).join("|");
   const prometheusRunning = packages.some(p => p.name === PROMETHEUS_PACKAGE && p.running);
 
-  // Store catalogue (updates). Re-run when installed versions change.
+  // Store catalogue (updates). Depends on `packageKey`, not `packages`, so a
+  // WAMP push that leaves installed versions unchanged does not refetch the
+  // store catalogue on every render.
   useEffect(() => {
     if (!params.nodeid) return;
     let cancelled = false;
@@ -50,7 +56,9 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
     };
   }, [params.nodeid, packageKey, tick]);
 
-  // Prometheus metrics, only when the monitoring package runs.
+  // Prometheus metrics, only when the monitoring package runs. Depends on
+  // `prometheusRunning`/`tick`, not `packageKey`: which packages are
+  // installed/updated is irrelevant here, only whether Prometheus itself is up.
   useEffect(() => {
     if (!prometheusRunning) {
       setMetrics({ status: "not-installed", data: null });
@@ -85,6 +93,10 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       coreUpdate: { available: Boolean(coreAvailable) },
       metrics: metrics.data,
       sources: { updates: store.status, metrics: metrics.status },
+      // Recomputed whenever this memo re-runs, which includes every metrics
+      // poll (`metrics` is a dep below). head-behind is the only rule that
+      // reads the wall clock, and it always needs a fresh `now` alongside a
+      // fresh `metrics.headSlot` sample to compute how far behind a client is.
       now: Date.now(),
     };
     const allFindings = runChecks(snapshot, ALL_RULES);
