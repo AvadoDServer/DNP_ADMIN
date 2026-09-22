@@ -20,7 +20,7 @@ export function appStopped({ packages }) {
       why: isClient(p)
         ? "While it is stopped it does not follow the chain, so your validators miss attestations and rewards."
         : "Anything that depends on it will not work until it runs again.",
-      fix: { kind: "action", action: "startPackage", label: "Start it" },
+      fix: { kind: "action", action: "restartPackage", label: "Start it" },
       secondary: { kind: "link", to: logsLink(p.name), label: "See why in the logs" },
     }));
 }

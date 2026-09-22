@@ -12,7 +12,7 @@ describe("appStopped", () => {
     const [f] = appStopped(s);
     expect(f).toMatchObject({ id: `app-stopped:${NIMBUS}`, severity: "critical", topic: "sync", appId: NIMBUS });
     expect(f.title).toBe("Nimbus Consensus Client is stopped");
-    expect(f.fix).toMatchObject({ kind: "action", action: "startPackage", label: "Start it" });
+    expect(f.fix).toMatchObject({ kind: "action", action: "restartPackage", label: "Start it" });
   });
   it("is a warning for non-client apps and ignores core and running apps", () => {
     const s = snapshot({ packages: [

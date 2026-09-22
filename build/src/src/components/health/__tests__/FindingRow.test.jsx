@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
@@ -7,6 +7,10 @@ import FindingRow from "components/health/FindingRow";
 
 const { dismissSpy } = vi.hoisted(() => ({ dismissSpy: vi.fn() }));
 vi.mock("health/HealthProvider", () => ({ useHealth: () => ({ dismiss: dismissSpy }) }));
+// The "action" fix kind dispatches a real redux-thunk action (see health/fixActions);
+// the test store below has no thunk middleware, so stub it out for these tests —
+// dispatch behaviour itself is covered by health/__tests__/fixActions.test.js.
+vi.mock("health/fixActions", () => ({ runFixAction: vi.fn() }));
 
 beforeEach(() => {
   dismissSpy.mockClear();
@@ -79,5 +83,52 @@ describe("FindingRow", () => {
     );
     const link = screen.getByRole("link", { name: "See why in the logs" });
     expect(link).toHaveAttribute("href", "/packages/nimbus.avado.dnp.dappnode.eth?tab=logs");
+  });
+
+  it("disables an action fix button after the first click and shows 'Starting…'", () => {
+    vi.useFakeTimers();
+    try {
+      renderRow(
+        stepsAndWhyFinding({
+          id: "app-stopped:nimbus.avado.dnp.dappnode.eth",
+          why: undefined,
+          steps: undefined,
+          fix: { kind: "action", action: "restartPackage", label: "Start it" },
+        })
+      );
+      const button = screen.getByRole("button", { name: "Start it" });
+      fireEvent.click(button);
+
+      const startingButton = screen.getByRole("button", { name: "Starting…" });
+      expect(startingButton).toBeDisabled();
+      expect(screen.queryByRole("button", { name: "Start it" })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("re-enables the action fix button after 15s", () => {
+    vi.useFakeTimers();
+    try {
+      renderRow(
+        stepsAndWhyFinding({
+          id: "app-stopped:nimbus.avado.dnp.dappnode.eth",
+          why: undefined,
+          steps: undefined,
+          fix: { kind: "action", action: "restartPackage", label: "Start it" },
+        })
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Start it" }));
+      expect(screen.getByRole("button", { name: "Starting…" })).toBeDisabled();
+
+      act(() => {
+        vi.advanceTimersByTime(15000);
+      });
+
+      const button = screen.getByRole("button", { name: "Start it" });
+      expect(button).not.toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

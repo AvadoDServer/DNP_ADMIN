@@ -29,17 +29,15 @@ describe("runFixAction", () => {
   });
 
   it("does nothing when appId is missing", () => {
-    runFixAction({ fix: { kind: "action", action: "startPackage" } }, dispatch);
+    runFixAction({ fix: { kind: "action", action: "restartPackage" } }, dispatch);
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it('dispatches the thunk from togglePackage(appId) for fix.action "startPackage"', () => {
+  it('does nothing for fix.action "startPackage" (removed: it could stop a running container)', () => {
     const finding = { fix: { kind: "action", action: "startPackage" }, appId };
     runFixAction(finding, dispatch);
-    expect(togglePackage).toHaveBeenCalledWith(appId);
-    expect(restartPackage).not.toHaveBeenCalled();
-    expect(dispatch).toHaveBeenCalledTimes(1);
-    expect(dispatch).toHaveBeenCalledWith(togglePackage.mock.results[0].value);
+    expect(togglePackage).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('dispatches restartPackage(appId) for fix.action "restartPackage"', () => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import Button from "components/ui/Button";
@@ -12,13 +12,27 @@ const ICON = {
   info: { glyph: "M12 11v5M12 7.5h.01", cls: "bg-accent/15 text-accent", label: "Tip" },
 };
 
+const ACTION_TIMEOUT_MS = 15000;
+
 export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false }) {
   const [whyOpen, setWhyOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
   const dispatch = useDispatch();
   const { dismiss } = useHealth();
   const icon = ICON[finding.severity] || ICON.info;
   const { fix } = finding;
+
+  useEffect(() => {
+    if (!starting) return undefined;
+    const timer = setTimeout(() => setStarting(false), ACTION_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [starting]);
+
+  const handleAction = () => {
+    setStarting(true);
+    runFixAction(finding, dispatch);
+  };
 
   const fixButton =
     fix && fix.kind === "link" ? (
@@ -26,7 +40,7 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
         {fix.label}
       </Button>
     ) : fix && fix.kind === "action" ? (
-      <Button size="sm" onClick={() => runFixAction(finding, dispatch)}>{fix.label}</Button>
+      <Button size="sm" onClick={handleAction} disabled={starting}>{starting ? "Starting…" : fix.label}</Button>
     ) : fix && fix.kind === "steps" ? (
       <Button size="sm" variant="secondary" onClick={() => setStepsOpen(o => !o)} aria-expanded={stepsOpen}>
         {fix.label}
