@@ -15,7 +15,7 @@ import api from "API/rpcMethods";
  * a box with a wrong clock can still subscribe.
  *
  * Deployment config (statically injected by Vite from REACT_APP_* env at build time):
- *   REACT_APP_PRIORITY_API_URL  base URL of the backend  (default https://priority.ava.do/api)
+ *   REACT_APP_PRIORITY_API_URL  base URL of the backend  (default https://priorityapi.ava.do/api)
  *
  * In mock mode (`yarn dev`, REACT_APP_MOCK_DATA=true) every call is served locally so the page
  * is fully usable without a backend or a box.
@@ -23,7 +23,7 @@ import api from "API/rpcMethods";
 
 const MOCK = Boolean(import.meta.env.REACT_APP_MOCK_DATA);
 const BASE_URL =
-  import.meta.env.REACT_APP_PRIORITY_API_URL || "https://priority.ava.do/api";
+  import.meta.env.REACT_APP_PRIORITY_API_URL || "https://priorityapi.ava.do/api";
 
 const client = axios.create({ baseURL: BASE_URL, timeout: 15000 });
 

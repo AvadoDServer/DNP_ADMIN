@@ -6,7 +6,7 @@ user accounts and no activation codes.
 
 Code: `build/src/src/pages/priority/` (`components/Priority.jsx`, `priorityApi.js`).
 Backend: the `avado-priority-support-backend` repository, served at
-`https://priority.ava.do/api` (override at build time with
+`https://priorityapi.ava.do/api` (override at build time with
 `REACT_APP_PRIORITY_API_URL`).
 
 ## Flow
