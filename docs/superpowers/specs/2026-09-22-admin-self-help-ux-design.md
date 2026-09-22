@@ -96,7 +96,7 @@ The dead `home` page is removed; `/` redirects to `/dashboard`. `activity` moves
 
 `runChecks(snapshot) → Finding[]` runs every rule, drops `null`s, sorts by severity then topic. A rule that throws is caught, logged and skipped, so one bad rule cannot blank Home.
 
-`useHealth()` builds the snapshot from redux selectors plus two async sources polled while the Admin is open: store updates (every 10 min) and Prometheus (every 60 s, only if `prometheus.avado.dappnode.eth` is installed and running). It returns `{ findings, verdict, loading, sources }`, where `sources` says which inputs were unavailable so the UI can say "Attestation checks need the monitoring package" rather than silently skipping.
+`useHealth()` builds the snapshot from redux selectors plus two async sources polled while the Admin is open: store updates (every 10 min) and Prometheus (every 60 s, only if `prometheus.avado.dappnode.eth` is installed and running). It returns `{ findings, allFindings, verdict, checkedAt, sources, updates, storePackages, refresh, dismiss }` (`findings` hides dismissed info findings, `allFindings` keeps them), where `sources` says which inputs were unavailable so the UI can say "Attestation checks need the monitoring package" rather than silently skipping.
 
 **Verdict:** any critical → "Action required"; any warning → "Needs attention"; else "All good".
 
