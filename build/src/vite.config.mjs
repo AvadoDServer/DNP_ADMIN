@@ -95,5 +95,11 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
       emptyOutDir: true,
     },
+    test: {
+      environment: "jsdom",
+      globals: true,
+      setupFiles: "./src/setupTests.js",
+      include: ["src/**/*.test.{js,jsx}"],
+    },
   };
 });
