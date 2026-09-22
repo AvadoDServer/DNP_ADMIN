@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# As PID 1, sh ignores SIGTERM unless told otherwise. Without this, every
+# update of this package waits the full docker stop timeout (180 s) before
+# the old container is killed.
+trap 'nginx -s quit 2>/dev/null; exit 0' TERM INT
+
 # start admin UI
 nginx -c /etc/nginx/nginx.conf
 
@@ -16,7 +21,9 @@ docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host 
 # restart bind if not running
 docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host  busybox  chroot /host /bin/bash -c "docker-compose -f /usr/src/dappnode/DNCORE/docker-compose-bind.yml up -d"
 
-sleep infinity
+# Backgrounded so the trap above can run while we wait
+sleep infinity &
+wait $!
 
 
 
