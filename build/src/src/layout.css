@@ -1,8 +1,8 @@
 /*
   TEXT STYLES
-  (font @import must precede all other statements per CSS spec / Vite)
+  Fonts (Inter, Sen, JetBrains Mono) are bundled via @fontsource imports in
+  index.jsx — no external Google Fonts request.
 */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 :root {
   /* Below this width the sidebar is an off-canvas drawer (see #sidebar.collapsed
