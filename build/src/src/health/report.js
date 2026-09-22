@@ -24,23 +24,33 @@ export function buildReport({ verdict, findings, packages, stats, params, chainD
   return lines.join("\n");
 }
 
+const ATTACH_LINE = "Please attach the diagnostics report you downloaded (Help → Download report).";
+
 export function mailtoReport(report, verdict, findings) {
   const subject = `AVADO support: ${verdict.label}`;
-  const summary = [
-    "Hi AVADO support,",
-    "",
-    "(Describe what you were doing and what went wrong.)",
-    "",
-    `Health: ${verdict.label}`,
-    ...findings.slice(0, 8).map(f => `- [${f.severity}] ${f.title}`),
-    "",
-    "Please attach the diagnostics report you downloaded (Help → Download report).",
-  ].join("\n");
-  let body = summary;
-  let url = `mailto:ziga@ava.do?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  while (url.length > 1800 && body.length > 200) {
-    body = body.slice(0, body.length - 100);
-    url = `mailto:ziga@ava.do?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  const buildUrl = shownFindings => {
+    const body = [
+      "Hi AVADO support,",
+      "",
+      "(Describe what you were doing and what went wrong.)",
+      "",
+      `Health: ${verdict.label}`,
+      ...shownFindings.map(f => `- [${f.severity}] ${f.title}`),
+      "",
+      ATTACH_LINE,
+    ].join("\n");
+    return `mailto:ziga@ava.do?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  let shown = findings.slice(0, 8);
+  let url = buildUrl(shown);
+  // Trim findings lines first (the least-severe of the ones shown, from the
+  // end) rather than blindly truncating the body text, so the "Please
+  // attach…" line — the actual point of this email — never gets cut off.
+  while (url.length > 1800 && shown.length > 0) {
+    shown = shown.slice(0, -1);
+    url = buildUrl(shown);
   }
   return url;
 }

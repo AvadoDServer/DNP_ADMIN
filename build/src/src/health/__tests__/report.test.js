@@ -41,4 +41,19 @@ describe("buildReport", () => {
     expect(body).toContain("Please attach the diagnostics report you downloaded (Help → Download report).");
     expect(body).not.toContain("is attached");
   });
+
+  it("when trimming for length, drops findings lines first — the attach line always survives", () => {
+    const manyLongFindings = Array.from({ length: 8 }, (_, i) => ({
+      id: `f${i}`,
+      severity: "warning",
+      title: `Finding number ${i}: `.padEnd(220, "x"),
+    }));
+    const url = mailtoReport(r, input.verdict, manyLongFindings);
+    expect(url.length).toBeLessThanOrEqual(1800);
+    const body = decodeURIComponent(url.split("&body=")[1]);
+    expect(body).toContain("Please attach the diagnostics report you downloaded (Help → Download report).");
+    // At least one finding line had to be dropped to fit under the budget.
+    const shownCount = manyLongFindings.filter(f => body.includes(f.title)).length;
+    expect(shownCount).toBeLessThan(manyLongFindings.length);
+  });
 });
