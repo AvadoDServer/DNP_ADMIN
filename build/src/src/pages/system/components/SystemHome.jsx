@@ -6,37 +6,16 @@ import { createStructuredSelector } from "reselect";
 import { confirmAlert } from "react-confirm-alert"; // Import
 import { title } from "../data";
 import * as a from "../actions";
+import { DISK_CLEANUP, SHUTDOWN } from "../signedCommands";
 // Modules
 import packages from "pages/packages";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 // Components
-import { PageHeader, SectionHeader } from "./SystemPresentation";
+import { PageHeader, SectionHeader, Dialog, confirmSignedCmd } from "./SystemPresentation";
 
 const PackageList = packages.components.PackageList;
-
-/**
- * A confirm dialog rendered via react-confirm-alert's customUI, restyled on the
- * design-system tokens. Behaviour (the confirmAlert calls / actions) is
- * unchanged — only presentation.
- */
-function Dialog({ heading, text, children }) {
-  return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[rgb(var(--bg-inset)/0.72)] backdrop-blur-sm" />
-      <div className="relative w-full max-w-md animate-rise rounded-xl border border-border bg-surface text-fg shadow-xl">
-        <div className="px-6 py-5">
-          <h2 className="text-lg font-semibold text-fg">{heading}</h2>
-          <p className="mt-2 text-sm text-fg-muted">{text}</p>
-        </div>
-        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Shown while the box reboots. react-confirm-alert renders outside the app's
@@ -115,27 +94,6 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
     });
   };
 
-  const confirmSignedCmd = (cmd, desc) => {
-    confirmAlert({
-      customUI: ({ onClose }) => (
-        <Dialog heading={desc.title} text={desc.text}>
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              runSignedCmd(cmd);
-              onClose();
-            }}
-          >
-            Start!
-          </Button>
-        </Dialog>
-      ),
-    });
-  };
-
   const maintenance = [
     {
       label: "Reboot my AVADO",
@@ -151,14 +109,12 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
       variant: "secondary",
       onClick: () =>
         confirmSignedCmd(
-          {
-            command: "docker image prune -a -f",
-            sig: "0x1d12a4062ccf7d95d2dc82776bd56558d195993b4a3ebc0f0b89476134e393cc1ac5fa627139dddb97568a7ac5feab3225ad0ceba27872501fa1baa8a5ec618d1b",
-          },
+          DISK_CLEANUP,
           {
             title: "Clean up disk",
             text: "Are you sure you want to perform a disk cleanup?",
-          }
+          },
+          runSignedCmd
         ),
     },
     {
@@ -168,14 +124,12 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
       variant: "danger",
       onClick: () =>
         confirmSignedCmd(
-          {
-            command: "shutdown",
-            sig: "0x8d40739e777533e8c85eed161640dc3307277a0c4a827abe13139cf2b777b52006af67e7c65bd4273fd2b2c5a60d907b38f5420c4eaff5f4eccc0c05cb6918e41b",
-          },
+          SHUTDOWN,
           {
             title: "Shut down your AVADO",
             text: "Are you sure you want to shut down your AVADO?",
-          }
+          },
+          runSignedCmd
         ),
     },
   ];
