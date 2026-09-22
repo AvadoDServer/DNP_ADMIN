@@ -13,6 +13,7 @@ import { toLowercase } from "utils/strings";
 import confirmRemovePackage from "../confirmRemovePackage";
 import confirmRestartPackage from "../confirmRestartPackage";
 import confirmResetPackage from "../confirmResetPackage";
+import confirmStopPackage from "../confirmStopPackage";
 import { getClient, ROLES } from "health/clients";
 import { appTitle } from "health/rules/apps";
 
@@ -28,6 +29,7 @@ function PackageControls({
   showResync = false,
   showReset = true,
   showRemove = true,
+  isCore = false,
   history,
 }) {
   function confirmResyncPackage(id) {
@@ -40,14 +42,21 @@ function PackageControls({
   }
 
   const state = toLowercase(dnp.state); // toLowercase always returns a string
+  const running = state === "running";
 
   let actions = [];
+  // Pausing stops a running container immediately — for a core (system)
+  // service that's never appropriate here (manage it from System instead),
+  // and for anything else it needs a confirmation first, same as the app
+  // page header's Stop action. Starting isn't destructive, so it stays a
+  // single click and stays available even for a core app.
   showToggle &&
+    !(isCore && running) &&
     actions.push({
-      name:
-        state === "running" ? "Pause" : state === "exited" ? "Start" : "Toggle",
+      name: running ? "Pause" : state === "exited" ? "Start" : "Toggle",
       text: "Toggle the state of the package from running to paused",
-      action: () => togglePackage(dnp.name),
+      action: () =>
+        running ? confirmStopPackage(dnp.name, togglePackage, appTitle(dnp)) : togglePackage(dnp.name),
       availableForCore: false,
       type: "secondary",
     });
@@ -145,3 +154,4 @@ const mapDispatchToProps = {
 export default withRouter(
   connect(mapStateToProps, mapDispatchToProps)(PackageControls)
 );
+export { PackageControls };

@@ -127,11 +127,18 @@ function OverflowMenu({ label, items }) {
   );
 }
 
-export function AppPage({ dnp, id, loading, history, location, isCore = false }) {
+export function AppPage({ dnp, id, loading, history, location, isCore: isCoreProp = false }) {
   const { theme } = useTheme();
   const { findings, updates } = useHealth();
   const dispatch = useDispatch();
   if (!dnp) return loading ? <LoadingState label="Loading app…" /> : <NoDnpInstalled id={id} moduleName="packages" />;
+
+  // `isCore` from the route is only true under /system/:id (see
+  // pages/system/components/SystemRoot.jsx); a core app reached via
+  // /packages/<core-id> instead (e.g. the appRestarting finding's "Open the
+  // logs" link) would otherwise be treated as an ordinary app and offered
+  // Stop/Reset/Remove. Fall back to the package's own isCore either way.
+  const isCore = isCoreProp || Boolean(dnp.isCore);
 
   const url = wizardUrl(dnp, theme);
   const tabs = tabsFor(Boolean(url));

@@ -84,6 +84,12 @@ describe("app page header actions", () => {
     expect(screen.queryByRole("button", { name: /more actions/i })).not.toBeInTheDocument();
   });
 
+  it("treats a package as core when dnp.isCore is true, even though the isCore route prop is false (e.g. reached via /packages/<core-id>, not /system/<core-id>)", () => {
+    const coreDnp = { ...dnp, isCore: true };
+    render(<AppPage dnp={coreDnp} {...baseProps} isCore={false} />);
+    expect(screen.queryByRole("button", { name: /more actions/i })).not.toBeInTheDocument();
+  });
+
   it("Escape closes the overflow menu and returns focus to its trigger", () => {
     render(<AppPage dnp={dnp} {...baseProps} isCore={false} />);
     const trigger = screen.getByRole("button", { name: /more actions/i });

@@ -14,7 +14,7 @@ export default function AppOverview({ dnp, isCore }) {
           <ul className="divide-y divide-border pl-0">{mine.map(f => <FindingRow key={f.id} finding={f} />)}</ul>
         </section>
       )}
-      <Controls dnp={dnp} showReset={!isCore} showRemove={!isCore} showResync={false} />
+      <Controls dnp={dnp} isCore={isCore} showReset={!isCore} showRemove={!isCore} showResync={false} />
       <Details dnp={dnp} />
     </div>
   );
