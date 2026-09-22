@@ -11,9 +11,7 @@ export function CategoryHeader({ title, count }) {
   return (
     <div className="mb-4 mt-8 flex items-end justify-between gap-3 first:mt-0">
       <div className="flex items-center gap-2.5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-fg-muted">
-          {title}
-        </h2>
+        <h2 className="text-sm font-bold text-fg-muted">{title}</h2>
         {typeof count === "number" && count > 0 && (
           <span className="rounded-full bg-fg/[0.06] px-2 py-0.5 text-xs font-semibold text-fg-subtle">
             {count}

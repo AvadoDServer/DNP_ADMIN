@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
+import { withRouter, Link } from "react-router-dom";
 import { compose } from "redux";
 import { createStructuredSelector } from "reselect";
 // This page
@@ -11,6 +11,7 @@ import isIpfsHash from "utils/isIpfsHash";
 import isDnpDomain from "utils/isDnpDomain";
 import { correctPackageName } from "../utils";
 import filterDirectory from "../helpers/filterDirectory";
+import orderCategoriesByFilter from "../helpers/orderCategoriesByFilter";
 import { rootPath } from "../data";
 import NoPackageFound from "./NoPackageFound";
 import TypeFilter from "./TypeFilter";
@@ -43,6 +44,7 @@ function InstallerHome({
     loading,
     error,
     history,
+    location,
     // Actions
     fetchPackageData,
     fetchPackageDataFromQuery,
@@ -189,18 +191,47 @@ function InstallerHome({
             );
         }
 
-        return categories.map((cat, i) => {
-            const subdir = displayManifest.packages.filter((p) => {
-                return p.manifest.avadocategory === cat.tag;
-            });
-            if (!subdir.length) return null;
-            return (
-                <div key={i}>
-                    <CategoryHeader title={cat.description} count={subdir.length} />
-                    <ManifestStore directory={subdir} openDnp={openDnp} />
-                </div>
-            );
-        });
+        const categoryTag = new URLSearchParams(location.search).get("category");
+        const { ordered, highlighted } = orderCategoriesByFilter(
+            categories,
+            categoryTag
+        );
+
+        return (
+            <>
+                {highlighted && (
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-accent/25 bg-accent/5 px-4 py-2.5 text-sm">
+                        <span className="text-fg-muted">
+                            Showing{" "}
+                            <span className="font-semibold text-fg">
+                                {highlighted.description}
+                            </span>
+                        </span>
+                        <Link
+                            to={rootPath}
+                            className="font-medium text-accent hover:underline"
+                        >
+                            Show all
+                        </Link>
+                    </div>
+                )}
+                {ordered.map((cat, i) => {
+                    const subdir = displayManifest.packages.filter((p) => {
+                        return p.manifest.avadocategory === cat.tag;
+                    });
+                    if (!subdir.length) return null;
+                    return (
+                        <div key={cat.tag || i}>
+                            <CategoryHeader
+                                title={cat.description}
+                                count={subdir.length}
+                            />
+                            <ManifestStore directory={subdir} openDnp={openDnp} />
+                        </div>
+                    );
+                })}
+            </>
+        );
     }
 
     return (
@@ -253,6 +284,7 @@ InstallerHome.propTypes = {
     selectedTypes: PropTypes.object.isRequired,
     inputValue: PropTypes.string.isRequired,
     history: PropTypes.object.isRequired,
+    location: PropTypes.object.isRequired,
     mainnet: PropTypes.object.isRequired,
     loading: PropTypes.bool.isRequired,
     error: PropTypes.string.isRequired,
