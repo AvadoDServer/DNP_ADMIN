@@ -14,8 +14,7 @@ import { runSignedCmd } from "pages/system/actions";
 import { DISK_CLEANUP } from "pages/system/signedCommands";
 import { cn } from "components/ui";
 import { buildCommands, searchCommands } from "./commands";
-
-export const OPEN_PALETTE_EVENT = "avado:open-palette";
+import { OPEN_PALETTE_EVENT } from "./constants";
 
 function isTypingTarget(el) {
   if (!el) return false;
@@ -41,18 +40,34 @@ function filterNav(items, packages) {
   }, []);
 }
 
-/** Groups an already-ranked command list, preserving first-seen group order and each group's internal ranking. */
-function groupResults(results) {
+/**
+ * Groups an already-ranked command list into `{ group, items: [{ command, index }] }`
+ * buckets in one pass — group order is first-seen order among the results,
+ * items keep their relative rank within a group. Also returns the equivalent
+ * flat, visually-ordered list (`flat`), since ArrowUp/ArrowDown and
+ * `aria-activedescendant` need indices that match top-to-bottom DOM order,
+ * not raw search-rank order.
+ */
+function groupResults(ranked) {
   const order = [];
   const byGroup = new Map();
-  for (const c of results) {
-    if (!byGroup.has(c.group)) {
-      byGroup.set(c.group, []);
-      order.push(c.group);
+  for (const command of ranked) {
+    if (!byGroup.has(command.group)) {
+      byGroup.set(command.group, []);
+      order.push(command.group);
     }
-    byGroup.get(c.group).push(c);
+    byGroup.get(command.group).push(command);
   }
-  return order.flatMap(group => byGroup.get(group));
+  const flat = [];
+  const groups = order.map(group => ({
+    group,
+    items: byGroup.get(group).map(command => {
+      const index = flat.length;
+      flat.push(command);
+      return { command, index };
+    }),
+  }));
+  return { groups, flat };
 }
 
 /**
@@ -81,20 +96,10 @@ export default function CommandPalette() {
     () => buildCommands({ nav, packages, storePackages, topics: TOPICS }),
     [nav, packages, storePackages]
   );
-  const results = useMemo(() => groupResults(searchCommands(commands, query)), [commands, query]);
-
-  const groupedForRender = useMemo(() => {
-    const order = [];
-    const byGroup = new Map();
-    results.forEach((command, index) => {
-      if (!byGroup.has(command.group)) {
-        byGroup.set(command.group, []);
-        order.push(command.group);
-      }
-      byGroup.get(command.group).push({ command, index });
-    });
-    return order.map(group => ({ group, items: byGroup.get(group) }));
-  }, [results]);
+  const { groups: groupedForRender, flat: results } = useMemo(
+    () => groupResults(searchCommands(commands, query)),
+    [commands, query]
+  );
 
   const close = useCallback(() => {
     setOpen(false);
@@ -117,6 +122,16 @@ export default function CommandPalette() {
     if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
 
+  // Lock page scroll while the palette is open, same as components/ui/Modal.
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
   // Reset the highlighted row whenever the visible result set changes.
   useEffect(() => {
     setActiveIndex(0);
@@ -133,7 +148,10 @@ export default function CommandPalette() {
   // what currently has focus.
   useEffect(() => {
     function onKeyDown(e) {
-      const isToggleCombo = (e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K");
+      // Ctrl/Cmd+K only — no Shift/Alt. Without the Shift/Alt guard this also
+      // matched Ctrl+Shift+K (Firefox's web console) and swallowed it.
+      const isToggleCombo =
+        (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "k";
       if (isToggleCombo) {
         e.preventDefault();
         if (open) close();

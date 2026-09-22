@@ -10,7 +10,7 @@ import { toggleSideNav } from "./SideBar";
 import MenuBurger from "Icons/MenuBurger";
 import { FiSearch } from "react-icons/fi";
 // Palette
-import { OPEN_PALETTE_EVENT } from "components/palette/CommandPalette";
+import { OPEN_PALETTE_EVENT } from "components/palette/constants";
 // Styles
 import "./notifications.css";
 import "./topbar.css";

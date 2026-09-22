@@ -83,6 +83,17 @@ describe("CommandPalette", () => {
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
+  it("Ctrl+Shift+K does not open the palette, and the event is left unprevented (Firefox's web console)", () => {
+    renderPalette();
+
+    // fireEvent returns the DOM dispatchEvent() result: false only if some
+    // handler called preventDefault() on this (cancelable) keydown.
+    const notPrevented = fireEvent.keyDown(document, { key: "K", ctrlKey: true, shiftKey: true });
+
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(notPrevented).toBe(true);
+  });
+
   it("Escape closes the palette and returns focus to the opener", () => {
     renderPalette();
     const opener = screen.getByText("opener");
