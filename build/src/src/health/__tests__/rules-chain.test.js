@@ -21,6 +21,26 @@ describe("chain rules", () => {
     expect(headBehind(snapshot({ packages: [NIMBUS], metrics: null }))).toEqual([]);
   });
 
+  it("suppresses head-behind when the matching chain in chainData reports syncing", () => {
+    const behind = snapshot({
+      now,
+      packages: [NIMBUS],
+      metrics: metrics({ headSlot: [{ client: "nimbus", network: "mainnet", value: 15273294 - 65 }] }),
+      chainData: [{ name: "Nimbus", syncing: true, message: "Syncing 42%" }],
+    });
+    expect(headBehind(behind)).toEqual([]);
+  });
+
+  it("still flags head-behind when chainData has no matching syncing entry", () => {
+    const behind = snapshot({
+      now,
+      packages: [NIMBUS],
+      metrics: metrics({ headSlot: [{ client: "nimbus", network: "mainnet", value: 15273294 - 65 }] }),
+      chainData: [{ name: "Nimbus", syncing: false }, { name: "Geth", syncing: true }],
+    });
+    expect(headBehind(behind)).toHaveLength(1);
+  });
+
   it("flags fewer than 10 peers", () => {
     const s = snapshot({ packages: [NIMBUS], metrics: metrics({ peers: [{ client: "nimbus", network: "mainnet", value: 4 }] }) });
     expect(lowPeers(s)[0]).toMatchObject({ severity: "warning", title: "Nimbus Consensus Client has only 4 peers" });

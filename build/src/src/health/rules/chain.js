@@ -9,6 +9,18 @@ function matchSamples(packages, samples) {
     .filter(x => x.match);
 }
 
+// chainData entries (services/chainData) aren't keyed by DNP name — just a
+// free-form `name` (e.g. "Nimbus"), which in practice is the client's
+// display label. Match case-insensitively against the client's label or its
+// Prometheus short name, rather than requiring an exact string match.
+function chainEntryMatchesClient(chainName, client) {
+  if (!chainName || !client) return false;
+  const name = String(chainName).toLowerCase();
+  const label = String(client.label || "").toLowerCase();
+  const promClient = String(client.promClient || "").toLowerCase();
+  return name === label || (promClient && name.includes(promClient));
+}
+
 export function chainSyncing({ chainData }) {
   return (chainData || [])
     .filter(c => c && c.syncing)
@@ -25,13 +37,17 @@ export function chainSyncing({ chainData }) {
     });
 }
 
-export function headBehind({ packages, metrics, now }) {
+export function headBehind({ packages, metrics, chainData, now }) {
   if (!metrics) return [];
   return matchSamples(packages, metrics.headSlot)
     .map(({ s, match }) => {
       const wall = currentSlot(s.network, now);
       const n = NETWORKS[s.network];
       if (wall === null || wall - s.value <= 2 * n.slotsPerEpoch) return null;
+      // A client that chainData already reports as syncing is expected to
+      // be behind the wall-clock head — that's normal catch-up, not a
+      // problem, and chainSyncing already surfaces it as its own info finding.
+      if ((chainData || []).some(c => c && c.syncing && chainEntryMatchesClient(c.name, match.client))) return null;
       return {
         id: `head-behind:${match.pkg.name}`,
         severity: "warning",
