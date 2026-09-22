@@ -29,7 +29,14 @@ export default defineConfig(({ mode }) => {
   }
 
   const processEnvDefine = {
-    "process.env.NODE_ENV": JSON.stringify(mode === "development" ? "development" : "production"),
+    // Under `vitest run` Vite's mode is "test", not "development", which would
+    // otherwise define NODE_ENV as "production" and load React's production
+    // build — whose act() deliberately throws for @testing-library/react.
+    // process.env.VITEST is set by Vitest itself (same pattern used above for
+    // the nodePolyfills `fs` exclude).
+    "process.env.NODE_ENV": JSON.stringify(
+      mode === "development" || process.env.VITEST ? "development" : "production"
+    ),
     "process.env.PUBLIC_URL": JSON.stringify(""),
   };
   for (const [key, value] of Object.entries(mergedEnv)) {

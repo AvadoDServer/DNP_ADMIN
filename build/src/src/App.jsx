@@ -16,6 +16,7 @@ import pages from "./pages";
 // Redux
 import { getConnectionStatus } from "services/connectionStatus/selectors";
 import { ToastContainer } from "react-toastify";
+import { HealthProvider } from "health/HealthProvider";
 
 if (typeof pages !== "object") throw Error("pages must be an object");
 
@@ -30,33 +31,35 @@ class App extends React.Component {
 
     if (isOpen) {
       return (
-        <div className="body">
-          {/* SideNav expands on big screens, while content-wrapper moves left */}
-          <SideBar />
-          <TopBar />
-          <div id="main">
-            {/* <ErrorBoundary>
-              <NotificationsMain />
-            </ErrorBoundary> */}
+        <HealthProvider>
+          <div className="body">
+            {/* SideNav expands on big screens, while content-wrapper moves left */}
+            <SideBar />
+            <TopBar />
+            <div id="main">
+              {/* <ErrorBoundary>
+                <NotificationsMain />
+              </ErrorBoundary> */}
 
-            {Object.values(pages).map(({ RootComponent, rootPath }) => (
-              <Route
-                key={rootPath}
-                path={rootPath}
-                exact={rootPath === "/"}
-                render={props => (
-                  <ErrorBoundary>
-                    <RootComponent {...props} />
-                  </ErrorBoundary>
-                )}
-              />
-            ))}
+              {Object.values(pages).map(({ RootComponent, rootPath }) => (
+                <Route
+                  key={rootPath}
+                  path={rootPath}
+                  exact={rootPath === "/"}
+                  render={props => (
+                    <ErrorBoundary>
+                      <RootComponent {...props} />
+                    </ErrorBoundary>
+                  )}
+                />
+              ))}
+            </div>
+
+            {/* Place here non-page components */}
+            <ToastContainer />
+            <ScrollToTop />
           </div>
-
-          {/* Place here non-page components */}
-          <ToastContainer />
-          <ScrollToTop />
-        </div>
+        </HealthProvider>
       );
     } else if (isNotAdmin) {
       return <NonAdmin />;
