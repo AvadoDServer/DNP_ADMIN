@@ -6,7 +6,7 @@ import "./toastStyle.css";
 const errorElement = message => (
   <div>
     {message}
-    <NavLink to={"/activity"}>
+    <NavLink to={"/system/history"}>
       <button className="btn btn-danger ml-2 mr-2" type="button">
         Show details
       </button>

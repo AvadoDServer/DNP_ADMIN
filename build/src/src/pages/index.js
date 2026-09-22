@@ -1,4 +1,3 @@
-import activity from "./activity";
 import dashboard from "./dashboard";
 import devices from "./devices";
 import home from "./home";
@@ -10,7 +9,6 @@ import system from "./system";
 import troubleshoot from "./troubleshoot";
 
 export default {
-  activity,
   dashboard,
   devices,
   home,
