@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 import semver from "semver";
 // UI kit
 import Card from "components/ui/Card";
@@ -15,6 +15,7 @@ import { rootPath as packagesRootPath } from "pages/packages/data";
  * presentation is modernized onto the design system.
  */
 function ManifestStore({ directory, openDnp }) {
+  const history = useHistory();
   const visible = directory.filter((item) => {
     if (!item || !item.manifest || !item.manifest.hidden === true) return true;
     return false;
@@ -34,6 +35,15 @@ function ManifestStore({ directory, openDnp }) {
           semver.valid(p.installedVersion) &&
           semver.gt(version, p.installedVersion);
         const pkg = { name, manifest: p.manifest };
+        // Installed, up-to-date entries have nowhere to "install" or "update"
+        // to — the card (and its button) should go straight to the app's
+        // own page instead of the store's install/detail flow.
+        const upToDate = installed && !hasUpdate;
+        const packagePath = `${packagesRootPath}/${name}`;
+        const open = () => {
+          if (upToDate) history.push(packagePath);
+          else openDnp(p.manifesthash);
+        };
 
         return (
           <Card
@@ -42,11 +52,11 @@ function ManifestStore({ directory, openDnp }) {
             padding="md"
             role="button"
             tabIndex={0}
-            onClick={() => openDnp(p.manifesthash)}
+            onClick={open}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                openDnp(p.manifesthash);
+                open();
               }
             }}
             className="group flex flex-col gap-3"
@@ -84,10 +94,10 @@ function ManifestStore({ directory, openDnp }) {
               </div>
             )}
 
-            {installed && !hasUpdate ? (
+            {upToDate ? (
               <Button
                 as={Link}
-                to={`${packagesRootPath}/${name}`}
+                to={packagePath}
                 variant="secondary"
                 size="sm"
                 pill
@@ -104,7 +114,7 @@ function ManifestStore({ directory, openDnp }) {
                 className="mt-auto w-full group-hover:border-accent/60 group-hover:text-accent"
                 onClick={(e) => {
                   e.stopPropagation();
-                  openDnp(p.manifesthash);
+                  open();
                 }}
               >
                 {hasUpdate ? `Update to v${version}` : "Install"}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { withRouter, Link } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import { compose } from "redux";
 import { createStructuredSelector } from "reselect";
 // This page
@@ -19,6 +19,7 @@ import ManifestStore from "./ManifestStore";
 import PackageStore from "./PackageStore";
 import {
     CategoryHeader,
+    CategoryFilterBanner,
     StoreSkeleton,
     StoreEmpty
 } from "./StorePresentation";
@@ -199,22 +200,7 @@ function InstallerHome({
 
         return (
             <>
-                {highlighted && (
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-accent/25 bg-accent/5 px-4 py-2.5 text-sm">
-                        <span className="text-fg-muted">
-                            Showing{" "}
-                            <span className="font-semibold text-fg">
-                                {highlighted.description}
-                            </span>
-                        </span>
-                        <Link
-                            to={rootPath}
-                            className="font-medium text-accent hover:underline"
-                        >
-                            Show all
-                        </Link>
-                    </div>
-                )}
+                <CategoryFilterBanner category={highlighted} onShowAllTo={rootPath} />
                 {ordered.map((cat, i) => {
                     const subdir = displayManifest.packages.filter((p) => {
                         return p.manifest.avadocategory === cat.tag;

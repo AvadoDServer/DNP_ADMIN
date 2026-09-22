@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import Card from "components/ui/Card";
 import Skeleton from "components/ui/Skeleton";
 
@@ -18,6 +19,28 @@ export function CategoryHeader({ title, count }) {
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Banner shown above the store when `?category=<tag>` highlights one
+ * category (see `orderCategoriesByFilter`). `category` is the matching
+ * `{tag, description, weight}` entry, or falsy when the filter didn't match
+ * anything — in which case nothing is rendered. `onShowAllTo` is the path
+ * the "Show all" link clears the query back to.
+ */
+export function CategoryFilterBanner({ category, onShowAllTo }) {
+  if (!category) return null;
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-accent/25 bg-accent/5 px-4 py-2.5 text-sm">
+      <span className="text-fg-muted">
+        Showing{" "}
+        <span className="font-semibold text-fg">{category.description}</span>
+      </span>
+      <Link to={onShowAllTo} className="font-medium text-accent hover:underline">
+        Show all
+      </Link>
     </div>
   );
 }
