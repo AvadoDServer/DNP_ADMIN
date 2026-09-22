@@ -17,8 +17,17 @@ export function appStatus(pkg, { findings = [], updates = {} } = {}) {
   return base;
 }
 
+// First-sentence match without a lookbehind (`(?<=\.)`), which Safari < 16.4
+// does not support and throws a SyntaxError on. `(?=\s|$)` (a lookahead, not
+// a lookbehind) is fine everywhere and gives the same result: everything up
+// to and including the first period that is followed by whitespace or the
+// end of the string.
+const FIRST_SENTENCE = /^.*?\.(?=\s|$)/;
+
 export function appDescription(pkg) {
   const m = (pkg && pkg.manifest) || {};
-  const text = (m.shortDescription || (m.description || "").split(/(?<=\.)\s/)[0] || "").trim();
+  const description = m.description || "";
+  const firstSentence = description.match(FIRST_SENTENCE);
+  const text = (m.shortDescription || (firstSentence ? firstSentence[0] : description) || "").trim();
   return text.length > 90 ? text.slice(0, 87).trimEnd() + "…" : text;
 }

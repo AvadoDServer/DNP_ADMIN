@@ -24,4 +24,9 @@ describe("appDescription", () => {
     expect(appDescription({ manifest: { description: "Grafana dashboards for your AVADO. Installing it also installs Prometheus." } })).toBe("Grafana dashboards for your AVADO.");
     expect(appDescription({})).toBe("");
   });
+
+  it("returns the whole description unchanged when it has no sentence-ending period", () => {
+    expect(appDescription({ manifest: { description: "Grafana dashboards for your AVADO" } })).toBe("Grafana dashboards for your AVADO");
+    expect(appDescription({ manifest: { description: "v1.2.3 client image" } })).toBe("v1.2.3 client image");
+  });
 });
