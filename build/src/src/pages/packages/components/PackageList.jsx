@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
+import React from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 import { createStructuredSelector } from "reselect";
+import PropTypes from "prop-types";
 import * as s from "../selectors";
 import * as a from "../actions";
-import { connect } from "react-redux";
-import { NavLink } from "react-router-dom";
 // Components
 import NoPackagesYet from "./NoPackagesYet";
-import StateBadge from "./PackageViews/StateBadge";
 import { LoadingState, EmptyState } from "./PackagePresentation";
 // UI kit
 import Card from "components/ui/Card";
-import { Table, THead, TBody, TR, TH, TD } from "components/ui/Table";
-import { cn } from "components/ui/cn";
+import AppAvatar from "components/ui/AppAvatar";
+import StatusPill from "components/ui/StatusPill";
 import Switch from "components/Switch";
-import axios from "axios";
+import { openUrl } from "components/apps/AppCard";
+// Health / status helpers
+import { useHealth } from "health/HealthProvider";
+import { appStatus, appDescription } from "components/appStatus";
+import { appTitle } from "health/rules/apps";
 // Selectors
 import {
     getIsLoading,
@@ -23,9 +26,19 @@ import {
 // Utils
 import confirmRestartPackage from "./confirmRestartPackage";
 // Icons
-import { MdRefresh, MdOpenInNew, MdTune } from "react-icons/md";
+import { MdRefresh } from "react-icons/md";
 
 const xnor = (a, b) => Boolean(a) === Boolean(b);
+
+// Reads the package's own autoupdate flag (not the manifest's). Packages
+// without the flag default to on, matching the rest of the app (e.g. the
+// autoupdateOff health rule only treats an explicit `false` as "off").
+export const getAutoUpdateState = dnp => Boolean(dnp) && dnp.autoupdate !== false;
+
+const iconBtn =
+    "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning focus:outline-none focus-visible:shadow-focus";
+
+const linkCls = "text-sm font-medium text-accent transition-colors hover:underline";
 
 const PackagesList = ({
     dnps = [],
@@ -38,50 +51,7 @@ const PackagesList = ({
     showRestart = true,
     showOpen = true,
 }) => {
-
-    const [storeManifest, setStoreManifest] = useState();
-    const [buttonState, setButtonState] = useState({});
-
-    useEffect(() => {
-        axios
-            .get(
-                `https://bo.ava.do/value/store`
-            )
-            .then(res => {
-                const storeRes = JSON.parse(res.data);
-                const storeHash = storeRes.hash;
-                axios
-                    .get(
-                        `http://ipfs.my.ava.do:8080/ipfs/${storeHash}`
-                    )
-                    .then(res => {
-                        const storeManifest = res.data;
-                        setStoreManifest(res.data);
-                    })
-                    .catch(error => {
-                        //debugger;
-                    });
-            }).catch(error => {
-                //debugger;
-            });
-
-    }, []);
-
-
-    // we wrap these changes in a local state - so the button presses are instantanious
-    const setAutoUpdateWrapper = (name, autoupdate) => {
-        const state = Object.assign({}, buttonState);
-        state[name] = autoupdate;
-        setButtonState(state);
-        setAutoUpdate(name, autoupdate);
-    }
-
-    // if a local cached state exists - use that.
-    // when a package reload is done - this will be overwritten
-    const getAutoUpdateState = (dnp) => {
-        if (!dnp) return false;
-        return buttonState[dnp.name] === undefined ? dnp.autoupdate : buttonState[dnp.name]
-    }
+    const { findings, updates } = useHealth();
 
     if (loading) return <LoadingState label="Loading installed DApps…" />;
     if (error)
@@ -100,113 +70,91 @@ const PackagesList = ({
             </EmptyState>
         );
 
-    //   const filteredDnps = dnps; //.filter(dnp => xnor(coreDnps, dnp.isCore));
-    const filteredDnps = dnps.filter(dnp => xnor(coreDnps, dnp.isCore)).map((p) => {
-        p.title = p.manifest && p.manifest.title ? p.manifest.title : p.name;
-        if (!storeManifest) return p;
-        const manifestPackage = storeManifest.packages.find((mp) => {
-            return mp.manifest.name === p.name
-        })
-        if (manifestPackage) p.title = manifestPackage.manifest.title || p.name;
-        return p;
-    }).sort((a, b) => a.title.localeCompare(b.title));
+    // The link base must be lower-case: moduleName ("Packages" / "System")
+    // is a display label, but the routes are /packages and /system.
+    const base = `/${(moduleName || "").toLowerCase()}`;
+
+    const filteredDnps = dnps
+        .filter(dnp => xnor(coreDnps, dnp.isCore))
+        .sort((x, y) => appTitle(x).localeCompare(appTitle(y)));
 
     if (!filteredDnps.length) return <NoPackagesYet />;
 
-    const iconBtn =
-        "inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-accent focus:outline-none focus-visible:shadow-focus";
-
     return (
-        <Card padding="none" className="overflow-hidden">
-            <Table>
-                <THead>
-                    <TR className="border-b border-border">
-                        <TH>Status</TH>
-                        <TH>Name</TH>
-                        {showOpen && <TH align="center">Open</TH>}
-                        <TH align="center">Manage</TH>
-                        {showRestart && <TH align="center">Restart</TH>}
-                        <TH align="center">Auto-update</TH>
-                    </TR>
-                </THead>
-                <TBody>
-                    {filteredDnps.map(({ version, id, name, title, state, manifest }) => {
-                        const external =
-                            manifest && manifest.ui && manifest.ui.OnboardingWizard && manifest.ui.OnboardingWizard.external;
-                        const openUrl = external ? manifest.ui.OnboardingWizard.url : null;
-                        const label = `${title || name} (${version})`;
+        <section>
+            <Card padding="none" className="overflow-hidden">
+                <ul className="divide-y divide-border">
+                    {filteredDnps.map(dnp => {
+                        const { name } = dnp;
+                        const title = appTitle(dnp);
+                        const description = appDescription(dnp);
+                        const status = appStatus(dnp, { findings, updates });
+                        const external = showOpen ? openUrl(dnp) : null;
+                        const autoUpdateOn = getAutoUpdateState(dnp);
+
                         return (
-                            <TR key={name}>
-                                <TD>
-                                    <StateBadge state={state} />
-                                </TD>
-                                <TD>
-                                    {external ? (
-                                        <a
-                                            href={openUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="font-medium capitalize text-fg transition-colors hover:text-accent"
-                                            title={label}
-                                        >
-                                            {label}
-                                        </a>
-                                    ) : (
-                                        <NavLink
-                                            to={`/${moduleName}/${name}`}
-                                            className="font-medium capitalize text-fg transition-colors hover:text-accent"
-                                            title={label}
-                                        >
-                                            {label}
-                                        </NavLink>
-                                    )}
-                                </TD>
-                                {showOpen && (
-                                    <TD align="center">
-                                        {external ? (
-                                            <a href={openUrl} target="_blank" rel="noopener noreferrer" className={iconBtn} aria-label={`Open ${title || name}`}>
-                                                <MdOpenInNew />
+                            <li
+                                key={name}
+                                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                            >
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <AppAvatar pkg={dnp} size={32} />
+                                    <div className="min-w-0">
+                                        <div className="break-words font-medium text-fg">{title}</div>
+                                        {description && (
+                                            <p className="mb-0 break-words text-sm text-fg-muted">{description}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-3 sm:flex-shrink-0">
+                                    <StatusPill status={status} />
+
+                                    {showOpen && (
+                                        external ? (
+                                            <a href={external} target="_blank" rel="noopener noreferrer" className={linkCls}>
+                                                Open
                                             </a>
                                         ) : (
-                                            <NavLink to={`/${moduleName}/${name}`} className={iconBtn} aria-label={`Open ${title || name}`}>
-                                                <MdOpenInNew />
-                                            </NavLink>
-                                        )}
-                                    </TD>
-                                )}
-                                <TD align="center">
-                                    <NavLink to={`/${moduleName}/${name}/detail`} className={iconBtn} aria-label={`Manage ${title || name}`}>
-                                        <MdTune />
-                                    </NavLink>
-                                </TD>
-                                {showRestart && (
-                                    <TD align="center">
+                                            <Link to={`${base}/${name}?tab=setup`} className={linkCls}>
+                                                Open
+                                            </Link>
+                                        )
+                                    )}
+
+                                    <Link to={`${base}/${name}`} className="text-sm font-medium text-fg-muted transition-colors hover:text-fg">
+                                        Manage
+                                    </Link>
+
+                                    {showRestart && (
                                         <button
                                             type="button"
-                                            className={cn(iconBtn, "hover:text-warning")}
-                                            aria-label={`Restart ${title || name}`}
+                                            className={iconBtn}
+                                            aria-label={`Restart ${title}`}
                                             onClick={() => confirmRestartPackage(name, restartPackage)}
                                         >
                                             <MdRefresh />
                                         </button>
-                                    </TD>
-                                )}
-                                <TD align="center">
-                                    <div className="inline-flex">
+                                    )}
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="hidden text-xs text-fg-muted sm:inline" aria-hidden="true">
+                                            Auto-update
+                                        </span>
                                         <Switch
-                                            checked={getAutoUpdateState(manifest)}
-                                            onToggle={() => {
-                                                setAutoUpdateWrapper(name, !getAutoUpdateState(manifest));
-                                            }}
+                                            id={`autoupdate-${name}`}
+                                            checked={autoUpdateOn}
+                                            onToggle={() => setAutoUpdate(name, !autoUpdateOn)}
+                                            aria-label={`Auto-update for ${title}`}
                                         />
                                     </div>
-                                </TD>
-                            </TR>
+                                </div>
+                            </li>
                         );
                     })}
-                </TBody>
-            </Table>
-        </Card>
+                </ul>
+            </Card>
+        </section>
     );
 };
 

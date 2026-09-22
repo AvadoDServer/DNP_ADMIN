@@ -2,6 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import DataList from "./DataList";
 import Soft from "./Soft";
+import humanFileSize from "utils/humanFileSize";
 
 function Vols({ dnp }) {
   const { volumes = [] } = dnp;
@@ -20,7 +21,10 @@ function Vols({ dnp }) {
         // - /etc/hostname: - (bind)
         .map(({ name, path, size, type }) => ({
           name: name || path || "unknown",
-          size: size || (type === "bind" ? "(bind)" : "unknown")
+          size:
+            size !== undefined && size !== null && size !== ""
+              ? humanFileSize(size)
+              : type === "bind" ? "(bind)" : "unknown"
         }))
         .map(({ name, size }) => (
           <>
