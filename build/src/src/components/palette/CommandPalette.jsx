@@ -249,7 +249,7 @@ export default function CommandPalette() {
               const headingId = `${listboxId}-heading-${group}`;
               return (
                 <div role="group" aria-labelledby={headingId} key={group}>
-                  <div id={headingId} className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                  <div id={headingId} className="px-4 pb-1 pt-3 text-xs font-semibold tracking-wide text-fg-subtle">
                     {group}
                   </div>
                   {items.map(({ command, index }) => (

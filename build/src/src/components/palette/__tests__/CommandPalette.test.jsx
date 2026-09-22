@@ -94,6 +94,15 @@ describe("CommandPalette", () => {
     expect(notPrevented).toBe(true);
   });
 
+  it("group headings render in sentence case, not visually uppercased", () => {
+    renderPalette();
+    ctrlK();
+
+    const heading = screen.getByText("Pages");
+    expect(heading).toBeInTheDocument();
+    expect(heading.className).not.toMatch(/\buppercase\b/);
+  });
+
   it("Escape closes the palette and returns focus to the opener", () => {
     renderPalette();
     const opener = screen.getByText("opener");
