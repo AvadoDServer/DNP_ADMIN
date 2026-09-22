@@ -1,4 +1,7 @@
-const SKIP = new Set(["getDiagnoseDiskSpace", "getDiagnoseCoreDnpsRunning"]);
+// getDiagnoseOpenPorts is already covered by health/rules/access.js's
+// portsClosed, which reads the same underlying data and gives a more
+// specific, actionable finding — no need to also surface the raw diagnose.
+const SKIP = new Set(["getDiagnoseDiskSpace", "getDiagnoseCoreDnpsRunning", "getDiagnoseOpenPorts"]);
 
 export function diagnoseFailed({ diagnoses }) {
   return (diagnoses || [])

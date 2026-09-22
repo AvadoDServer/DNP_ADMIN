@@ -90,7 +90,7 @@ const getDiagnoseDappmanagerConnected = onlyIfConnectionIsOpen(
         : "DAPPMANAGER is not connected",
       solutions: [
         "Close your VPN connection and connect again",
-        "If the problem persists, reset the AVADO"
+        "If the problem persists, restart (reboot) your AVADO"
       ]
     })
   )
