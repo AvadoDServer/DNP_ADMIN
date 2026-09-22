@@ -1,6 +1,6 @@
 import { updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable } from "health/rules/updates";
 import { portsClosed, noUpnp, noNatLoopback, remoteAccessMissing } from "health/rules/access";
-import { diskHigh, parsePercent } from "health/rules/storage";
+import { diskHigh, parsePercent, parseDockerSize, appDiskUse } from "health/rules/storage";
 import { diagnoseFailed } from "health/rules/core";
 import { pkg, snapshot } from "./fixtures";
 
@@ -50,6 +50,27 @@ describe("storage", () => {
     expect(parsePercent("")).toBeNull();
     expect(parsePercent(undefined)).toBeNull();
     expect(parsePercent("n/a")).toBeNull();
+  });
+  it("parseDockerSize turns docker's human size strings into bytes", () => {
+    expect(parseDockerSize("27.94GB")).toBeCloseTo(27.94e9);
+    expect(parseDockerSize("1.572GB")).toBeCloseTo(1.572e9);
+    expect(parseDockerSize("22.34MB")).toBeCloseTo(22.34e6);
+    expect(parseDockerSize("17.3kB")).toBeCloseTo(17300);
+    expect(parseDockerSize("63B")).toBe(63);
+    expect(parseDockerSize("0B")).toBe(0);
+    // Case-insensitive units, and a bare number (already bytes) passes through.
+    expect(parseDockerSize("1KB")).toBe(1000);
+    expect(parseDockerSize(1234)).toBe(1234);
+    // Unparseable input never throws or returns NaN.
+    expect(parseDockerSize("n/a")).toBe(0);
+    expect(parseDockerSize(undefined)).toBe(0);
+    expect(parseDockerSize(null)).toBe(0);
+  });
+  it("appDiskUse sums a package's volumes from docker's size strings", () => {
+    const p = pkg("nimbus.avado.dnp.dappnode.eth", {
+      volumes: [{ name: "data", size: "27.94GB" }, { name: "logs", size: "63B" }, { type: "bind", path: "/etc/hostname" }],
+    });
+    expect(appDiskUse(p)).toBeCloseTo(27.94e9 + 63);
   });
   it("warns at 80 %, is critical at 90 % and names the biggest apps", () => {
     const packages = [

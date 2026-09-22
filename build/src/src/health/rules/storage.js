@@ -7,8 +7,32 @@ export function parsePercent(value) {
   return m ? Number(m[1]) : null;
 }
 
+// Docker (`docker system df -v`, via DAPPMANAGER's parseDockerSystemDf) reports
+// volume sizes as human strings in decimal (1000-based) units, e.g. "27.94GB",
+// "1.572GB", "22.34MB", "17.3kB", "63B", "0B" — never raw bytes. Units are
+// matched case-insensitively; a bare number (already bytes) passes through
+// unchanged; anything unparseable is 0.
+const SIZE_UNIT_MULTIPLIERS = {
+  "": 1,
+  b: 1,
+  kb: 1e3,
+  mb: 1e6,
+  gb: 1e9,
+  tb: 1e12,
+};
+
+export function parseDockerSize(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value !== "string") return 0;
+  const m = value.trim().match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)$/);
+  if (!m) return 0;
+  const n = Number(m[1]);
+  const mult = SIZE_UNIT_MULTIPLIERS[m[2].toLowerCase()];
+  return Number.isFinite(n) && mult !== undefined ? n * mult : 0;
+}
+
 export const appDiskUse = pkg =>
-  ((pkg && pkg.volumes) || []).reduce((sum, v) => sum + (Number(v && v.size) || 0), 0);
+  ((pkg && pkg.volumes) || []).reduce((sum, v) => sum + parseDockerSize(v && v.size), 0);
 
 export function diskHigh({ stats, packages }) {
   const pct = parsePercent(stats && stats.disk);

@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import DataList from "./DataList";
 import Soft from "./Soft";
 import humanFileSize from "utils/humanFileSize";
+import { parseDockerSize } from "health/rules/storage";
 
 function Vols({ dnp }) {
   const { volumes = [] } = dnp;
@@ -21,9 +22,11 @@ function Vols({ dnp }) {
         // - /etc/hostname: - (bind)
         .map(({ name, path, size, type }) => ({
           name: name || path || "unknown",
+          // `size` is docker's human string (e.g. "45.13GB"), not bytes —
+          // parse it to bytes first, then format for display.
           size:
             size !== undefined && size !== null && size !== ""
-              ? humanFileSize(size)
+              ? humanFileSize(parseDockerSize(size))
               : type === "bind" ? "(bind)" : "unknown"
         }))
         .map(({ name, size }) => (
