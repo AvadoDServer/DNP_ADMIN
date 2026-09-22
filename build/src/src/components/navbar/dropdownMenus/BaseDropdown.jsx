@@ -39,6 +39,7 @@ const TITLE_COLOR = {
 
 function BaseDropdown({
   name,
+  label,
   messages,
   Icon,
   onClick,
@@ -95,13 +96,16 @@ function BaseDropdown({
         onClick={onToggle}
         aria-haspopup="true"
         aria-expanded={!collapsed}
-        title={name}
+        title={label || name}
+        aria-label={label || name}
         className={cn(
           "relative flex h-9 w-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus",
+          label && "lg:w-auto lg:px-2.5",
           attentionGrab && "animate-pulse-soft text-fg"
         )}
       >
         <Icon />
+        {label && <span className="topbar-label">{label}</span>}
         {BUBBLE[globalType] && (
           <span
             className={cn(
@@ -162,6 +166,7 @@ function BaseDropdown({
 
 BaseDropdown.propTypes = {
   name: PropTypes.string.isRequired,
+  label: PropTypes.string,
   messages: PropTypes.array.isRequired,
   Icon: PropTypes.func.isRequired,
   onClick: PropTypes.func,
