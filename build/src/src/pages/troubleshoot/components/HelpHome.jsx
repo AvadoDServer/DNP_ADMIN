@@ -26,10 +26,14 @@ const RESOURCES = [
   },
 ];
 
-const DOT = { critical: "bg-danger", warning: "bg-warning", ok: "bg-success" };
-const DOT_LABEL = { critical: "Action required", warning: "Needs attention", ok: "All good" };
+// "checking": the neutral dot tone (matches StatusPill's `neutral` tone) —
+// shown before health is ready, instead of a false-green "All good" over
+// findings that just haven't been computed yet.
+const DOT = { critical: "bg-danger", warning: "bg-warning", ok: "bg-success", checking: "bg-fg-subtle" };
+const DOT_LABEL = { critical: "Action required", warning: "Needs attention", ok: "All good", checking: "Checking…" };
 
-function severityFor(findingTopics, allFindings) {
+function severityFor(findingTopics, allFindings, ready) {
+  if (!ready) return "checking";
   const matches = (allFindings || []).filter(f => findingTopics.includes(f.topic));
   if (matches.some(f => f.severity === "critical")) return "critical";
   if (matches.some(f => f.severity === "warning")) return "warning";
@@ -37,7 +41,7 @@ function severityFor(findingTopics, allFindings) {
 }
 
 export default function HelpHome() {
-  const { allFindings } = useHealth();
+  const { allFindings, ready } = useHealth();
 
   return (
     <div className="animate-fade-in">
@@ -46,7 +50,7 @@ export default function HelpHome() {
       <SectionHeader title="Topics" first />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TOPICS.map(topic => {
-          const severity = severityFor(topic.findingTopics, allFindings);
+          const severity = severityFor(topic.findingTopics, allFindings, ready);
           const Icon = topic.icon;
           return (
             <Card

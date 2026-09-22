@@ -61,7 +61,11 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
       </h2>
       {headline && (
         <ul className="mt-2 pl-0">
-          <FindingRow finding={headline} hideTitle showWhy />
+          {/* key={headline.id}: without it, a refresh that changes which
+              finding is the headline reuses the same FindingRow instance —
+              its internal "Starting…" (action-button) state would then
+              wrongly carry over onto an unrelated finding. */}
+          <FindingRow key={headline.id} finding={headline} hideTitle showWhy />
         </ul>
       )}
       {shown.length > 0 && <ul className="mt-4 divide-y divide-border/70 pl-0">{shown.map(f => <FindingRow key={f.id} finding={f} />)}</ul>}

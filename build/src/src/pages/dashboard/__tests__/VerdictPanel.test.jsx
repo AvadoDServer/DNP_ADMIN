@@ -3,17 +3,32 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { verdictSentence, VerdictView } from "pages/dashboard/components/VerdictPanel";
 
+// mountLog records the finding id every time a *new* FindingRow instance is
+// created (a fresh call to the useState lazy initializer, which only ever
+// runs once per mounted instance) — used to prove the headline row remounts
+// instead of being reused when the headline finding's id changes.
+const { mountLog } = vi.hoisted(() => ({ mountLog: [] }));
+
 // A stand-in that still honours hideTitle/showWhy so the "no repeat"
 // behaviour is actually observable, without pulling in FindingRow's real
 // dependencies (react-redux dispatch, health/fixActions, ...).
-vi.mock("components/health/FindingRow", () => ({
-  default: ({ finding, hideTitle, showWhy }) => (
+function FindingRowStub({ finding, hideTitle, showWhy }) {
+  React.useState(() => {
+    mountLog.push(finding.id);
+    return null;
+  });
+  return (
     <li>
       {!hideTitle && finding.title}
       {showWhy && finding.why}
     </li>
-  ),
-}));
+  );
+}
+vi.mock("components/health/FindingRow", () => ({ default: FindingRowStub }));
+
+beforeEach(() => {
+  mountLog.length = 0;
+});
 
 const f = (id, severity) => ({ id, severity, topic: "sync", title: `title ${id}`, why: `why ${id}` });
 
@@ -81,5 +96,26 @@ describe("VerdictView", () => {
     expect(screen.getByRole("heading", { name: "Checking your AVADO…" })).toBeInTheDocument();
     expect(screen.queryByText(/checks passed/)).not.toBeInTheDocument();
     expect(screen.queryByText("All good")).not.toBeInTheDocument();
+  });
+
+  it("remounts the headline FindingRow when the headline finding changes (key={headline.id}), so per-row state (e.g. FindingRow's own 'Starting…') never carries over to an unrelated finding", () => {
+    const renderWith = findings =>
+      render(
+        <MemoryRouter>
+          <VerdictView verdict={{ level: "critical", label: "Action required" }} findings={findings} checkedAt={new Date(0)} onRefresh={() => {}} />
+        </MemoryRouter>
+      );
+
+    const { rerender } = renderWith([f("a", "critical")]);
+    expect(mountLog).toEqual(["a"]);
+
+    rerender(
+      <MemoryRouter>
+        <VerdictView verdict={{ level: "critical", label: "Action required" }} findings={[f("b", "critical")]} checkedAt={new Date(0)} onRefresh={() => {}} />
+      </MemoryRouter>
+    );
+    // A fresh instance was mounted for "b" — the "a" instance (and any
+    // internal state it held) was discarded, not reused with new props.
+    expect(mountLog).toEqual(["a", "b"]);
   });
 });

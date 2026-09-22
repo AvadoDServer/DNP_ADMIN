@@ -1,13 +1,21 @@
 import { appTitle } from "./rules/apps";
 import { appDiskUse, formatDockerSize } from "./rules/storage";
 
-/** Plain-text support report. Deliberately excludes env values, logs, keys and public IPs. */
-export function buildReport({ verdict, findings, packages, stats, params, chainData, userActionLogs, versions, now }) {
+/**
+ * Plain-text support report. Deliberately excludes env values, logs, keys
+ * and public IPs.
+ *
+ * `ready = false` (health/HealthProvider hasn't finished its first check
+ * yet) reports "still checking" instead of the healthy-looking `verdict`
+ * computed over an empty findings list — that would otherwise read as a
+ * false "All good".
+ */
+export function buildReport({ verdict, findings, packages, stats, params, chainData, userActionLogs, versions, now, ready = true }) {
   const lines = [];
   lines.push("AVADO diagnostics report", `Created ${now.toISOString()}`, "");
-  lines.push(`Health: ${verdict.label}`);
+  lines.push(`Health: ${ready ? verdict.label : "still checking"}`);
   for (const f of findings) lines.push(`- [${f.severity}] ${f.title}`);
-  if (!findings.length) lines.push("- no findings");
+  if (!findings.length) lines.push(ready ? "- no findings" : "- still checking, no findings yet");
   lines.push("", "Versions");
   for (const [k, v] of Object.entries(versions || {})) lines.push(`- ${k} ${v || "?"}`);
   lines.push("", "Box");
@@ -26,8 +34,9 @@ export function buildReport({ verdict, findings, packages, stats, params, chainD
 
 const ATTACH_LINE = "Please attach the diagnostics report you downloaded (Help → Download report).";
 
-export function mailtoReport(report, verdict, findings) {
-  const subject = `AVADO support: ${verdict.label}`;
+export function mailtoReport(report, verdict, findings, ready = true) {
+  const healthLabel = ready ? verdict.label : "still checking";
+  const subject = `AVADO support: ${healthLabel}`;
 
   const buildUrl = shownFindings => {
     const body = [
@@ -35,7 +44,7 @@ export function mailtoReport(report, verdict, findings) {
       "",
       "(Describe what you were doing and what went wrong.)",
       "",
-      `Health: ${verdict.label}`,
+      `Health: ${healthLabel}`,
       ...shownFindings.map(f => `- [${f.severity}] ${f.title}`),
       "",
       ATTACH_LINE,

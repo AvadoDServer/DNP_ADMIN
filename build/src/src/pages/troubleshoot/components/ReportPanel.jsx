@@ -34,7 +34,7 @@ function buildVersions(packages, dappmanagerVersionData) {
  * `health/report.js`.
  */
 export default function ReportPanel({ compact = false }) {
-  const { allFindings, verdict } = useHealth();
+  const { allFindings, verdict, ready } = useHealth();
   const packages = useSelector(getDnpInstalled) || [];
   const stats = useSelector(getDappnodeStats) || {};
   const params = useSelector(getDappnodeParams) || {};
@@ -54,8 +54,9 @@ export default function ReportPanel({ compact = false }) {
     userActionLogs,
     versions,
     now: new Date(),
+    ready,
   });
-  const mailto = mailtoReport(report, verdict, allFindings);
+  const mailto = mailtoReport(report, verdict, allFindings, ready);
 
   function handleDownload() {
     saveAs(new Blob([report], { type: "text/plain" }), "avado-report.txt");

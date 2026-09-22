@@ -56,4 +56,25 @@ describe("buildReport", () => {
     const shownCount = manyLongFindings.filter(f => body.includes(f.title)).length;
     expect(shownCount).toBeLessThan(manyLongFindings.length);
   });
+
+  it("reports 'still checking' instead of the verdict label when ready is false", () => {
+    const stillChecking = buildReport({ ...input, findings: [], ready: false });
+    expect(stillChecking).toContain("Health: still checking");
+    expect(stillChecking).not.toContain("Action required");
+  });
+
+  it("mailtoReport also says 'still checking' (subject and body) when ready is false", () => {
+    const url = mailtoReport(r, input.verdict, [], false);
+    expect(url).toContain(encodeURIComponent("AVADO support: still checking"));
+    const body = decodeURIComponent(url.split("&body=")[1]);
+    expect(body).toContain("Health: still checking");
+    expect(body).not.toContain("Action required");
+  });
+
+  it("still reports the real verdict when ready is true (or omitted, the default)", () => {
+    expect(buildReport(input)).toContain("Health: Action required");
+    const url = mailtoReport(r, input.verdict, input.findings, true);
+    const body = decodeURIComponent(url.split("&body=")[1]);
+    expect(body).toContain("Health: Action required");
+  });
 });
