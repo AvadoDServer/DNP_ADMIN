@@ -12,6 +12,7 @@ import { shortNameCapitalized } from "utils/format";
 import { toLowercase } from "utils/strings";
 import confirmRemovePackage from "../confirmRemovePackage";
 import confirmRestartPackage from "../confirmRestartPackage";
+import confirmResetPackage from "../confirmResetPackage";
 
 function PackageControls({
   dnp,
@@ -27,15 +28,6 @@ function PackageControls({
   showRemove = true,
   history,
 }) {
-  function confirmRemovePackageVolumes(id) {
-    confirm({
-      title: `Reset ${shortNameCapitalized(id)}`,
-      text: `This will reload this package to its factory settings \n (only this package - all other installed AVADO packages will remain installed and keep their data). This action cannot be undone.`,
-      label: "Reset package",
-      onClick: () => restartPackageVolumes(id),
-    });
-  }
-
   function confirmResyncPackage(id) {
     confirm({
       title: `Resync ${shortNameCapitalized(id)}`,
@@ -77,7 +69,7 @@ function PackageControls({
     actions.push({
       name: "Reset",
       text: `Resets this package to its factory settings (all package data will be lost).`,
-      action: () => confirmRemovePackageVolumes(dnp.name),
+      action: () => confirmResetPackage(dnp.name, restartPackageVolumes),
       availableForCore: true,
       type: "danger",
     });

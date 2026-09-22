@@ -14,7 +14,7 @@ function PackageDetails({ dnp }) {
   const { description, version, origin } = manifest || {};
   return (
     <section>
-      <SectionHeader title="Stats" />
+      <SectionHeader title="Details" />
       <Card padding="lg" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <div className="flex items-center gap-2">
