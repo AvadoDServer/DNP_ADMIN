@@ -107,6 +107,10 @@ module.exports = {
         'shimmer': {
           '100%': { transform: 'translateX(100%)' },
         },
+        'pulse-once': {
+          '0%,100%': { opacity: '1' },
+          '50%': { opacity: '.35' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.4s ease both',
@@ -114,6 +118,7 @@ module.exports = {
         'spin-slow': 'spin-slow 1s linear infinite',
         'pulse-soft': 'pulse-soft 1.8s ease-in-out infinite',
         'shimmer': 'shimmer 1.6s infinite',
+        'pulse-once': 'pulse-once 1.2s ease-out 2',
       },
     },
   },
