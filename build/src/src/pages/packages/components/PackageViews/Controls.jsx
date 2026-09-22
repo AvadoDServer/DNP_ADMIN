@@ -13,6 +13,8 @@ import { toLowercase } from "utils/strings";
 import confirmRemovePackage from "../confirmRemovePackage";
 import confirmRestartPackage from "../confirmRestartPackage";
 import confirmResetPackage from "../confirmResetPackage";
+import { getClient, ROLES } from "health/clients";
+import { appTitle } from "health/rules/apps";
 
 function PackageControls({
   dnp,
@@ -69,7 +71,11 @@ function PackageControls({
     actions.push({
       name: "Reset",
       text: `Resets this package to its factory settings (all package data will be lost).`,
-      action: () => confirmResetPackage(dnp.name, restartPackageVolumes),
+      action: () =>
+        confirmResetPackage(dnp.name, restartPackageVolumes, {
+          consensus: getClient(dnp.name)?.role === ROLES.CONSENSUS,
+          title: appTitle(dnp),
+        }),
       availableForCore: true,
       type: "danger",
     });

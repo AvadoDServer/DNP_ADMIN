@@ -8,6 +8,7 @@ import { useTheme } from "theme/ThemeProvider";
 import { useHealth } from "health/HealthProvider";
 import { appStatus, appDescription } from "components/appStatus";
 import { appTitle } from "health/rules/apps";
+import { getClient, ROLES } from "health/clients";
 import { openUrl } from "components/apps/AppCard";
 import AppAvatar from "components/ui/AppAvatar";
 import StatusPill from "components/ui/StatusPill";
@@ -25,6 +26,7 @@ import { getIsLoading } from "services/loadingStatus/selectors";
 import confirmRestartPackage from "./confirmRestartPackage";
 import confirmResetPackage from "./confirmResetPackage";
 import confirmRemovePackage from "./confirmRemovePackage";
+import confirmStopPackage from "./confirmStopPackage";
 
 export function wizardUrl(pkg, theme) {
   if (pkg && pkg.name === "remoteconnect.avado.dnp.dappnode.eth") return `http://remoteconnect.my.ava.do/?theme=${theme}`;
@@ -147,9 +149,20 @@ export function AppPage({ dnp, id, loading, history, location, isCore = false })
   const showOpen = Boolean(external || url);
   const running = dnp.state === "running";
 
+  const isConsensus = getClient(dnp.name)?.role === ROLES.CONSENSUS;
+
   const restart = () => confirmRestartPackage(dnp.name, restartId => dispatch(a.restartPackage(restartId)));
-  const toggle = () => dispatch(a.togglePackage(dnp.name));
-  const reset = () => confirmResetPackage(dnp.name, resetId => dispatch(a.restartPackageVolumes(resetId)));
+  // Starting is not destructive and needs no confirmation; stopping does,
+  // since it takes the app (and, for a client, its validators) offline.
+  const toggle = () => {
+    if (running) confirmStopPackage(dnp.name, toggleId => dispatch(a.togglePackage(toggleId)), title);
+    else dispatch(a.togglePackage(dnp.name));
+  };
+  const reset = () =>
+    confirmResetPackage(dnp.name, resetId => dispatch(a.restartPackageVolumes(resetId)), {
+      consensus: isConsensus,
+      title,
+    });
   const remove = () =>
     confirmRemovePackage(dnp.name, (removeId, deleteVolumes) =>
       Promise.resolve(dispatch(a.removePackage(removeId, deleteVolumes))).then(
@@ -158,8 +171,10 @@ export function AppPage({ dnp, id, loading, history, location, isCore = false })
       )
     );
 
+  // Stop/Start acts directly on the container; hide it for core (system)
+  // services in this menu the same way Reset/Remove already are.
   const menuItems = [
-    { label: running ? "Stop" : "Start", onClick: toggle },
+    ...(!isCore ? [{ label: running ? "Stop" : "Start", onClick: toggle }] : []),
     ...(!isCore ? [{ label: "Reset", onClick: reset }] : []),
     ...(!isCore ? [{ label: "Remove", tone: "danger", onClick: remove }] : []),
   ];
@@ -174,7 +189,7 @@ export function AppPage({ dnp, id, loading, history, location, isCore = false })
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={appStatus(dnp, { findings, updates })} />
-          <span className="font-mono text-xs text-fg-subtle">v{dnp.version}</span>
+          {dnp.version && <span className="font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
           {showOpen &&
             (external ? (
               <Button as="a" href={external} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
