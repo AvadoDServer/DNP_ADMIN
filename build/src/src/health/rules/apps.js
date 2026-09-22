@@ -10,7 +10,7 @@ const logsLink = name => `/packages/${name}?tab=logs`;
 
 export function appStopped({ packages }) {
   return (packages || [])
-    .filter(p => p && !p.isCore && (p.state === "exited" || p.state === "dead" || p.state === "created"))
+    .filter(p => p && !p.isCore && (p.state === "exited" || p.state === "dead"))
     .map(p => ({
       id: `app-stopped:${p.name}`,
       severity: isClient(p) ? "critical" : "warning",

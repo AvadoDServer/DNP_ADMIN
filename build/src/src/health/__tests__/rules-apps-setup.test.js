@@ -4,6 +4,7 @@ import { pkg, snapshot } from "./fixtures";
 
 const NIMBUS = "nimbus.avado.dnp.dappnode.eth";
 const GETH = "ethchain-geth.public.dappnode.eth";
+const NETHERMIND = "avado-dnp-nethermind.public.dappnode.eth";
 
 describe("appStopped", () => {
   it("flags an exited client as critical with a start action", () => {
@@ -22,6 +23,10 @@ describe("appStopped", () => {
     const out = appStopped(s);
     expect(out).toHaveLength(1);
     expect(out[0].severity).toBe("warning");
+  });
+  it("does not flag a package that is merely created (not yet started after install)", () => {
+    const s = snapshot({ packages: [pkg("rotki.avado.dnp.dappnode.eth", { state: "created", running: false })] });
+    expect(appStopped(s)).toEqual([]);
   });
 });
 
@@ -53,6 +58,11 @@ describe("setup pairing", () => {
   it("warns about an execution client with no consensus client", () => {
     const [f] = executionWithoutConsensus(snapshot({ packages: [pkg(GETH)] }));
     expect(f).toMatchObject({ severity: "warning", topic: "setup" });
+  });
+  it("emits one finding per network even with two execution clients and no consensus client", () => {
+    const out = executionWithoutConsensus(snapshot({ packages: [pkg(GETH), pkg(NETHERMIND)] }));
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe("execution-without-consensus:mainnet");
   });
   it("suggests monitoring when a consensus client runs without Prometheus", () => {
     expect(monitoringMissing(snapshot({ packages: [pkg(NIMBUS)] }))).toMatchObject({ id: "monitoring-missing", severity: "info", topic: "attestations" });

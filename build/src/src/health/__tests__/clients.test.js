@@ -37,4 +37,21 @@ describe("client table", () => {
     expect(currentSlot("nowhere", Date.now())).toBeNull();
     expect(NETWORKS.gnosis.slotSeconds).toBe(5);
   });
+
+  it("mirrors the store's ETH STAKING category: every listed package is a known execution or consensus client", () => {
+    // Verified against the live DappStore's ETH STAKING category on 2026-09-22.
+    const ethStakingPackages = [
+      "teku.avado.dnp.dappnode.eth",
+      "ethchain-geth.public.dappnode.eth",
+      "eth2validator.avado.dnp.dappnode.eth",
+      "avado-dnp-nethermind.public.dappnode.eth",
+      "nimbus.avado.dnp.dappnode.eth",
+    ];
+    for (const name of ethStakingPackages) {
+      const client = getClient(name);
+      expect(client, `expected ${name} to be a known client`).not.toBeNull();
+      expect([ROLES.EXECUTION, ROLES.CONSENSUS]).toContain(client.role);
+      expect(client.network).toBe("mainnet");
+    }
+  });
 });
