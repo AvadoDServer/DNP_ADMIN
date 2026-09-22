@@ -10,6 +10,7 @@ import SideBar from "./components/navbar/SideBar";
 import Loading from "components/generic/Loading";
 import ScrollToTop from "components/ScrollToTop";
 import { AppRoutes } from "./AppRoutes";
+import CommandPalette from "./components/palette/CommandPalette";
 // Pages
 import pages from "./pages";
 // Redux
@@ -46,6 +47,7 @@ class App extends React.Component {
             {/* Place here non-page components */}
             <ToastContainer />
             <ScrollToTop />
+            <CommandPalette />
           </div>
         </HealthProvider>
       );
