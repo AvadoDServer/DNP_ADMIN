@@ -41,7 +41,7 @@ const SystemUpdateDetails = ({
   return (
     <Card padding="lg" className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <div className="text-sm font-bold uppercase tracking-wider text-fg-muted">
+        <div className="text-sm font-bold text-fg-muted">
           Core {coreManifest.version}
         </div>
         {coreChangelog && (

@@ -2,6 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import DataList from "./DataList";
 import Soft from "./Soft";
+import { parseDockerSize, formatDockerSize } from "health/rules/storage";
 
 function Vols({ dnp }) {
   const { volumes = [] } = dnp;
@@ -20,7 +21,14 @@ function Vols({ dnp }) {
         // - /etc/hostname: - (bind)
         .map(({ name, path, size, type }) => ({
           name: name || path || "unknown",
-          size: size || (type === "bind" ? "(bind)" : "unknown")
+          // `size` is docker's human string (e.g. "45.13GB"), not bytes —
+          // parse it to bytes, then format back with the same decimal
+          // (1000-based) units docker itself uses, so the number shown
+          // doesn't drift from what docker reported.
+          size:
+            size !== undefined && size !== null && size !== ""
+              ? formatDockerSize(parseDockerSize(size))
+              : type === "bind" ? "(bind)" : "unknown"
         }))
         .map(({ name, size }) => (
           <>

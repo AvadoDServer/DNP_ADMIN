@@ -5,7 +5,7 @@ function DataList({ title, data }) {
   if (!data.length) return null;
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+      <div className="mb-1.5 text-xs font-semibold text-fg-subtle">
         {title}
       </div>
       <ul className="flex flex-col gap-1 text-sm text-fg">

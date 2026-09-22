@@ -90,7 +90,6 @@ function InstallerInterface({
 
     const toWizard = () => {
         history.push(`${packagesRootPath}/${name}`);
-        // history.push(`/Packages/${manifest.name}`);
     }
 
     const manage = (name) => {
@@ -192,7 +191,7 @@ function InstallerInterface({
 
                 <div className="min-w-0 flex-1">
                     {showedPackage.descriptionmd ? (
-                        <div className="prose-installer max-w-none text-sm leading-relaxed text-fg-muted [&_a]:text-accent [&_a:hover]:underline [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:text-fg [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-fg [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">
+                        <div className="prose-installer max-w-none text-sm leading-relaxed text-fg-muted [&_a]:text-accent [&_a:hover]:underline [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:text-fg [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-fg [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5">
                             <ReactMarkdown>{showedPackage.descriptionmd}</ReactMarkdown>
                         </div>
                     ) : (
@@ -300,5 +299,6 @@ export default compose(
     ),
     // withTitle("Installer")
 )(InstallerInterface);
+export { InstallerInterface };
 
 // ##### TODO: - Implement the loading HOC for the specific DNP fetch

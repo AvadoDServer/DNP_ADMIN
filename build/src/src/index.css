@@ -1,5 +1,5 @@
-/* Font import must precede the Tailwind directives */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* Fonts (Inter, Sen, JetBrains Mono) are bundled via @fontsource imports in
+   index.jsx, loaded ahead of this stylesheet — no @import needed here. */
 
 @tailwind base;
 @tailwind components;
@@ -84,6 +84,40 @@
   :focus-visible {
     outline: 2px solid rgb(var(--accent));
     outline-offset: 2px;
+  }
+
+  /* Native <button>s (not Bootstrap's own `.btn`) render with the browser's
+     default grey face, outset border and padding since Tailwind preflight
+     is off (kept off for Bootstrap, see the note above). Every component
+     button already sets its own background/border/padding with Tailwind
+     utility classes, which must always win over this reset — Tailwind's
+     `@layer` here is a build-time-only grouping (this project's compiled
+     CSS has no real cascade layers, i.e. no `@layer` at-rules survive the
+     build), so ordinary specificity decides, and `button:not(.btn)` alone
+     would actually OUTRANK a single utility class like `.bg-accent`
+     (0,1,1 vs 0,1,0) and win. Wrapping the selector in :where() zeroes its
+     specificity instead, so any component class always overrides it. */
+  :where(button:not(.btn)) {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  /* Same story for <ul>/<ol>: the browser's default ~40 px list padding and
+     bullets/numbers aren't reset by Tailwind (preflight off) or Bootstrap
+     (which only zeroes their margin, not padding/list-style). Component
+     lists already lay themselves out with Tailwind utilities (flex, gap,
+     divide-y, ...), not bullets. A list that does want numbering/markers
+     opts back in with its own list-* / pl-* utility class (e.g.
+     `list-decimal pl-5`) — a bare `ul, ol` type selector is always lower
+     specificity than any single class, so it always loses to one, no
+     :where() needed here (unlike the button reset above). */
+  ul, ol {
+    padding-left: 0;
+    list-style: none;
   }
 }
 

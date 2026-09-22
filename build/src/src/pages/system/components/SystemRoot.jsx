@@ -1,30 +1,41 @@
 import React from "react";
 import { Route, Switch } from "react-router-dom";
-import { title, rootPath, updatePath } from "../data";
+import { rootPath, updatePath, title } from "../data";
 // Components
 import SystemHome from "./SystemHome";
+import SystemUpdates from "./SystemUpdates";
+import SystemStorage from "./SystemStorage";
+import SystemHistory from "./SystemHistory";
 import SystemUpdate from "./SystemUpdate";
-import packages from "pages/packages";
+import SystemTabs, { isTabPath } from "./SystemTabs";
+import AppPage from "pages/packages/components/AppPage";
+import { PageHeader } from "components/ui/PageHeader";
 
-const PackageInterface = packages.components.PackageInterface;
+const UPDATES_PATH = `${rootPath}/updates`;
+const STORAGE_PATH = `${rootPath}/storage`;
+const HISTORY_PATH = `${rootPath}/history`;
 
-const SystemRoot = () => (
+const SystemRoot = ({ location }) => (
   <>
+    {/* One header for all four tab pages (not the core update flow at
+        /system/update, or an individual core app page at /system/:id,
+        which have their own). Each tab's own component used to render its
+        own PageHeader too — title "System" under a per-tab eyebrow read
+        backwards, and duplicated "System" on every tab. */}
+    {isTabPath(location.pathname) && (
+      <div className="animate-fade-in">
+        <PageHeader title={title} subtitle="Updates, disk space and maintenance for your AVADO." />
+        <SystemTabs />
+      </div>
+    )}
     {/* Use switch so only the first match is rendered. match.url = /system */}
     <Switch>
       <Route exact path={rootPath} component={SystemHome} />
+      <Route path={UPDATES_PATH} component={SystemUpdates} />
+      <Route path={STORAGE_PATH} component={SystemStorage} />
+      <Route path={HISTORY_PATH} component={SystemHistory} />
       <Route path={rootPath + "/" + updatePath} component={SystemUpdate} />
-      <Route
-        path={rootPath + "/:id"}
-        render={props =>
-          <PackageInterface
-            {...props}
-            moduleName={title}
-            showControls={true}
-            showReset={false}
-            showRemove={false}
-          />}
-      />
+      <Route path={rootPath + "/:id"} render={props => <AppPage {...props} isCore />} />
     </Switch>
   </>
 );

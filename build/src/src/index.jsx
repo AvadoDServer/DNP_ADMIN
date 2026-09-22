@@ -12,6 +12,16 @@ import ThemeProvider, {
   resolveInitialTheme
 } from "./theme/ThemeProvider";
 
+// Bundled fonts (replaces the Google Fonts @import in index.css)
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/sen/600.css";
+import "@fontsource/sen/700.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+
 // Init css
 import "react-toastify/dist/ReactToastify.css";
 // Boostrap loaders (kept for not-yet-migrated pages)

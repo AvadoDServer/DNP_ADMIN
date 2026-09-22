@@ -1,6 +1,7 @@
 // Icons
 import Dashboard from "Icons/Dashboard";
 import Activity from "Icons/Activity";
+import Chain from "Icons/Chain";
 import Devices from "Icons/Devices";
 import Folder from "Icons/Folder";
 import NewFolder from "Icons/NewFolder";
@@ -25,6 +26,11 @@ export const sidenavItems = [
     icon: Folder
   },
   {
+    name: "Staking setup",
+    href: "/staking",
+    icon: Chain
+  },
+  {
     name: "Connect (VPN)",
     href: "/devices",
     icon: Devices,
@@ -33,7 +39,7 @@ export const sidenavItems = [
   },
   {
     name: "Remote Connect",
-    href: "/Packages/remoteconnect.avado.dnp.dappnode.eth",
+    href: "/packages/remoteconnect.avado.dnp.dappnode.eth",
     icon: Devices,
     package: "remoteconnect.avado.dnp.dappnode.eth",
   },
@@ -43,8 +49,8 @@ export const sidenavItems = [
     icon: Priority
   },
   {
-    name: "Support",
-    href: "/troubleshoot",
+    name: "Help",
+    href: "/help",
     icon: Activity
   },
 

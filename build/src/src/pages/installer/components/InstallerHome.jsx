@@ -11,6 +11,7 @@ import isIpfsHash from "utils/isIpfsHash";
 import isDnpDomain from "utils/isDnpDomain";
 import { correctPackageName } from "../utils";
 import filterDirectory from "../helpers/filterDirectory";
+import orderCategoriesByFilter from "../helpers/orderCategoriesByFilter";
 import { rootPath } from "../data";
 import NoPackageFound from "./NoPackageFound";
 import TypeFilter from "./TypeFilter";
@@ -18,6 +19,7 @@ import ManifestStore from "./ManifestStore";
 import PackageStore from "./PackageStore";
 import {
     CategoryHeader,
+    CategoryFilterBanner,
     StoreSkeleton,
     StoreEmpty
 } from "./StorePresentation";
@@ -33,8 +35,7 @@ import {
 import { rootPath as packagesRootPath } from "pages/packages/data";
 import { getDappnodeParams } from "services/dappnodeStatus/selectors";
 import IsSyncing from "./IsSyncing";
-import axios from "axios";
-import JsonRpcClient from 'react-jsonrpc-client';
+import { fetchStore } from "services/store/fetchStore";
 
 function InstallerHome({
     // variables
@@ -44,6 +45,7 @@ function InstallerHome({
     loading,
     error,
     history,
+    location,
     // Actions
     fetchPackageData,
     fetchPackageDataFromQuery,
@@ -55,23 +57,6 @@ function InstallerHome({
     const [selectedTypes, setSelectedTypes] = useState({});
     const [storeManifest, setStoreManifest] = useState();
     const [displayManifest, setDisplayManifest] = useState();
-
-    const peerConnect = (peer) => {
-        console.log(`connecting to ${peer}`);
-        const apiLink = `http://ipfs.my.ava.do:5001/api/v0/swarm/connect?arg=${peer}`;
-        axios
-            .post(
-                apiLink
-            )
-            .then(res => {
-                if (res && res.status === 200) {
-                    console.log(`Connected to ${apiLink}`);
-                }
-            })
-            .catch(error => {
-                console.log(`Failed to connect to ${apiLink}`, error.message);
-            });
-    };
 
     useEffect(() => {
         if (packages && storeManifest && packages.length > 0) {
@@ -95,77 +80,11 @@ function InstallerHome({
 
     useEffect(() => {
         if (!packages || !dappnodeParams || !dappnodeParams.nodeid) return;
-
-        var api = new JsonRpcClient({
-            endpoint: `https://rpc.ava.do`,
-        })
-
-        const p = {
-            nodeid: dappnodeParams.nodeid,
-            packages: packages.map((p) => {
-                return ({ name: p.name, version: p.version })
-            })
-        };
-
-        api.request(
-            "store.getUpdates",
-            p
-        ).then(function (response) {
-            const storeRes = JSON.parse(response);
-            const storeHash = (id && id !== "undefined") ? id : storeRes.hash;
-            if (storeRes && storeRes.ipfsHostNodes) {
-                storeRes.ipfsHostNodes.map(peerConnect);
-            }
-            axios
-                .get(
-                    `http://ipfs.my.ava.do:8080/ipfs/${storeHash}`
-                )
-                .then(res => {
-                    const storeManifest = res.data;
-                    if (storeManifest && storeManifest.ipfsHostNodes) {
-                        storeManifest.ipfsHostNodes.map(peerConnect);
-                    }
-                    setStoreManifest(res.data);
-                })
-                .catch(error => {
-                    console.log(`Failed to fetch store: ${error.message}`);
-                });
-        });
-
-
-    }, [packages, dappnodeParams])
-
-    // useEffect(() => {
-    //     axios
-    //         .get(
-    //             `https://bo.ava.do/value/store`
-    //         )
-    //         .then(res => {
-    //             const storeRes = JSON.parse(res.data);
-    //             const storeHash = (id && id !== "undefined") ? id : storeRes.hash;
-    //             if (storeRes && storeRes.ipfsHostNodes) {
-    //                 storeRes.ipfsHostNodes.map(peerConnect);
-    //             }
-    //             //  const storeHash = "QmekF1EwLrfSwm4mjRHaBGrHmRafYBLTTz2Ymx5nszdaan";
-    //             axios
-    //                 .get(
-    //                     `http://ipfs.my.ava.do:8080/ipfs/${storeHash}`
-    //                 )
-    //                 .then(res => {
-    //                     const storeManifest = res.data;
-    //                     if (storeManifest && storeManifest.ipfsHostNodes) {
-    //                         storeManifest.ipfsHostNodes.map(peerConnect);
-    //                     }
-    //                     setStoreManifest(res.data);
-    //                 })
-    //                 .catch(error => {
-    //                     //debugger;
-    //                 });
-    //         }).catch(error => {
-    //             //debugger;
-    //         });
-    //     ;
-    // }, []);
+        const storeHash = id && id !== "undefined" ? id : undefined;
+        fetchStore({ nodeid: dappnodeParams.nodeid, packages, storeHash })
+            .then(setStoreManifest)
+            .catch(error => console.log(`Failed to fetch store: ${error.message}`));
+    }, [packages, dappnodeParams]);
 
     useEffect(() => {
         // If the packageLink is a valid IPFS hash preload it's info
@@ -273,18 +192,32 @@ function InstallerHome({
             );
         }
 
-        return categories.map((cat, i) => {
-            const subdir = displayManifest.packages.filter((p) => {
-                return p.manifest.avadocategory === cat.tag;
-            });
-            if (!subdir.length) return null;
-            return (
-                <div key={i}>
-                    <CategoryHeader title={cat.description} count={subdir.length} />
-                    <ManifestStore directory={subdir} openDnp={openDnp} />
-                </div>
-            );
-        });
+        const categoryTag = new URLSearchParams(location.search).get("category");
+        const { ordered, highlighted } = orderCategoriesByFilter(
+            categories,
+            categoryTag
+        );
+
+        return (
+            <>
+                <CategoryFilterBanner category={highlighted} onShowAllTo={rootPath} />
+                {ordered.map((cat, i) => {
+                    const subdir = displayManifest.packages.filter((p) => {
+                        return p.manifest.avadocategory === cat.tag;
+                    });
+                    if (!subdir.length) return null;
+                    return (
+                        <div key={cat.tag || i}>
+                            <CategoryHeader
+                                title={cat.description}
+                                count={subdir.length}
+                            />
+                            <ManifestStore directory={subdir} openDnp={openDnp} />
+                        </div>
+                    );
+                })}
+            </>
+        );
     }
 
     return (
@@ -337,6 +270,7 @@ InstallerHome.propTypes = {
     selectedTypes: PropTypes.object.isRequired,
     inputValue: PropTypes.string.isRequired,
     history: PropTypes.object.isRequired,
+    location: PropTypes.object.isRequired,
     mainnet: PropTypes.object.isRequired,
     loading: PropTypes.bool.isRequired,
     error: PropTypes.string.isRequired,

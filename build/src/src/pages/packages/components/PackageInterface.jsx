@@ -33,7 +33,7 @@ const PackageInterface = ({
       {dnp ? (
         <div className="animate-fade-in flex flex-col gap-2">
           <PageHeader title={dnp.title || dnp.id}>
-            <span className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            <span className="text-xs font-semibold text-fg-subtle">
               {moduleName}
             </span>
           </PageHeader>

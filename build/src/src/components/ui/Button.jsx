@@ -33,6 +33,7 @@ const SIZES = {
 
 const Button = forwardRef(function Button(
   {
+    as: Tag = "button",
     variant = "primary",
     size = "md",
     pill = false,
@@ -43,17 +44,37 @@ const Button = forwardRef(function Button(
     className,
     children,
     type = "button",
+    onClick,
     ...props
   },
   ref
 ) {
   const isDisabled = disabled || loading;
+  const isRealButton = Tag === "button";
+
+  // A native `disabled` attribute is a no-op on a non-button element (e.g.
+  // `as={Link}` renders an <a>, which stays focusable and clickable even
+  // when `disabled` is set). For those, fall back to the ARIA-disabled
+  // pattern: remove it from the tab order, mark it for assistive tech, and
+  // swallow clicks instead of relying on the DOM attribute. Real buttons
+  // keep the native `disabled` behaviour unchanged.
+  const extraDisabledProps = !isRealButton && isDisabled ? { "aria-disabled": "true", tabIndex: -1 } : {};
+
+  const handleClick = e => {
+    if (!isRealButton && isDisabled) {
+      e.preventDefault();
+      return;
+    }
+    if (onClick) onClick(e);
+  };
+
   return (
-    <button
+    <Tag
       ref={ref}
-      type={type}
-      disabled={isDisabled}
+      {...(isRealButton ? { type, disabled: isDisabled } : {})}
+      {...extraDisabledProps}
       aria-busy={loading || undefined}
+      onClick={handleClick}
       className={cn(
         "relative inline-flex select-none items-center justify-center whitespace-nowrap font-semibold transition-all duration-150 focus:outline-none",
         pill ? "rounded-full" : "rounded-md",
@@ -69,7 +90,7 @@ const Button = forwardRef(function Button(
       {!loading && leftIcon}
       {children != null && <span className={loading ? "opacity-90" : undefined}>{children}</span>}
       {!loading && rightIcon}
-    </button>
+    </Tag>
   );
 });
 

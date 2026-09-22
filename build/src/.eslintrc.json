@@ -65,5 +65,20 @@
     "tailwind.config.js",
     "src/contracts/**",
     "**/abi.js"
+  ],
+  "overrides": [
+    {
+      "files": ["src/**/*.test.{js,jsx}", "src/setupTests.js"],
+      "globals": {
+        "describe": "readonly",
+        "it": "readonly",
+        "expect": "readonly",
+        "vi": "readonly",
+        "beforeEach": "readonly",
+        "afterEach": "readonly",
+        "beforeAll": "readonly",
+        "afterAll": "readonly"
+      }
+    }
   ]
 }

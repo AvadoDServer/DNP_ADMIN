@@ -51,7 +51,7 @@ export const TR = ({ className, children, ...props }) => (
 export const TH = ({ className, align = "left", children, ...props }) => (
   <th
     className={cn(
-      "px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-fg-subtle",
+      "px-4 py-2.5 text-xs font-semibold text-fg-subtle",
       align === "right" && "text-right",
       align === "center" && "text-center",
       align === "left" && "text-left",

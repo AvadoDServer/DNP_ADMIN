@@ -53,6 +53,8 @@ module.exports = {
         success: { DEFAULT: ch('--success'), subtle: ch('--success-subtle') },
         warning: { DEFAULT: ch('--warning'), subtle: ch('--warning-subtle') },
         danger: { DEFAULT: ch('--danger'), subtle: ch('--danger-subtle') },
+        brand: { DEFAULT: ch('--brand'), subtle: ch('--brand-subtle') },
+        verdict: { ok: ch('--verdict-ok'), warn: ch('--verdict-warn'), crit: ch('--verdict-crit') },
       },
       borderRadius: {
         sm: 'var(--radius-sm)',
@@ -84,6 +86,7 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        display: ['Sen', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         'fade-in': {
@@ -104,6 +107,10 @@ module.exports = {
         'shimmer': {
           '100%': { transform: 'translateX(100%)' },
         },
+        'pulse-once': {
+          '0%,100%': { opacity: '1' },
+          '50%': { opacity: '.35' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.4s ease both',
@@ -111,6 +118,7 @@ module.exports = {
         'spin-slow': 'spin-slow 1s linear infinite',
         'pulse-soft': 'pulse-soft 1.8s ease-in-out infinite',
         'shimmer': 'shimmer 1.6s infinite',
+        'pulse-once': 'pulse-once 1.2s ease-out 1',
       },
     },
   },

@@ -42,37 +42,46 @@
   color-scheme: dark;
 
   /* Surfaces (channels) */
-  --bg: 9 14 26;            /* app canvas — deep navy */
-  --bg-subtle: 14 21 38;
+  --bg: 7 12 24;            /* app canvas — deep navy */
+  --bg-subtle: 11 18 34;
   --bg-inset: 6 10 19;
-  --surface: 18 26 45;      /* cards */
-  --surface-hover: 24 34 58;
-  --surface-raised: 26 37 62;
+  --surface: 15 23 41;      /* cards */
+  --surface-hover: 21 31 54;
+  --surface-raised: 22 32 58;
 
   /* Borders */
-  --border: 38 50 78;
-  --border-strong: 54 70 105;
+  --border: 34 48 83;
+  --border-strong: 50 66 104;
 
   /* Foreground / text */
   --fg: 237 242 250;
-  --fg-muted: 156 169 193;
+  --fg-muted: 154 167 192;
   --fg-subtle: 110 124 150;
   --fg-inverse: 9 14 26;
 
   /* AVADO brand blue accent */
-  --accent: 47 128 237;          /* #2F80ED — AVADO blue */
-  --accent-hover: 86 158 246;
-  --accent-active: 30 104 209;
+  --accent: 80 133 245;          /* signal #5085F5 */
+  --accent-hover: 110 155 247;
+  --accent-active: 58 112 226;
   --accent-fg: 255 255 255;      /* text on accent fills */
   --accent-subtle: 24 47 84;     /* tinted accent surface */
 
+  /* AVADO brand teal (tide) */
+  --brand: 122 203 199;          /* tide #7ACBC7 */
+  --brand-subtle: 20 44 50;
+
   /* Status */
-  --success: 52 199 123;
+  --success: 61 203 138;
   --success-subtle: 18 48 38;
-  --warning: 240 180 41;
+  --warning: 242 184 75;
   --warning-subtle: 56 43 14;
-  --danger: 242 92 92;
+  --danger: 242 100 100;
   --danger-subtle: 56 24 28;
+
+  /* Verdict surfaces (status-tinted backgrounds) */
+  --verdict-ok: 17 38 48;
+  --verdict-warn: 44 36 22;
+  --verdict-crit: 48 24 32;
 
   /* Shadows (tuned for dark — deep, low-spread) */
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.30);
@@ -83,8 +92,8 @@
 
   /* Decorative — subtle radial glow behind the app shell */
   --app-glow:
-    radial-gradient(900px 480px at 82% -8%, rgb(47 128 237 / 0.14), transparent 60%),
-    radial-gradient(720px 420px at 8% 4%, rgb(47 128 237 / 0.07), transparent 55%);
+    radial-gradient(900px 480px at 82% -8%, rgb(var(--accent) / 0.14), transparent 60%),
+    radial-gradient(720px 420px at 8% 4%, rgb(var(--accent) / 0.07), transparent 55%);
 }
 
 /* =====================================================================
@@ -93,33 +102,40 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --bg: 244 247 251;
+  --bg: 243 245 249;
   --bg-subtle: 237 242 248;
   --bg-inset: 232 238 246;
   --surface: 255 255 255;
   --surface-hover: 247 250 254;
   --surface-raised: 255 255 255;
 
-  --border: 224 231 241;
+  --border: 220 226 236;
   --border-strong: 203 213 228;
 
-  --fg: 16 26 45;
-  --fg-muted: 88 102 128;
+  --fg: 14 24 48;
+  --fg-muted: 74 87 115;
   --fg-subtle: 130 144 168;
   --fg-inverse: 255 255 255;
 
-  --accent: 33 110 222;          /* slightly deeper for contrast on white */
+  --accent: 47 107 232;          /* slightly deeper for contrast on white */
   --accent-hover: 24 92 196;
   --accent-active: 18 78 172;
   --accent-fg: 255 255 255;
   --accent-subtle: 228 238 252;
 
-  --success: 22 163 96;
+  --brand: 46 143 138;
+  --brand-subtle: 224 242 241;
+
+  --success: 22 137 90;
   --success-subtle: 224 246 235;
-  --warning: 199 138 12;
+  --warning: 168 106 0;
   --warning-subtle: 252 243 219;
-  --danger: 215 56 56;
+  --danger: 198 47 47;
   --danger-subtle: 252 230 230;
+
+  --verdict-ok: 230 245 244;
+  --verdict-warn: 253 243 224;
+  --verdict-crit: 252 232 232;
 
   --shadow-xs: 0 1px 2px rgb(15 26 45 / 0.05);
   --shadow-sm: 0 1px 3px rgb(15 26 45 / 0.07), 0 1px 2px rgb(15 26 45 / 0.04);
@@ -128,8 +144,8 @@
   --shadow-xl: 0 30px 64px -16px rgb(15 26 45 / 0.20);
 
   --app-glow:
-    radial-gradient(900px 480px at 82% -10%, rgb(33 110 222 / 0.10), transparent 60%),
-    radial-gradient(720px 420px at 6% 2%, rgb(33 110 222 / 0.05), transparent 55%);
+    radial-gradient(900px 480px at 82% -10%, rgb(var(--accent) / 0.10), transparent 60%),
+    radial-gradient(720px 420px at 6% 2%, rgb(var(--accent) / 0.05), transparent 55%);
 }
 
 /* =====================================================================

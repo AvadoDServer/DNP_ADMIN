@@ -1,21 +1,22 @@
 import React from "react";
-import { Route } from "react-router-dom";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
 // Components
 import NotificationsMain from "./components/NotificationsMain";
 import NonAdmin from "./components/NonAdmin";
 import NoConnection from "components/NoConnection";
-import ErrorBoundary from "./components/generic/ErrorBoundary";
 import TopBar from "./components/navbar/TopBar";
 import SideBar from "./components/navbar/SideBar";
 import Loading from "components/generic/Loading";
 import ScrollToTop from "components/ScrollToTop";
+import { AppRoutes } from "./AppRoutes";
+import CommandPalette from "./components/palette/CommandPalette";
 // Pages
 import pages from "./pages";
 // Redux
 import { getConnectionStatus } from "services/connectionStatus/selectors";
 import { ToastContainer } from "react-toastify";
+import { HealthProvider } from "health/HealthProvider";
 
 if (typeof pages !== "object") throw Error("pages must be an object");
 
@@ -30,33 +31,25 @@ class App extends React.Component {
 
     if (isOpen) {
       return (
-        <div className="body">
-          {/* SideNav expands on big screens, while content-wrapper moves left */}
-          <SideBar />
-          <TopBar />
-          <div id="main">
-            {/* <ErrorBoundary>
-              <NotificationsMain />
-            </ErrorBoundary> */}
+        <HealthProvider>
+          <div className="body">
+            {/* SideNav expands on big screens, while content-wrapper moves left */}
+            <SideBar />
+            <TopBar />
+            <div id="main">
+              {/* <ErrorBoundary>
+                <NotificationsMain />
+              </ErrorBoundary> */}
 
-            {Object.values(pages).map(({ RootComponent, rootPath }) => (
-              <Route
-                key={rootPath}
-                path={rootPath}
-                exact={rootPath === "/"}
-                render={props => (
-                  <ErrorBoundary>
-                    <RootComponent {...props} />
-                  </ErrorBoundary>
-                )}
-              />
-            ))}
+              <AppRoutes pages={pages} />
+            </div>
+
+            {/* Place here non-page components */}
+            <ToastContainer />
+            <ScrollToTop />
+            <CommandPalette />
           </div>
-
-          {/* Place here non-page components */}
-          <ToastContainer />
-          <ScrollToTop />
-        </div>
+        </HealthProvider>
       );
     } else if (isNotAdmin) {
       return <NonAdmin />;

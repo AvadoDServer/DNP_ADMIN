@@ -10,12 +10,16 @@ import Card from "components/ui/Card";
 
 
 
-/** Generic empty state. */
-export function EmptyState({ icon, title, children, action }) {
+/** Generic empty / error state. */
+export function EmptyState({ icon, title, children, action, tone = "accent" }) {
+  const ring =
+    tone === "danger"
+      ? "bg-danger/10 text-danger"
+      : "bg-accent/10 text-accent";
   return (
     <Card padding="lg" className="text-center">
       <div className="mx-auto flex max-w-sm flex-col items-center gap-3 py-6">
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+        <span className={`flex h-12 w-12 items-center justify-center rounded-xl ${ring}`}>
           {icon || (
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />

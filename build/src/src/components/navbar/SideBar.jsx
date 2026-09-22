@@ -1,7 +1,7 @@
 import logo from "img/avado-logo-v1.1.svg";
 import { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { createSelector, createStructuredSelector } from "reselect";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { sidenavItems } from "./navbarItems";
@@ -33,6 +33,7 @@ const SideBar = ({
   const [width, setWidth] = useState(window.innerWidth);
 
   const sidebarEl = useRef(null);
+  const location = useLocation();
 
   function toggleSideNav() {
     setCollapsed(!collapsed);
@@ -47,6 +48,13 @@ const SideBar = ({
       window.removeEventListener(toggleSideNavEvent, toggleSideNav);
     };
   }, []);
+
+  // Below 1024 px the sidebar is an off-canvas drawer: close it whenever the
+  // route changes, so navigating (a link inside a page, browser back/forward,
+  // a redirect) never leaves it open over the new page.
+  useEffect(() => {
+    setCollapsed(true);
+  }, [location.pathname]);
 
   useEffect(() => {
     // Always collapse the navbar when crossing the breakpoint, going from big to small
@@ -93,32 +101,49 @@ const SideBar = ({
     }, []);
 
   return (
-    <div id="sidebar" ref={sidebarEl} className={collapsed ? "collapsed" : ""}>
-      <NavLink className="sidenav-item top" to={"/"} onClick={collapseSideNav}>
-        <img className="sidebar-logo header" src={logo} alt="logo" />
-      </NavLink>
+    <>
+      {/* Off-canvas overlay, below 1024 px only (see .sidebar-overlay / the
+          sidebar's own breakpoint in layout.css). Tapping it closes the sidebar. */}
+      {!collapsed && (
+        <div
+          className="sidebar-overlay"
+          data-testid="sidebar-overlay"
+          aria-hidden="true"
+          onClick={collapseSideNav}
+        />
+      )}
+      <div id="sidebar" ref={sidebarEl} className={collapsed ? "collapsed" : ""}>
+        <NavLink className="sidenav-item top" to={"/"} onClick={collapseSideNav}>
+          <img className="sidebar-logo header" src={logo} alt="logo" />
+        </NavLink>
 
-      <div className="nav">
-        <div className="sidenav-section-label">Menu</div>
+        <div className="nav">
+          <div className="sidenav-section-label">Menu</div>
 
-        {filteredSidenavItems.map(item => (
-          <NavLink
-            exact
-            key={item.name}
-            className="sidenav-item selectable"
-            onClick={collapseSideNav}
-            to={item.href}
-          >
-            <item.icon scale={0.8} />
-            <span className="name svg-text">{item.name}</span>
-          </NavLink>
-        ))}
+          {filteredSidenavItems.map(item => (
+            <NavLink
+              exact
+              key={item.name}
+              className="sidenav-item selectable"
+              onClick={collapseSideNav}
+              to={item.href}
+            >
+              <item.icon scale={0.8} />
+              <span className="name svg-text">{item.name}</span>
+            </NavLink>
+          ))}
+        </div>
+
+        {/* spacer keeps the funded-by section at the bottom (if possible) */}
+        <div className="spacer" />
+        {/* REACT_APP_VERSION is only set by getVersionData.sh during the Docker
+            build (yarn build run straight from the repo, e.g. a preview build,
+            never sees it) — hide the line rather than show a bare "Version". */}
+        {process.env.REACT_APP_VERSION && (
+          <div className="sidebar-version">Version {process.env.REACT_APP_VERSION}</div>
+        )}
       </div>
-
-      {/* spacer keeps the funded-by section at the bottom (if possible) */}
-      <div className="spacer" />
-      <div className="sidebar-version">Version {process.env.REACT_APP_VERSION}</div>
-    </div>
+    </>
   );
 }
 

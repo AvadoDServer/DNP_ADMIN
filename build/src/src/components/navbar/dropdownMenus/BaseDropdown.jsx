@@ -39,6 +39,7 @@ const TITLE_COLOR = {
 
 function BaseDropdown({
   name,
+  label,
   messages,
   Icon,
   onClick,
@@ -95,13 +96,16 @@ function BaseDropdown({
         onClick={onToggle}
         aria-haspopup="true"
         aria-expanded={!collapsed}
-        title={name}
+        title={label || name}
+        aria-label={label || name}
         className={cn(
           "relative flex h-9 w-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus",
+          label && "lg:w-auto lg:px-2.5",
           attentionGrab && "animate-pulse-soft text-fg"
         )}
       >
         <Icon />
+        {label && <span className="topbar-label">{label}</span>}
         {BUBBLE[globalType] && (
           <span
             className={cn(
@@ -118,7 +122,7 @@ function BaseDropdown({
           role="menu"
           className="absolute right-0 top-full z-[1100] mt-2 max-h-[30rem] w-[min(22.5rem,90vw)] overflow-y-auto rounded-lg border border-border bg-surface text-fg shadow-xl"
         >
-          <div className="border-b border-border px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-fg-subtle">
+          <div className="border-b border-border px-4 py-2.5 text-xs font-bold text-fg-subtle">
             {name}
           </div>
           {messages.map(({ type, title, body, progress, showProgress }, i) => (
@@ -162,6 +166,7 @@ function BaseDropdown({
 
 BaseDropdown.propTypes = {
   name: PropTypes.string.isRequired,
+  label: PropTypes.string,
   messages: PropTypes.array.isRequired,
   Icon: PropTypes.func.isRequired,
   onClick: PropTypes.func,

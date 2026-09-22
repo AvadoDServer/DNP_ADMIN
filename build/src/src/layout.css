@@ -1,11 +1,13 @@
 /*
   TEXT STYLES
-  (font @import must precede all other statements per CSS spec / Vite)
+  Fonts (Inter, Sen, JetBrains Mono) are bundled via @fontsource imports in
+  index.jsx — no external Google Fonts request.
 */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 :root {
-  --sidebar-breakpoint: 40rem;
+  /* Below this width the sidebar is an off-canvas drawer (see #sidebar.collapsed
+     and .sidebar-overlay below); it stays docked open at/above it. */
+  --sidebar-breakpoint: 64rem;
   --sidenav-width: 14rem;
   --transition-time: 0.25s;
   --topbar-height: 4rem;
@@ -141,9 +143,38 @@ body,
 }
 
 /* Styles below apply when screen width big */
-@media (min-width: 40rem) {
+@media (min-width: 64rem) {
   .sidenav-toggler {
     display: none;
+  }
+}
+
+/* Overlay behind the off-canvas sidebar, below 1024 px only. Rendered by
+   SideBar.jsx while the drawer is open; tapping it closes the sidebar
+   (SideBar.jsx also closes it on route change). Sits above the topbar/main
+   content but below the sidebar panel itself. */
+.sidebar-overlay {
+  display: none;
+}
+@media only screen and (max-width: 64rem) {
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--overlay-bg);
+    animation: sidebar-overlay-fade-in 0.2s ease;
+    z-index: calc(var(--z-index-sidebar) - 1);
+  }
+}
+@keyframes sidebar-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -245,7 +276,7 @@ body,
 #topbar {
   transition: margin-left var(--transition-time);
 }
-@media only screen and (max-width: 40rem) {
+@media only screen and (max-width: 64rem) {
   #sidebar.collapsed {
     width: 0;
     border-right-width: 0;

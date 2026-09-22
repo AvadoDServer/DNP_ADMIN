@@ -255,7 +255,7 @@ function Priority({ dappnodeParams = {} }) {
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {subscription.planType && (
               <div className="rounded-md border border-border bg-bg-subtle p-3">
-                <dt className="text-xs uppercase tracking-wide text-fg-subtle">Plan</dt>
+                <dt className="text-xs text-fg-subtle">Plan</dt>
                 <dd className="mt-0.5 text-sm font-medium capitalize text-fg">
                   {subscription.planType}
                 </dd>
@@ -263,7 +263,7 @@ function Priority({ dappnodeParams = {} }) {
             )}
             {subscription.endDate && (
               <div className="rounded-md border border-border bg-bg-subtle p-3">
-                <dt className="text-xs uppercase tracking-wide text-fg-subtle">
+                <dt className="text-xs text-fg-subtle">
                   {cancelling ? "Ends on" : "Renews on"}
                 </dt>
                 <dd className="mt-0.5 text-sm font-medium text-fg">
