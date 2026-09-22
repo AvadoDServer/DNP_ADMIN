@@ -1,22 +1,21 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { Link, useHistory } from "react-router-dom";
 import semver from "semver";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 import Badge from "components/ui/Badge";
-import defaultAvatar from "img/defaultAvatar.png";
+import AppAvatar from "components/ui/AppAvatar";
+import { appDescription } from "components/appStatus";
+import { rootPath as packagesRootPath } from "pages/packages/data";
 
 /**
  * DappStore category grid. Same redux/manifest data shape as before — only
  * presentation is modernized onto the design system.
  */
 function ManifestStore({ directory, openDnp }) {
-  const hashToUrl = (hash) => {
-    if (!hash) return defaultAvatar;
-    return `http://ipfs.my.ava.do:8080/ipfs/${hash.replace("/ipfs/", "")}`;
-  };
-
+  const history = useHistory();
   const visible = directory.filter((item) => {
     if (!item || !item.manifest || !item.manifest.hidden === true) return true;
     return false;
@@ -25,7 +24,8 @@ function ManifestStore({ directory, openDnp }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {visible.map((p, i) => {
-        const { title, name, version, description, avatar } = p.manifest || {};
+        const { title, name, version } = p.manifest || {};
+        const description = appDescription(p);
         const installed = Boolean(p.installed);
         const hasUpdate =
           installed &&
@@ -34,6 +34,16 @@ function ManifestStore({ directory, openDnp }) {
           semver.valid(version) &&
           semver.valid(p.installedVersion) &&
           semver.gt(version, p.installedVersion);
+        const pkg = { name, manifest: p.manifest };
+        // Installed, up-to-date entries have nowhere to "install" or "update"
+        // to — the card (and its button) should go straight to the app's
+        // own page instead of the store's install/detail flow.
+        const upToDate = installed && !hasUpdate;
+        const packagePath = `${packagesRootPath}/${name}`;
+        const open = () => {
+          if (upToDate) history.push(packagePath);
+          else openDnp(p.manifesthash);
+        };
 
         return (
           <Card
@@ -42,28 +52,21 @@ function ManifestStore({ directory, openDnp }) {
             padding="md"
             role="button"
             tabIndex={0}
-            onClick={() => openDnp(p.manifesthash)}
+            onClick={open}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                openDnp(p.manifesthash);
+                open();
               }
             }}
             className="group flex flex-col gap-3"
           >
             <div className="flex items-start gap-3">
-              <img
-                src={hashToUrl(avatar)}
-                alt=""
-                onError={(e) => {
-                  e.currentTarget.src = defaultAvatar;
-                }}
-                className="h-12 w-12 flex-shrink-0 rounded-lg border border-border object-cover"
-              />
+              <AppAvatar pkg={pkg} size={48} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <h5
-                    className="truncate font-semibold capitalize text-fg"
+                    className="line-clamp-2 break-words font-semibold capitalize text-fg"
                     title={title || name}
                   >
                     {title || name}
@@ -74,12 +77,12 @@ function ManifestStore({ directory, openDnp }) {
                     </Badge>
                   )}
                 </div>
-                <span className="text-xs text-fg-subtle">v{version}</span>
+                <span className="font-mono text-xs text-fg-subtle">v{version}</span>
               </div>
             </div>
 
             {description && (
-              <p className="line-clamp-2 text-sm text-fg-muted">{description}</p>
+              <p className="line-clamp-3 text-sm text-fg-muted">{description}</p>
             )}
 
             {installed && (
@@ -91,18 +94,32 @@ function ManifestStore({ directory, openDnp }) {
               </div>
             )}
 
-            <Button
-              variant={hasUpdate ? "primary" : "secondary"}
-              size="sm"
-              pill
-              className="mt-auto w-full group-hover:border-accent/60 group-hover:text-accent"
-              onClick={(e) => {
-                e.stopPropagation();
-                openDnp(p.manifesthash);
-              }}
-            >
-              {hasUpdate ? "Update" : installed ? "Details" : "Install"}
-            </Button>
+            {upToDate ? (
+              <Button
+                as={Link}
+                to={packagePath}
+                variant="secondary"
+                size="sm"
+                pill
+                className="mt-auto w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Installed
+              </Button>
+            ) : (
+              <Button
+                variant={hasUpdate ? "primary" : "secondary"}
+                size="sm"
+                pill
+                className="mt-auto w-full group-hover:border-accent/60 group-hover:text-accent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  open();
+                }}
+              >
+                {hasUpdate ? `Update to v${version}` : "Install"}
+              </Button>
+            )}
           </Card>
         );
       })}
