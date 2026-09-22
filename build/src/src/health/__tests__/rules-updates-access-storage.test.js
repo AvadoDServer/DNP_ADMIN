@@ -1,6 +1,6 @@
 import { updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable } from "health/rules/updates";
 import { portsClosed, noUpnp, noNatLoopback, remoteAccessMissing } from "health/rules/access";
-import { diskHigh, parsePercent, parseDockerSize, appDiskUse } from "health/rules/storage";
+import { diskHigh, parsePercent, parseDockerSize, formatDockerSize, appDiskUse } from "health/rules/storage";
 import { diagnoseFailed } from "health/rules/core";
 import { pkg, snapshot } from "./fixtures";
 
@@ -66,6 +66,18 @@ describe("storage", () => {
     expect(parseDockerSize(undefined)).toBe(0);
     expect(parseDockerSize(null)).toBe(0);
   });
+  it("formatDockerSize is the inverse of parseDockerSize, in decimal (1000-based) units matching docker's own", () => {
+    expect(formatDockerSize(parseDockerSize("27.94GB"))).toBe("27.9 GB");
+    expect(formatDockerSize(parseDockerSize("1.572GB"))).toBe("1.6 GB");
+    expect(formatDockerSize(parseDockerSize("22.34MB"))).toBe("22.3 MB");
+    expect(formatDockerSize(parseDockerSize("17.3kB"))).toBe("17.3 kB");
+    expect(formatDockerSize(63)).toBe("63 B");
+    expect(formatDockerSize(0)).toBe("0 B");
+    expect(formatDockerSize(undefined)).toBe("0 B");
+    expect(formatDockerSize(null)).toBe("0 B");
+    expect(formatDockerSize(NaN)).toBe("0 B");
+    expect(formatDockerSize(1.9e12)).toBe("1.9 TB");
+  });
   it("appDiskUse sums a package's volumes from docker's size strings", () => {
     const p = pkg("nimbus.avado.dnp.dappnode.eth", {
       volumes: [{ name: "data", size: "27.94GB" }, { name: "logs", size: "63B" }, { type: "bind", path: "/etc/hostname" }],
@@ -88,12 +100,12 @@ describe("storage", () => {
 });
 
 describe("diagnoses", () => {
-  it("turns failing diagnoses into warnings, skipping disk and loading ones", () => {
+  it("turns failing diagnoses into warnings, skipping disk, core-dnps, open-ports and loading ones", () => {
     const diagnoses = [
       { id: "getDiagnoseIpfs", ok: false, msg: "IPFS is not resolving: timeout", solutions: ["Restart IPFS"] },
       { id: "getDiagnoseDiskSpace", ok: false, msg: "Disk usage is over 95%", solutions: [] },
       { id: "getDiagnoseDappmanagerConnected", loading: true, msg: "Checking" },
-      { id: "getDiagnoseOpenPorts", ok: true, msg: "fine" },
+      { id: "getDiagnoseOpenPorts", ok: false, msg: "Some ports are closed", solutions: [] },
     ];
     const out = diagnoseFailed(snapshot({ diagnoses }));
     expect(out).toHaveLength(1);

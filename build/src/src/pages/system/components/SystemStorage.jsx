@@ -5,10 +5,9 @@ import * as a from "../actions";
 import { DISK_CLEANUP } from "../signedCommands";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getDappnodeStats } from "services/dappnodeStatus/selectors";
-import { appDiskUse } from "health/rules/storage";
+import { appDiskUse, formatDockerSize, parsePercent } from "health/rules/storage";
 import { appTitle } from "health/rules/apps";
 import { getClient } from "health/clients";
-import humanFileSize from "utils/humanFileSize";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
@@ -45,7 +44,7 @@ function StorageRow({ pkg, size, share }) {
           <div className="break-words text-sm font-medium text-fg">{appTitle(pkg)}</div>
           <ProgressBar value={share * 100} size="sm" className="mt-1.5" />
         </div>
-        <span className="flex-shrink-0 font-mono text-xs text-fg-subtle">{humanFileSize(size)}</span>
+        <span className="flex-shrink-0 font-mono text-xs text-fg-subtle">{formatDockerSize(size)}</span>
       </div>
       {advice && (
         <button
@@ -63,8 +62,10 @@ function StorageRow({ pkg, size, share }) {
 
 function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
   const rows = storageRows(dnpInstalled);
-  const pct = parseInt((dappnodeStats && dappnodeStats.disk) || "0", 10) || 0;
-  const status = pct > 90 ? "danger" : pct > 75 ? "warning" : "accent";
+  // Same parser and 80/90 thresholds as Home's Resources strip, so the two
+  // pages never disagree about how full the disk is.
+  const pct = parsePercent(dappnodeStats && dappnodeStats.disk) || 0;
+  const status = pct >= 90 ? "danger" : pct >= 80 ? "warning" : "accent";
 
   const cleanUp = () =>
     confirmSignedCmd(
@@ -82,7 +83,7 @@ function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
       <Card padding="lg">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-fg">Disk</span>
-          <span className="text-sm font-semibold text-fg">{pct}% used</span>
+          <span className="text-sm font-semibold text-fg">{Math.round(pct)}% used</span>
         </div>
         <ProgressBar value={pct} variant={status} className="mt-3" />
         {dappnodeStats && dappnodeStats.diskUsed && dappnodeStats.diskTotal && (

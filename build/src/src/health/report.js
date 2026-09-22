@@ -1,7 +1,5 @@
 import { appTitle } from "./rules/apps";
-import { appDiskUse } from "./rules/storage";
-
-const gb = n => (n ? `${(n / 1e9).toFixed(1)} GB` : "?");
+import { appDiskUse, formatDockerSize } from "./rules/storage";
 
 /** Plain-text support report. Deliberately excludes env values, logs, keys and public IPs. */
 export function buildReport({ verdict, findings, packages, stats, params, chainData, userActionLogs, versions, now }) {
@@ -17,7 +15,7 @@ export function buildReport({ verdict, findings, packages, stats, params, chainD
   lines.push(`- CPU ${stats.cpu || "?"}, memory ${stats.memory || "?"}, disk ${stats.disk || "?"} of ${stats.diskTotal || "?"}`);
   lines.push("", "Apps");
   for (const p of packages || [])
-    lines.push(`- ${appTitle(p)} (${p.name}) ${p.version || "?"} ${p.state || "?"}${p.isCore ? " [system]" : ""}, disk ${gb(appDiskUse(p))}`);
+    lines.push(`- ${appTitle(p)} (${p.name}) ${p.version || "?"} ${p.state || "?"}${p.isCore ? " [system]" : ""}, disk ${formatDockerSize(appDiskUse(p))}`);
   lines.push("", "Chains");
   for (const c of chainData || []) lines.push(`- ${c.name}: ${c.syncing ? c.message || "syncing" : "synced"}`);
   lines.push("", "Recent activity");

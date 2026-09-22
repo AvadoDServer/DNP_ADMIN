@@ -31,6 +31,23 @@ export function parseDockerSize(value) {
   return Number.isFinite(n) && mult !== undefined ? n * mult : 0;
 }
 
+const SIZE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB"];
+
+/**
+ * The inverse of parseDockerSize: format a byte count using the same
+ * decimal (1000-based) units docker itself reports, so a size shown in the
+ * UI doesn't drift from "docker system df -v" (e.g. its "27.94GB" becomes
+ * "27.9 GB" here — not `humanFileSize`'s binary/1024-based "26.0 GB", a
+ * different number under the same "GB" label).
+ */
+export function formatDockerSize(bytes) {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n <= 0) return "0 B";
+  const i = Math.min(Math.floor(Math.log(n) / Math.log(1000)), SIZE_UNITS.length - 1);
+  const value = n / Math.pow(1000, i);
+  return `${value.toFixed(i === 0 ? 0 : 1)} ${SIZE_UNITS[i]}`;
+}
+
 export const appDiskUse = pkg =>
   ((pkg && pkg.volumes) || []).reduce((sum, v) => sum + parseDockerSize(v && v.size), 0);
 
