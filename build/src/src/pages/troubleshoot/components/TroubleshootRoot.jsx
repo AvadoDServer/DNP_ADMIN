@@ -1,15 +1,14 @@
 import React from "react";
-import { Route } from "react-router-dom";
+import { Route, Switch } from "react-router-dom";
 import { rootPath } from "../data";
-// Components
-import TroubleshootHome from "./TroubleshootHome";
-// Logic
+import HelpHome from "./HelpHome";
+import HelpTopic from "./HelpTopic";
 
-const TroubleshootRoot = () => (
-  <>
-    <Route exact path={rootPath} component={TroubleshootHome} />
-    <Route path={rootPath + "/:id"} component={null} />
-  </>
-);
-
-export default TroubleshootRoot;
+export default function TroubleshootRoot() {
+  return (
+    <Switch>
+      <Route exact path={rootPath} component={HelpHome} />
+      <Route path={rootPath + "/:topic"} component={HelpTopic} />
+    </Switch>
+  );
+}
