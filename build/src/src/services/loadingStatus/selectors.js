@@ -6,7 +6,9 @@ import * as loadingIds from "./loadingIds";
 // Service > loadingStatus
 
 export const getLoadingStatuses = createSelector(
-  state => state[mountPoint],
+  // Defensive default: some tests build a minimal store without this slice
+  // mounted; treat that the same as "nothing loaded yet" instead of crashing.
+  state => state[mountPoint] || {},
   loadingStatuses => loadingStatuses
 );
 
@@ -58,7 +60,23 @@ export const getIsLoadingStrictById = loadingId => {
   );
 };
 
+/**
+ * The `loadingId` variable is constant,
+ * never changes on the lifetime of the components consuming it
+ *
+ * Returns true once the data has been received at least once, regardless of
+ * whether it is loading again right now (e.g. a background refresh).
+ * @param {string} loadingId
+ */
+export const getIsLoadedById = loadingId => {
+  return createSelector(
+    getLoadingStatuses,
+    loadingStatuses => Boolean((loadingStatuses[loadingId] || {}).isLoaded)
+  );
+};
+
 export const getIsLoading = mapValues(loadingIds, id => getIsLoadingById(id));
+export const getIsLoaded = mapValues(loadingIds, id => getIsLoadedById(id));
 export const getLoadingError = mapValues(loadingIds, id =>
   getLoadingErrorById(id)
 );

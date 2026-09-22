@@ -7,6 +7,7 @@ import { fetchDappnodeStats } from "services/dappnodeStatus/actions";
 import { getChainData } from "services/chainData/selectors";
 import { getDappnodeStats } from "services/dappnodeStatus/selectors";
 import { getConnectionStatus } from "services/connectionStatus/selectors";
+import { useHealth } from "health/HealthProvider";
 // Own module
 import VerdictPanel from "./VerdictPanel";
 import ResourcesStrip from "./ResourcesStrip";
@@ -15,9 +16,26 @@ import ChainLine from "./ChainLine";
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 import Badge from "components/ui/Badge";
+import Skeleton from "components/ui/Skeleton";
 import { PageHeader, SectionHeader } from "components/ui/PageHeader";
 import AppCard from "components/apps/AppCard";
 import * as s from "../../packages/selectors.js";
+
+/** Shimmer placeholder for an AppCard, shown while packages are still loading. */
+function AppCardSkeleton() {
+  return (
+    <div aria-hidden="true" className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+      <div className="flex items-start gap-3">
+        <Skeleton className="h-10 w-10 flex-shrink-0" rounded="full" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-3 w-4/5" />
+        </div>
+      </div>
+      <Skeleton className="mt-auto h-6 w-24" rounded="full" />
+    </div>
+  );
+}
 
 /**
  * @param {array} chainData
@@ -35,6 +53,8 @@ function Dashboard({
   installedpackages,
   history,
 }) {
+  const { ready } = useHealth();
+
   useEffect(() => {
     const interval = setInterval(fetchDappnodeStats, 5 * 1000);
     return () => {
@@ -75,7 +95,11 @@ function Dashboard({
             }
             first
           />
-          {activePackages.length === 0 ? (
+          {!ready ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => <AppCardSkeleton key={i} />)}
+            </div>
+          ) : activePackages.length === 0 ? (
             <Card padding="lg" className="text-center">
               <p className="mb-1 font-display text-lg font-semibold text-fg">Your AVADO is ready</p>
               <p className="mb-4 text-sm text-fg-muted">Start with Staking setup, or browse the DappStore for other apps.</p>
@@ -115,3 +139,4 @@ const mapDispatchToProps = {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Dashboard);
+export { Dashboard };

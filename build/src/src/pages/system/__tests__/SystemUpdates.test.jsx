@@ -42,6 +42,16 @@ describe("SystemUpdates", () => {
     expect(screen.getByText("Your AVADO system is up to date.")).toBeInTheDocument();
   });
 
+  it("shows 'Checking for updates…' while sources.updates is 'loading' (incl. before nodeid ever arrives)", () => {
+    useHealthMock.mockReturnValue({ updates: {}, sources: { updates: "loading" } });
+    renderPage();
+    expect(screen.getByText("Checking for updates…")).toBeInTheDocument();
+    expect(screen.queryByText("All apps are up to date.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Can't check for updates right now: your AVADO can't reach the AVADO store.")
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a quiet explanation when the store can't be reached, instead of the empty state", () => {
     useHealthMock.mockReturnValue({ updates: {}, sources: { updates: "failed" } });
     renderPage();

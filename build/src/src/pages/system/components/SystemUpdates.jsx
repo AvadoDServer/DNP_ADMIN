@@ -43,12 +43,18 @@ function SystemUpdates({ dnpInstalled, coreUpdateAvailable, coreDeps }) {
     update,
   }));
   const failedToCheck = sources && sources.updates === "failed";
+  // Also true when nodeid has never arrived, since the fetch that would set
+  // sources.updates to "ok"/"failed" never runs until then, and the store
+  // status is initialised to "loading" (see health/HealthProvider).
+  const checking = sources && sources.updates === "loading";
 
   return (
     <div className="animate-fade-in">
       <SectionHeader title="App updates" count={rows.length} first />
       <Card padding="none">
-        {failedToCheck ? (
+        {checking ? (
+          <p className="p-4 text-sm text-fg-muted">Checking for updates…</p>
+        ) : failedToCheck ? (
           <p className="p-4 text-sm text-fg-muted">
             Can't check for updates right now: your AVADO can't reach the AVADO store.
           </p>

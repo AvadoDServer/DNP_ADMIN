@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "components/ui/cn";
 import FindingRow from "components/health/FindingRow";
+import Spinner from "components/ui/Spinner";
 import { useHealth } from "health/HealthProvider";
 
 const BAND = {
@@ -15,8 +16,26 @@ export function verdictSentence(verdict, findings) {
   return findings[0] ? findings[0].title : verdict.label;
 }
 
-export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed }) {
+export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true }) {
   const [all, setAll] = useState(false);
+
+  // Until the installed-packages list has actually loaded, there is nothing
+  // to have a verdict about yet — show a neutral "checking" state instead of
+  // a false "all good" (no findings computed over empty/partial data).
+  if (!ready) {
+    return (
+      <section aria-labelledby="verdict-title" className="rounded-lg border border-border bg-surface p-5 sm:p-6">
+        <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg-muted">
+          <Spinner size="sm" />
+          Checking
+        </p>
+        <h2 id="verdict-title" className="mb-0 break-words font-display text-2xl font-bold leading-tight text-fg sm:text-[2.5rem]">
+          Checking your AVADO…
+        </h2>
+      </section>
+    );
+  }
+
   const band = BAND[verdict.level] || BAND.ok;
   const healthy = verdict.level === "ok";
   // The headline (h2) is already the worst finding's title — showing that
@@ -70,6 +89,15 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
 }
 
 export default function VerdictPanel() {
-  const { verdict, findings, checkedAt, refresh, checksPassed } = useHealth();
-  return <VerdictView verdict={verdict} findings={findings} checkedAt={checkedAt} onRefresh={refresh} checksPassed={checksPassed} />;
+  const { verdict, findings, checkedAt, refresh, checksPassed, ready } = useHealth();
+  return (
+    <VerdictView
+      verdict={verdict}
+      findings={findings}
+      checkedAt={checkedAt}
+      onRefresh={refresh}
+      checksPassed={checksPassed}
+      ready={ready}
+    />
+  );
 }

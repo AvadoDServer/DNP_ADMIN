@@ -14,6 +14,7 @@ const state = {
   packages: [{ name: "nimbus.avado.dnp.dappnode.eth", version: "0.0.48", state: "running", running: true, manifest: { title: "Nimbus" } }],
   stats: { disk: "12%" },
   params: { nodeid: "0xabc" },
+  loadingStatus: { dnpInstalled: { isLoading: false, isLoaded: true } },
 };
 
 // `state.packages` has no remoteconnect/vpn package, so `remote-access-missing`
@@ -22,9 +23,10 @@ const state = {
 // against this fixture regardless of the store/metrics impls passed in.
 
 function Probe({ dismissId }) {
-  const { verdict, findings, allFindings, sources, dismiss, checksPassed, checksTotal } = useHealth();
+  const { verdict, findings, allFindings, sources, dismiss, checksPassed, checksTotal, ready } = useHealth();
   return (
     <div>
+      <span data-testid="ready">{String(ready)}</span>
       <span data-testid="verdict">{verdict.label}</span>
       <span data-testid="ids">{findings.map(f => f.id).join(",")}</span>
       <span data-testid="allids">{allFindings.map(f => f.id).join(",")}</span>
@@ -40,9 +42,9 @@ function Probe({ dismissId }) {
   );
 }
 
-const renderWith = (props, probeProps) =>
+const renderWith = (props, probeProps, stateOverride) =>
   render(
-    <Provider store={createStore(() => state)}>
+    <Provider store={createStore(() => stateOverride || state)}>
       <HealthProvider {...props}>
         <Probe {...probeProps} />
       </HealthProvider>
@@ -74,6 +76,43 @@ describe("HealthProvider", () => {
     renderWith({ fetchStoreImpl: async () => { throw Error("offline"); }, fetchMetricsImpl: async () => null });
     await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("failed"));
     expect(screen.getByTestId("ids").textContent).toContain("store-unreachable");
+  });
+
+  it("ready is true once dnpInstalled has loaded", async () => {
+    renderWith({
+      fetchStoreImpl: async () => ({ packages: [] }),
+      fetchMetricsImpl: async () => null,
+    });
+    await waitFor(() => expect(screen.getByTestId("ready").textContent).toBe("true"));
+  });
+});
+
+describe("HealthProvider readiness", () => {
+  const okStore = { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null };
+
+  it("is not ready while dnpInstalled is still loading, and computes no findings", async () => {
+    renderWith(okStore, undefined, { ...state, loadingStatus: { dnpInstalled: { isLoading: true, isLoaded: false } } });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ready").textContent).toBe("false");
+    expect(screen.getByTestId("ids").textContent).toBe("");
+    expect(screen.getByTestId("allids").textContent).toBe("");
+    expect(screen.getByTestId("checksPassed").textContent).toBe("0");
+    expect(screen.getByTestId("checksTotal").textContent).toBe("0");
+  });
+
+  it("is not ready before dnpInstalled has ever been received, even if isLoading is false", async () => {
+    renderWith(okStore, undefined, { ...state, loadingStatus: { dnpInstalled: { isLoading: false, isLoaded: false } } });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ready").textContent).toBe("false");
+    expect(screen.getByTestId("ids").textContent).toBe("");
+  });
+
+  it("is not ready when the loadingStatus slice itself is missing (e.g. before it is ever mounted)", async () => {
+    const stateWithoutLoadingStatus = { packages: state.packages, stats: state.stats, params: state.params };
+    renderWith(okStore, undefined, stateWithoutLoadingStatus);
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ready").textContent).toBe("false");
+    expect(screen.getByTestId("ids").textContent).toBe("");
   });
 });
 

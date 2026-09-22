@@ -5,6 +5,7 @@ import { getDappnodeStats, getDappnodeParams } from "services/dappnodeStatus/sel
 import { getChainData } from "services/chainData/selectors";
 import { getCoreUpdateAvailable } from "services/coreUpdate/selectors";
 import { getDiagnoses } from "pages/troubleshoot/selectors";
+import { getIsLoading, getIsLoaded } from "services/loadingStatus/selectors";
 import { fetchStore } from "services/store/fetchStore";
 import { computeUpdates } from "services/store/updates";
 import { fetchMetrics } from "./prometheus";
@@ -25,6 +26,13 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
   const chainData = useSelector(getChainData) || [];
   const coreAvailable = useSelector(getCoreUpdateAvailable);
   const diagnoses = useSelector(getDiagnoses) || [];
+  // `ready`: the installed-packages list has actually arrived at least once
+  // and isn't loading right now. Until then, findings/verdict would be
+  // computed over an empty `packages` array and look like a healthy AVADO
+  // with nothing installed — show a neutral "checking" state instead.
+  const dnpInstalledLoading = useSelector(getIsLoading.dnpInstalled);
+  const dnpInstalledLoaded = useSelector(getIsLoaded.dnpInstalled);
+  const ready = !dnpInstalledLoading && dnpInstalledLoaded;
 
   const [store, setStore] = useState({ status: "loading", packages: null });
   const [metrics, setMetrics] = useState({ status: "not-installed", data: null });
@@ -99,9 +107,15 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       // fresh `metrics.headSlot` sample to compute how far behind a client is.
       now: Date.now(),
     };
-    const { findings: allFindings, passed: checksPassed, total: checksTotal } = runChecksDetailed(snapshot, ALL_RULES);
-    const findings = allFindings.filter(f => !(f.dismissable && isDismissed(f.id)));
+    // Findings are not computed until `ready`: with an empty/partial
+    // `packages` snapshot every rule would just find nothing wrong, which
+    // would flash a false "all good" verdict before the real data arrives.
+    const { findings: allFindings, passed: checksPassed, total: checksTotal } = ready
+      ? runChecksDetailed(snapshot, ALL_RULES)
+      : { findings: [], passed: 0, total: 0 };
+    const findings = ready ? allFindings.filter(f => !(f.dismissable && isDismissed(f.id))) : [];
     return {
+      ready,
       findings,
       allFindings,
       verdict: verdictOf(findings),
@@ -117,7 +131,7 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
         setDismissVersion(v => v + 1);
       },
     };
-  }, [packages, stats, params, diagnoses, chainData, updates, coreAvailable, metrics, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, coreAvailable, metrics, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }

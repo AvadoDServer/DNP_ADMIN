@@ -64,4 +64,22 @@ describe("VerdictView", () => {
     expect(screen.getByRole("button", { name: /Check again/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute("href", "/help");
   });
+
+  it("shows a neutral checking state, with no verdict colour and no checks-passed footer, while not ready", () => {
+    render(
+      <MemoryRouter>
+        <VerdictView
+          verdict={{ level: "ok", label: "All good" }}
+          findings={[]}
+          checkedAt={new Date(0)}
+          onRefresh={() => {}}
+          checksPassed={12}
+          ready={false}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("heading", { name: "Checking your AVADO…" })).toBeInTheDocument();
+    expect(screen.queryByText(/checks passed/)).not.toBeInTheDocument();
+    expect(screen.queryByText("All good")).not.toBeInTheDocument();
+  });
 });
