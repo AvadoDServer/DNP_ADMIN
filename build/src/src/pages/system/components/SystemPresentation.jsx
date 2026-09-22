@@ -1,6 +1,8 @@
 import React from "react";
 export { PageHeader, SectionHeader } from "components/ui/PageHeader";
 import Spinner from "components/ui/Spinner";
+import Button from "components/ui/Button";
+import { confirmAlert } from "react-confirm-alert";
 
 /**
  * Presentational helpers local to the System pages. Composed entirely from the
@@ -35,4 +37,53 @@ export function Callout({ tone = "warning", children }) {
   );
 }
 
+/**
+ * A confirm dialog rendered via react-confirm-alert's customUI, restyled on the
+ * design-system tokens. Behaviour (the confirmAlert calls / actions) is
+ * unchanged — only presentation. Shared by every System page that runs a
+ * destructive maintenance action (Overview's reboot/disk-cleanup/shutdown,
+ * Storage's disk cleanup).
+ */
+export function Dialog({ heading, text, children }) {
+  return (
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[rgb(var(--bg-inset)/0.72)] backdrop-blur-sm" />
+      <div className="relative w-full max-w-md animate-rise rounded-xl border border-border bg-surface text-fg shadow-xl">
+        <div className="px-6 py-5">
+          <h2 className="text-lg font-semibold text-fg">{heading}</h2>
+          <p className="mt-2 text-sm text-fg-muted">{text}</p>
+        </div>
+        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
+/**
+ * Confirms, then runs a signed command (`{ command, sig }`, see
+ * `pages/system/signedCommands.js`) through `runSignedCmd`. Same "Cancel" /
+ * "Start!" dialog every destructive maintenance action has always used —
+ * only the command data moved, not the confirmation behaviour.
+ */
+export function confirmSignedCmd(cmd, desc, runSignedCmd) {
+  confirmAlert({
+    customUI: ({ onClose }) => (
+      <Dialog heading={desc.title} text={desc.text}>
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={() => {
+            runSignedCmd(cmd);
+            onClose();
+          }}
+        >
+          Start!
+        </Button>
+      </Dialog>
+    ),
+  });
+}
