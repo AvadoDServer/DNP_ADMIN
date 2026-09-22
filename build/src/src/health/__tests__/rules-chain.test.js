@@ -41,6 +41,20 @@ describe("chain rules", () => {
     expect(headBehind(behind)).toHaveLength(1);
   });
 
+  it("does not suppress mainnet Nimbus head-behind when a different network variant (Nimbus-holesky) is syncing", () => {
+    // DAPPMANAGER names chainData entries shortNameCapitalized(dnpName), so
+    // "Nimbus-holesky" (from nimbus-holesky.avado.dnp.dappnode.eth) is a
+    // different, unrelated package's chain — a *substring* match against
+    // "nimbus" would wrongly suppress this finding; an exact match must not.
+    const behind = snapshot({
+      now,
+      packages: [NIMBUS],
+      metrics: metrics({ headSlot: [{ client: "nimbus", network: "mainnet", value: 15273294 - 65 }] }),
+      chainData: [{ name: "Nimbus-holesky", syncing: true }],
+    });
+    expect(headBehind(behind)).toHaveLength(1);
+  });
+
   it("flags fewer than 10 peers", () => {
     const s = snapshot({ packages: [NIMBUS], metrics: metrics({ peers: [{ client: "nimbus", network: "mainnet", value: 4 }] }) });
     expect(lowPeers(s)[0]).toMatchObject({ severity: "warning", title: "Nimbus Consensus Client has only 4 peers" });

@@ -9,16 +9,17 @@ function matchSamples(packages, samples) {
     .filter(x => x.match);
 }
 
-// chainData entries (services/chainData) aren't keyed by DNP name — just a
-// free-form `name` (e.g. "Nimbus"), which in practice is the client's
-// display label. Match case-insensitively against the client's label or its
-// Prometheus short name, rather than requiring an exact string match.
-function chainEntryMatchesClient(chainName, client) {
-  if (!chainName || !client) return false;
+// chainData entries (services/chainData) aren't keyed by the full DNP name —
+// DAPPMANAGER names them shortNameCapitalized(dnpName) (utils/format.js),
+// e.g. "Nimbus", "Nimbus-holesky", "Teku-gnosis". Match the exact short
+// name, case-insensitively; a *substring* match (e.g. "nimbus" inside
+// "nimbus-holesky") would wrongly let one network's syncing chain suppress
+// a same-client, different-network package's head-behind finding.
+function chainEntryMatchesPkg(chainName, pkgName) {
+  if (!chainName || !pkgName) return false;
   const name = String(chainName).toLowerCase();
-  const label = String(client.label || "").toLowerCase();
-  const promClient = String(client.promClient || "").toLowerCase();
-  return name === label || (promClient && name.includes(promClient));
+  const short = String(pkgName).split(".")[0].toLowerCase();
+  return name === short;
 }
 
 export function chainSyncing({ chainData }) {
@@ -47,7 +48,7 @@ export function headBehind({ packages, metrics, chainData, now }) {
       // A client that chainData already reports as syncing is expected to
       // be behind the wall-clock head — that's normal catch-up, not a
       // problem, and chainSyncing already surfaces it as its own info finding.
-      if ((chainData || []).some(c => c && c.syncing && chainEntryMatchesClient(c.name, match.client))) return null;
+      if ((chainData || []).some(c => c && c.syncing && chainEntryMatchesPkg(c.name, match.pkg.name))) return null;
       return {
         id: `head-behind:${match.pkg.name}`,
         severity: "warning",
