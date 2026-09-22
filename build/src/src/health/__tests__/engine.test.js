@@ -44,6 +44,29 @@ describe("runChecksDetailed", () => {
     const rules = [() => null, () => f("ok", "info")];
     expect(runChecks({}, rules)).toEqual(runChecksDetailed({}, rules).findings);
   });
+
+  it("skips a rule.needs === 'metrics' rule entirely (not counted as passed) when snapshot.metrics is null", () => {
+    const needsMetrics = () => [];
+    needsMetrics.needs = "metrics";
+    const rules = [needsMetrics, () => null];
+
+    const withoutMetrics = runChecksDetailed({ metrics: null }, rules);
+    expect(withoutMetrics.total).toBe(1);
+    expect(withoutMetrics.passed).toBe(1);
+
+    const withMetrics = runChecksDetailed({ metrics: { headSlot: [] } }, rules);
+    expect(withMetrics.total).toBe(2);
+    expect(withMetrics.passed).toBe(2);
+  });
+
+  it("still runs and counts a rule.needs === 'metrics' rule once metrics produce a finding", () => {
+    const needsMetrics = () => f("needs-metrics", "warning");
+    needsMetrics.needs = "metrics";
+    const { findings, total, passed } = runChecksDetailed({ metrics: { ok: true } }, [needsMetrics]);
+    expect(findings.map(x => x.id)).toEqual(["needs-metrics"]);
+    expect(total).toBe(1);
+    expect(passed).toBe(0);
+  });
 });
 
 describe("verdictOf", () => {

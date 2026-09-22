@@ -78,6 +78,19 @@ describe("HealthProvider", () => {
     expect(screen.getByTestId("ids").textContent).toContain("store-unreachable");
   });
 
+  it("flags metrics-unavailable when Prometheus runs but the scrape fails", async () => {
+    const withPrometheus = {
+      ...state,
+      packages: [...state.packages, { name: "prometheus.avado.dappnode.eth", version: "1.0.0", state: "running", running: true, manifest: { title: "Prometheus" } }],
+    };
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null },
+      undefined,
+      withPrometheus
+    );
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("metrics-unavailable"));
+  });
+
   it("ready is true once dnpInstalled has loaded", async () => {
     renderWith({
       fetchStoreImpl: async () => ({ packages: [] }),

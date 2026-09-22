@@ -42,4 +42,10 @@ describe("chain rules", () => {
     const none = snapshot({ packages: [NIMBUS], metrics: metrics({ attesterMiss: [{ client: "nimbus", network: "mainnet", value: 0 }] }) });
     expect(missedAttestations(none)).toEqual([]);
   });
+
+  it("declares rule.needs = 'metrics' so runChecksDetailed can skip them when metrics is null", () => {
+    expect(headBehind.needs).toBe("metrics");
+    expect(lowPeers.needs).toBe("metrics");
+    expect(missedAttestations.needs).toBe("metrics");
+  });
 });

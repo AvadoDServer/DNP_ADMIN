@@ -84,3 +84,11 @@ export function missedAttestations({ packages, metrics }) {
       };
     });
 }
+
+// These three rules can only evaluate anything with a metrics sample; when
+// metrics are unavailable they return `[]`, which would otherwise be
+// indistinguishable from "checked, found nothing wrong". `needs = "metrics"`
+// tells runChecksDetailed to skip (not count) them while metrics is null.
+headBehind.needs = "metrics";
+lowPeers.needs = "metrics";
+missedAttestations.needs = "metrics";

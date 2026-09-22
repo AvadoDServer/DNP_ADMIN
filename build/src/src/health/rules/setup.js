@@ -43,6 +43,23 @@ export function executionWithoutConsensus({ packages }) {
   }));
 }
 
+// Prometheus is installed but the last scrape failed — distinct from
+// monitoringMissing (no monitoring package at all). This also fires when
+// the Admin is opened through Remote Connect or by IP address, since
+// Prometheus is then unreachable from the browser even though it's running.
+export function metricsUnavailable({ sources }) {
+  if (!sources || sources.metrics !== "failed") return null;
+  return {
+    id: "metrics-unavailable",
+    severity: "info",
+    topic: "attestations",
+    title: "Can't read your clients' metrics",
+    why: "The monitoring package is installed but your AVADO couldn't reach Prometheus, so missed attestations, peers and sync can't be checked right now. This also happens when you open the Admin through Remote Connect or an IP address.",
+    fix: { kind: "steps", label: "What to check" },
+    steps: ["Open System and check that Prometheus is running.", "Restart Prometheus."],
+  };
+}
+
 export function monitoringMissing({ packages }) {
   const hasConsensus = clientsByRole(packages, ROLES.CONSENSUS).length > 0;
   const hasPrometheus = (packages || []).some(p => p && p.name === PROMETHEUS_PACKAGE);

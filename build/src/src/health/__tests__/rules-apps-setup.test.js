@@ -1,5 +1,5 @@
 import { appStopped, appRestarting, coreAppDown } from "health/rules/apps";
-import { consensusWithoutExecution, executionWithoutConsensus, monitoringMissing } from "health/rules/setup";
+import { consensusWithoutExecution, executionWithoutConsensus, monitoringMissing, metricsUnavailable } from "health/rules/setup";
 import { pkg, snapshot } from "./fixtures";
 
 const NIMBUS = "nimbus.avado.dnp.dappnode.eth";
@@ -67,6 +67,22 @@ describe("setup pairing", () => {
   it("suggests monitoring when a consensus client runs without Prometheus", () => {
     expect(monitoringMissing(snapshot({ packages: [pkg(NIMBUS)] }))).toMatchObject({ id: "monitoring-missing", severity: "info", topic: "attestations" });
     expect(monitoringMissing(snapshot({ packages: [pkg(NIMBUS), pkg("prometheus.avado.dappnode.eth")] }))).toBeNull();
+  });
+});
+
+describe("metricsUnavailable", () => {
+  it("flags an info finding when the last Prometheus scrape failed", () => {
+    const f = metricsUnavailable(snapshot({ sources: { updates: "ok", metrics: "failed" } }));
+    expect(f).toMatchObject({ id: "metrics-unavailable", severity: "info", topic: "attestations" });
+    expect(f.why).toMatch(/Remote Connect/);
+    expect(f.fix).toMatchObject({ kind: "steps" });
+    expect(f.steps.length).toBeGreaterThan(0);
+  });
+
+  it("is quiet when metrics are not installed or reachable", () => {
+    expect(metricsUnavailable(snapshot({ sources: { updates: "ok", metrics: "not-installed" } }))).toBeNull();
+    expect(metricsUnavailable(snapshot({ sources: { updates: "ok", metrics: "ok" } }))).toBeNull();
+    expect(metricsUnavailable(snapshot({ sources: undefined }))).toBeNull();
   });
 });
 
