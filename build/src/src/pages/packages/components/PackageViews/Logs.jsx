@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import api from "API/rpcMethods";
-// Components
-import Card from "components/Card";
-import SubTitle from "components/SubTitle";
+// UI kit
+import Card from "components/ui/Card";
+import { Input } from "components/ui/Input";
 import Switch from "components/Switch";
-import Input from "components/Input";
+import { SectionHeader } from "../PackagePresentation";
 import Terminal from "./Terminal";
 // Utils
 import { stringIncludes } from "utils/strings";
@@ -77,17 +77,16 @@ function Logs({ id }) {
     : "Lines must be a number > 0";
 
   return (
-    <>
-      <SubTitle>Logs</SubTitle>
-      <Card className="log-controls">
-        <div>
+    <section>
+      <SectionHeader title="Logs" />
+      <Card padding="lg" className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <Switch
             checked={autoRefresh}
             onToggle={setAutoRefresh}
             label="Auto-refresh logs"
             id="switch-ar"
           />
-
           <Switch
             checked={timestamps}
             onToggle={setTimestamps}
@@ -96,24 +95,25 @@ function Logs({ id }) {
           />
         </div>
 
-        <Input
-          prepend="Lines"
-          placeholder="Number of lines to display..."
-          value={lines}
-          onValueChange={setLines}
-          type="number"
-        />
-
-        <Input
-          prepend="Search"
-          placeholder="Filter by..."
-          value={query}
-          onValueChange={setQuery}
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Lines"
+            type="number"
+            placeholder="Number of lines to display…"
+            value={lines}
+            onChange={(e) => setLines(e.target.value)}
+          />
+          <Input
+            label="Search"
+            placeholder="Filter by…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
 
         <Terminal text={terminalText} id={terminalID} />
       </Card>
-    </>
+    </section>
   );
 }
 

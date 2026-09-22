@@ -5,6 +5,7 @@ import Devices from "Icons/Devices";
 import Folder from "Icons/Folder";
 import NewFolder from "Icons/NewFolder";
 import Settings from "Icons/Settings";
+import Priority from "Icons/Priority";
 
 export const sidenavItems = [
   {
@@ -35,6 +36,11 @@ export const sidenavItems = [
     href: "/Packages/remoteconnect.avado.dnp.dappnode.eth",
     icon: Devices,
     package: "remoteconnect.avado.dnp.dappnode.eth",
+  },
+  {
+    name: "Priority",
+    href: "/priority",
+    icon: Priority
   },
   {
     name: "Support",

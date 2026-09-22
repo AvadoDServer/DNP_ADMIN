@@ -1,99 +1,136 @@
-import React from "react";
 import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
 import * as action from "../../actions";
-// Components
-import CardList from "components/CardList";
-import SubTitle from "components/SubTitle";
-import Button from "components/Button";
+import { rootPath } from "../../data";
+// UI kit
+import Button from "components/ui/Button";
+import Card from "components/ui/Card";
+import { SectionHeader } from "../PackagePresentation";
 // Confirm UI
-import confirmRemovePackage from "../confirmRemovePackage";
-import confirmRestartPackage from "../confirmRestartPackage";
 import { confirm } from "components/ConfirmDialog";
 import { shortNameCapitalized } from "utils/format";
 import { toLowercase } from "utils/strings";
+import confirmRemovePackage from "../confirmRemovePackage";
+import confirmRestartPackage from "../confirmRestartPackage";
 
 function PackageControls({
   dnp,
   togglePackage,
   restartPackage,
   restartPackageVolumes,
+  resyncPackage,
   removePackage,
   showToggle = true,
   showRestart = true,
+  showResync = false,
   showReset = true,
   showRemove = true,
+  history,
 }) {
   function confirmRemovePackageVolumes(id) {
     confirm({
       title: `Reset ${shortNameCapitalized(id)}`,
       text: `This will reload this package to its factory settings \n (only this package - all other installed AVADO packages will remain installed and keep their data). This action cannot be undone.`,
       label: "Reset package",
-      onClick: () => restartPackageVolumes(id)
+      onClick: () => restartPackageVolumes(id),
+    });
+  }
+
+  function confirmResyncPackage(id) {
+    confirm({
+      title: `Resync ${shortNameCapitalized(id)}`,
+      text: `This will delete the blockchain/chain data for this package and resync from scratch. Validator keys and configuration will be preserved. This action cannot be undone.`,
+      label: "Resync chain data",
+      onClick: () => resyncPackage(id),
     });
   }
 
   const state = toLowercase(dnp.state); // toLowercase always returns a string
 
   let actions = [];
-  showToggle && actions.push(
-    {
+  showToggle &&
+    actions.push({
       name:
         state === "running" ? "Pause" : state === "exited" ? "Start" : "Toggle",
       text: "Toggle the state of the package from running to paused",
       action: () => togglePackage(dnp.name),
       availableForCore: false,
-      type: "secondary"
+      type: "secondary",
     });
-  showRestart && actions.push(
-    {
+  showRestart &&
+    actions.push({
       name: "Restart",
-      text:
-        "Restarting a package will interrupt the service during 1-10s but preserve its data",
+      text: "Restarting a package will interrupt the service during 1-10s but preserve its data",
       action: () => confirmRestartPackage(dnp.name, restartPackage),
       availableForCore: true,
-      type: "secondary"
+      type: "secondary",
     });
-  showReset && actions.push(
-    {
+  showResync &&
+    actions.push({
+      name: "Resync",
+      text: "Resyncs the blockchain data from scratch while preserving validator keys and configuration.",
+      action: () => confirmResyncPackage(dnp.name),
+      availableForCore: true,
+      type: "warning",
+    });
+  showReset &&
+    actions.push({
       name: "Reset",
       text: `Resets this package to its factory settings (all package data will be lost).`,
       action: () => confirmRemovePackageVolumes(dnp.name),
       availableForCore: true,
-      type: "danger"
+      type: "danger",
     });
-  showRemove && actions.push(
-    {
+  showRemove &&
+    actions.push({
       name: "Remove ",
       text: "Deletes a package permanently.",
-      action: () => confirmRemovePackage(dnp.name, removePackage),
+      // Back to the package list once it is gone; its own page no longer exists
+      action: () =>
+        confirmRemovePackage(dnp.name, (id, deleteVolumes) =>
+          Promise.resolve(removePackage(id, deleteVolumes)).then(
+            () => history && history.push(rootPath),
+            () => {} // the toast already reported the error
+          )
+        ),
       availableForCore: false,
-      type: "danger"
+      type: "danger",
     });
 
-  // Table style -> Removes the space below the table, only for tables in cards
+  // Map the legacy action "type" onto design-system Button variants.
+  const VARIANT = {
+    secondary: "secondary",
+    warning: "outline",
+    danger: "danger",
+  };
+
   return (
-    <>
-      <SubTitle>Controls</SubTitle>
-      <CardList>
-        {actions
-          //   .filter(action => action.availableForCore || !dnp.isCore)
-          .map(({ name, text, type, action }) => (
-            <div key={name} className="control-item">
-              <div>
-                <strong>{name}</strong>
-                <div>{text}</div>
+    <section>
+      <SectionHeader title="Controls" first />
+      <Card padding="none">
+        <ul className="divide-y divide-border">
+          {actions.map(({ name, text, type, action }) => (
+            <li
+              key={name}
+              className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="font-semibold text-fg">{name.trim()}</div>
+                <p className="mt-0.5 text-sm text-fg-muted">{text}</p>
               </div>
               <Button
-                variant={`outline-${type}`}
+                variant={VARIANT[type] || "secondary"}
+                size="sm"
                 onClick={action}
-                style={{ whiteSpace: "normal" }}
+                className="flex-shrink-0 sm:min-w-[7rem]"
               >
-                {name}
+                {name.trim()}
               </Button>
-            </div>
+            </li>
           ))}
-      </CardList>
-    </>
+        </ul>
+      </Card>
+    </section>
   );
 }
 
@@ -103,10 +140,10 @@ const mapDispatchToProps = {
   togglePackage: action.togglePackage,
   restartPackage: action.restartPackage,
   restartPackageVolumes: action.restartPackageVolumes,
-  removePackage: action.removePackage
+  resyncPackage: action.resyncPackage,
+  removePackage: action.removePackage,
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(PackageControls);
+export default withRouter(
+  connect(mapStateToProps, mapDispatchToProps)(PackageControls)
+);

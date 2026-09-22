@@ -1,16 +1,16 @@
-import React from "react";
 // DropdownMenu components
-import DappnodeIdentity from "./dropdownMenus/DappnodeIdentity/index.jsx";
 import ChainData from "./dropdownMenus/ChainData";
+import DappnodeIdentity from "./dropdownMenus/DappnodeIdentity/index.jsx";
 import Notifications from "./dropdownMenus/Notifications";
 import Report from "./dropdownMenus/Report";
 // Components
+import ThemeToggle from "../ThemeToggle";
 import { toggleSideNav } from "./SideBar";
 // Icons
 import MenuBurger from "Icons/MenuBurger";
 // Styles
-import "./topbar.css";
 import "./notifications.css";
+import "./topbar.css";
 
 const TopBar = () => (
   <div id="topbar">
@@ -23,6 +23,8 @@ const TopBar = () => (
     {/* Right justified items */}
     <div className="avado right">
       <DappnodeIdentity />
+      <div className="topnav-icon-separator" />
+      <ThemeToggle />
       <div className="topnav-icon-separator" />
       <ChainData />
       <Notifications />

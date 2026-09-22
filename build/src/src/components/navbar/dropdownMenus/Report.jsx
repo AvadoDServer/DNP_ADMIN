@@ -6,7 +6,12 @@ import { rootPath as reportPath } from "pages/troubleshoot";
 
 const Report = () => {
   return (
-    <NavLink className="tn-dropdown-toggle no-a-style" to={reportPath}>
+    <NavLink
+      to={reportPath}
+      title="Support"
+      aria-label="Support"
+      className="flex h-9 w-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus"
+    >
       <ContactSupport />
     </NavLink>
   );

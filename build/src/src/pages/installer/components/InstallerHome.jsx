@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import withTitle from "components/hoc/withTitle";
 import { compose } from "redux";
 import { createStructuredSelector } from "reselect";
 // This page
@@ -17,11 +16,14 @@ import NoPackageFound from "./NoPackageFound";
 import TypeFilter from "./TypeFilter";
 import ManifestStore from "./ManifestStore";
 import PackageStore from "./PackageStore";
-// Components
-import Input from "components/Input";
-import { ButtonLight } from "components/Button";
-import Loading from "components/generic/Loading";
-import Error from "components/generic/Error";
+import {
+    CategoryHeader,
+    StoreSkeleton,
+    StoreEmpty
+} from "./StorePresentation";
+// UI kit
+import { Input } from "components/ui/Input";
+import Button from "components/ui/Button";
 // Selectors
 import { getMainnet } from "services/chainData/selectors";
 import {
@@ -30,11 +32,8 @@ import {
 } from "services/loadingStatus/selectors";
 import { rootPath as packagesRootPath } from "pages/packages/data";
 import { getDappnodeParams } from "services/dappnodeStatus/selectors";
-// Styles
-import "./installer.css";
 import IsSyncing from "./IsSyncing";
 import axios from "axios";
-import SubTitle from "components/SubTitle";
 import JsonRpcClient from 'react-jsonrpc-client';
 
 function InstallerHome({
@@ -225,52 +224,109 @@ function InstallerHome({
      * 0. Else show the DnpStore
      */
     function Body() {
+        if (
+            !displayManifest ||
+            !displayManifest.packages ||
+            !displayManifest.packages.length
+        )
+            return <StoreSkeleton />;
 
-        if (!displayManifest || !displayManifest.packages || !displayManifest.packages.length) return <Loading msg="Loading DNPs..." />;
-        // if (displayManifest && displayManifest.length) {
-        const categories = displayManifest.categories.sort((a, b) => { return a.weight - b.weight });
+        const categories = displayManifest.categories.sort((a, b) => {
+            return a.weight - b.weight;
+        });
 
-        const store = categories.map((cat, i) => {
-            let subdir = displayManifest.packages.filter((p) => {
-                return p.manifest.avadocategory === cat.tag
+        // When the user is searching, flatten everything into a single
+        // result grid filtered by the current query instead of per-category.
+        if (query) {
+            const matches = displayManifest.packages.filter((p) => {
+                const { name = "", title = "", description = "" } =
+                    p.manifest || {};
+                const q = query.toLowerCase();
+                return (
+                    name.toLowerCase().includes(q) ||
+                    title.toLowerCase().includes(q) ||
+                    description.toLowerCase().includes(q)
+                );
             });
-            return (<div key={i}>
-                <SubTitle>{cat.description}</SubTitle>
-                <ManifestStore directory={subdir} openDnp={openDnp} />
-            </div>);
-        })
 
-        return store;
+            if (!matches.length)
+                return (
+                    <StoreEmpty
+                        icon={
+                            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.3-4.3" />
+                            </svg>
+                        }
+                        title={`No packages match “${query}”`}
+                    >
+                        Try a different name, or paste an IPFS hash to install a
+                        custom package.
+                    </StoreEmpty>
+                );
 
-        // return <ManifestStore directory={displayManifest} openDnp={openDnp} />;
+            return (
+                <>
+                    <CategoryHeader title="Search results" count={matches.length} />
+                    <ManifestStore directory={matches} openDnp={openDnp} />
+                </>
+            );
+        }
 
-
-        // }
-        // return null;
-
+        return categories.map((cat, i) => {
+            const subdir = displayManifest.packages.filter((p) => {
+                return p.manifest.avadocategory === cat.tag;
+            });
+            if (!subdir.length) return null;
+            return (
+                <div key={i}>
+                    <CategoryHeader title={cat.description} count={subdir.length} />
+                    <ManifestStore directory={subdir} openDnp={openDnp} />
+                </div>
+            );
+        });
     }
 
     return (
-        <>
-            <Input
-                placeholder="DNP's name or IPFS hash"
-                value={query}
-                onValueChange={value => setQuery(correctPackageName(value))}
-                onEnterPress={runQuery}
-                append={<ButtonLight onClick={runQuery}>Search</ButtonLight>}
-            />
+        <div className="animate-fade-in">
+            {/* Hero header */}
+            <div className="mb-6 flex flex-col gap-1 border-b border-border pb-5">
+                <h1 className="text-3xl font-bold tracking-tight text-fg">
+                    DappStore
+                </h1>
+                <p className="text-sm text-fg-muted">
+                    Browse and install AVADO packages, or paste an IPFS hash to add a
+                    custom one.
+                </p>
+            </div>
 
-            {/* <TypeFilter types={types} onTypeChange={onTypeChange} /> */}
-
-            {/* <PackageStore directory={directoryFiltered} openDnp={openDnp} /> */}
-
-            <h1>AVADO's DAPP DIRECTORY</h1>
-            {/* <ul>
-                <li><a href="http://localhost:3000/#/installer/%2Fipfs%2FQmebCzywYDtXvpeLFDBPW8LTGWk7RZqjnDBXRWpCbV5t22">ethchain</a></li>
-            </ul> */}
+            {/* Search */}
+            <form
+                className="mb-2"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    runQuery();
+                }}
+                role="search"
+            >
+                <div className="flex items-stretch gap-2">
+                    <Input
+                        className="flex-1"
+                        aria-label="Search packages"
+                        placeholder="Package name or IPFS hash"
+                        value={query}
+                        onChange={(e) =>
+                            setQuery(correctPackageName(e.target.value))
+                        }
+                    />
+                    <Button type="submit" variant="primary">
+                        Search
+                    </Button>
+                </div>
+            </form>
 
             <Body />
-        </>
+        </div>
     );
 }
 
@@ -314,6 +370,5 @@ export default compose(
     connect(
         mapStateToProps,
         mapDispatchToProps
-    ),
-    withTitle("Dappstore")
+    )
 )(InstallerHome);

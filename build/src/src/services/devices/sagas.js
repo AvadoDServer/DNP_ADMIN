@@ -6,7 +6,8 @@ import * as t from "./actionTypes";
 import { loadingId } from "./data";
 import {
   updateIsLoading,
-  updateIsLoaded
+  updateIsLoaded,
+  updateLoading
 } from "services/loadingStatus/actions";
 import { CONNECTION_OPEN } from "services/connectionStatus/actionTypes";
 
@@ -19,7 +20,12 @@ export function* fetchDevices() {
     yield put(a.updateDevices(devices));
     yield put(updateIsLoaded(loadingId));
   } catch (e) {
-    // console.error(`Error on fetchDevices: ${e.stack}`);
+    // Without the VPN package there is no listDevices procedure: record the
+    // error so the page stops showing "Loading devices..." forever
+    const message = /no callee registered/i.test(e.message || "")
+      ? "the VPN package is not installed on this AVADO"
+      : e.message;
+    yield put(updateLoading(loadingId, false, message));
   }
 }
 

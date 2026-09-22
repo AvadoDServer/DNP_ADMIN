@@ -18,38 +18,46 @@ export const mockState = {
   /* connectionStatus */
   [connectionStatusMountPoint]: {
     isOpen: true,
-    session: {}
+    session: {},
   },
 
   /* coreUpdate */
   [coreUpdateMountPoint]: {
     coreDeps: {
       "admin.dnp.dappnode.eth": { version: "0.2.1" },
-      "vpn.dnp.dappnode.eth": { version: "0.2.1" }
+      "vpn.dnp.dappnode.eth": { version: "0.2.1" },
     },
     coreManifest: {
       version: "0.2.1",
       changelog:
         "Major improvements to the 0.2 version https://github.com/dappnode/DAppNode/wiki/DAppNode-Migration-guide-to-OpenVPN",
       warnings: {
-        onInstall: "Your VPN will be restarted and you may lose connection"
-      }
-    }
+        onInstall: "Your VPN will be restarted and you may lose connection",
+      },
+    },
   },
 
   /* dappnodeStatus */
   [dappnodeStatusMountPoint]: {
     params: {},
-    stats: {},
+    stats: {
+      cpu: "35%",
+      memory: "46%",
+      memTotal: "16.00 GB",
+      memUsed: "7.36 GB",
+      disk: "57%",
+      diskTotal: "1.50 TB",
+      diskUsed: "0.86 TB",
+    },
     diagnose: {},
     pingReturns: {},
-    ipfsConnectionStatus: {}
+    ipfsConnectionStatus: {},
   },
 
   /* devices */
   [devicesMountPoint]: [
     { id: "test-name", isAdmin: true },
-    { id: "other-user", isAdmin: false, url: "link-to-otp/?id=617824#hdfuisf" }
+    { id: "other-user", isAdmin: false, url: "link-to-otp/?id=617824#hdfuisf" },
   ],
 
   /* dnpDirectory */
@@ -58,13 +66,13 @@ export const mockState = {
       name: "bitcoin.dnp.dappnode.eth",
       whitelisted: true,
       manifest: { name: "bitcoin.dnp.dappnode.eth" },
-      avatar: "https://en.bitcoin.it/w/images/en/2/29/BC_Logo_.png"
+      avatar: "https://en.bitcoin.it/w/images/en/2/29/BC_Logo_.png",
     },
     "ln.dnp.dappnode.eth": {
       name: "ln.dnp.dappnode.eth",
       whitelisted: true,
-      manifest: { name: "ln.dnp.dappnode.eth", version: "0.1.0" }
-    }
+      manifest: { name: "ln.dnp.dappnode.eth", version: "0.1.0" },
+    },
   },
 
   /* dnpInstalled */
@@ -72,14 +80,14 @@ export const mockState = {
     {
       name: "admin.dnp.dappnode.eth",
       isCore: true,
-      state: "exited"
+      state: "exited",
     },
     {
       name: "ln.dnp.dappnode.eth",
       isDnp: true,
       version: "0.1.0",
-      state: "running"
-    }
+      state: "running",
+    },
   ],
 
   /* isInstallingLogs */
@@ -87,21 +95,21 @@ export const mockState = {
     /* Core update */
     "core.dnp.dappnode.eth": {
       id: "834d5e59-664b-46b9-8906-fbc5341d1acf",
-      log: "Downloading 54%"
+      log: "Downloading 54%",
     },
     "vpn.dnp.dappnode.eth": {
       id: "834d5e59-664b-46b9-8906-fbc5341d1acf",
-      log: "Downloading 54%"
+      log: "Downloading 54%",
     },
     "admin.dnp.dappnode.eth": {
       id: "834d5e59-664b-46b9-8906-fbc5341d1acf",
-      log: "Loading..."
+      log: "Loading...",
     },
     /* Regular install of non-core*/
     "bitcoin.dnp.dappnode.eth": {
       id: "834d5e59-664b-46b9-8906-fbc5341d1acf",
-      log: "Downloading 87%"
-    }
+      log: "Downloading 87%",
+    },
   },
 
   /* loadingStatus */
@@ -116,8 +124,8 @@ export const mockState = {
       body: "Available disk space gone wrong ".repeat(10),
       timestamp: 153834824,
       viewed: false,
-      fromDappmanager: true
-    }
+      fromDappmanager: true,
+    },
   },
 
   /* userActionLogs */
@@ -128,13 +136,13 @@ export const mockState = {
         id: "rinkeby.dnp.dappnode.eth",
         userSetVols: {},
         userSetPorts: {},
-        options: {}
+        options: {},
       },
       level: "error",
       message: "Timeout to cancel expired",
       name: "Error",
       stack: "Error: Timeout to cancel expired↵  ...",
-      timestamp: "2019-02-01T19:09:16.503Z"
-    }
-  ]
+      timestamp: "2019-02-01T19:09:16.503Z",
+    },
+  ],
 };

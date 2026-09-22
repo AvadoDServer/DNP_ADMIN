@@ -1,15 +1,18 @@
+/*
+  TEXT STYLES
+  (font @import must precede all other statements per CSS spec / Vite)
+*/
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
 :root {
   --sidebar-breakpoint: 40rem;
-  --sidenav-width: 12.5rem;
+  --sidenav-width: 14rem;
   --transition-time: 0.25s;
-  --topbar-height: 3.5rem;
-  --container-padding: 1.5rem;
-  --color-white: #2e4e72;
-  --color-border: #3d6696;
-  --color-background: #2e4e72;
-  --border-size: 0.08rem;
-  --border-style: var(--border-size) solid var(--color-border);
-  --default-spacing: 1.25rem;
+  --topbar-height: 4rem;
+  --container-padding: 2rem;
+  --content-max-width: 72rem;
+  --border-size: 1px;
+  --default-spacing: 1.5rem;
 }
 /* MUST ONLY defined z-index properties here 
    Variable definitions are ordered from front to back
@@ -21,15 +24,14 @@
   --z-index-topbar: 1000;
 }
 
-/* 
-  TEXT STYLES 
+/*
+  TEXT STYLES
 */
-@import url("https://fonts.googleapis.com/css?family=Exo+2:400,700");
 
 
 
 body {
-  font-family: overpass, sans-serif !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 /* Reset margins and underlying sizes. 
@@ -42,8 +44,10 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: 'Exo 2', sans-serif;
-  color:white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 
@@ -72,7 +76,7 @@ body,
   bottom: 0;
   left: 0;
   width: var(--sidenav-width);
-  transition: width var(--transition-time);
+  transition: width var(--transition-time), background-color 0.3s ease, border-color 0.3s ease;
   /* When the screen height is really small, show scrolling
      When the sidenav collapses, hide its content
    */
@@ -81,9 +85,9 @@ body,
   /* While the sidenav is collapsing, make sure the content stays straight */
   white-space: nowrap;
   /* Colors */
-  background-color: var(--color-white);
-  border-right: var(--border-style);
-  box-shadow: rgba(0, 0, 0, 0.1) 1px 0px 15px;
+  background-color: var(--bg-sidebar);
+  border-right: var(--border-size) solid var(--border-color);
+  box-shadow: var(--shadow-md);
   /* place sidebar on top of the header and content */
   z-index: var(--z-index-sidebar);
 }
@@ -98,23 +102,23 @@ body,
 }
 .sidenav-item {
   display: grid;
-  grid-template-columns: 1rem 2rem auto;
-  grid-gap: 0.6rem;
+  grid-template-columns: 1.5rem auto;
+  grid-gap: 0.75rem;
   place-items: center start;
-  transition: all 0.5s;
+  padding: 0 0.875rem;
   width: 100%;
 }
 .sidenav-item:not(.top) {
-  height: 2.5rem;
+  height: 2.6rem;
 }
 .sidenav-item .icon,
 .sidenav-item svg {
-  grid-column: 2/3;
-  opacity: 0.3;
+  grid-column: 1/2;
+  opacity: 0.55;
 }
 .sidenav-item .header,
 .sidenav-item .subheader {
-  grid-column: 2/4;
+  grid-column: 1/3;
 }
 /* Make this section dissapear small heights */
 #sidebar > .funded-by {
@@ -125,10 +129,15 @@ body,
 
 /* SIDEBAR > TOP */
 .sidenav-item.top {
+  display: flex;
+  align-items: center;
   height: var(--topbar-height);
-  border-bottom: var(--border-style);
+  border-bottom: var(--border-size) solid var(--border-color);
   /* Prevent the item from shrinking */
   flex-shrink: 0;
+}
+.sidenav-item.top:hover {
+  background: transparent;
 }
 
 /* Styles below apply when screen width big */
@@ -153,12 +162,15 @@ body,
   display: grid;
   grid-template-columns: auto auto;
   grid-gap: 1em;
-  /* Colors */
-  background-color: var(--color-white);
-  border-bottom: var(--border-style);
+  /* Colors — translucent glass */
+  background-color: var(--bg-topbar);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: var(--border-size) solid var(--border-color);
   padding: 0 var(--container-padding);
   /* place topbar between the sidebar (2) and the main (0) */
   z-index: var(--z-index-topbar);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 #topbar .right,
 #topbar .left {
@@ -195,12 +207,31 @@ body,
   position: relative;
   margin-top: var(--topbar-height);
   margin-left: var(--sidenav-width);
-  background-color: var(--color-background);
+  background-color: var(--bg-primary);
   padding: var(--container-padding);
+  min-height: calc(100vh - var(--topbar-height));
+  transition: background-color 0.3s ease;
 }
 
+/* One reading column: pages do not stretch across a wide display */
 #main > div {
-  margin-bottom: var(--default-spacing);
+  max-width: var(--content-max-width);
+  margin: 0 auto var(--default-spacing);
+}
+
+@media only screen and (max-width: 40rem) {
+  #main {
+    padding: 1rem;
+  }
+  #topbar {
+    padding: 0 0.75rem;
+  }
+  #topbar .right {
+    grid-gap: 0.5rem;
+  }
+  .topnav-icon-separator {
+    display: none;
+  }
 }
 
 /********************
@@ -239,5 +270,8 @@ body,
   padding: 5em;
   padding: 5em 1em;
   text-align: center;
-  background-color: var(--color-background);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

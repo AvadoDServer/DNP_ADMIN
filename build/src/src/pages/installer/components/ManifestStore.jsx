@@ -1,76 +1,118 @@
 import React from "react";
 import PropTypes from "prop-types";
-// Imgs
-// import errorAvatar from "img/errorAvatar.png";
-// import ipfsLogo from "img/IPFS-badge-small.png";
-// import defaultAvatar from "img/defaultAvatar.png";
-// Utility components
-import Card from "components/Card";
-import Button from "components/Button";
-// import { stringIncludes } from "utils/strings";
 import semver from "semver";
+// UI kit
+import Card from "components/ui/Card";
+import Button from "components/ui/Button";
+import Badge from "components/ui/Badge";
+import defaultAvatar from "img/defaultAvatar.png";
 
-function DnpStore({ directory, openDnp }) {
+/**
+ * DappStore category grid. Same redux/manifest data shape as before — only
+ * presentation is modernized onto the design system.
+ */
+function ManifestStore({ directory, openDnp }) {
+  const hashToUrl = (hash) => {
+    if (!hash) return defaultAvatar;
+    return `http://ipfs.my.ava.do:8080/ipfs/${hash.replace("/ipfs/", "")}`;
+  };
 
-    const hashToUrl = (hash) => {
-        return `http://ipfs.my.ava.do:8080/ipfs/${hash.replace("/ipfs/", "")}`
-    };
-// debugger;
-    directory = directory.filter((item)=>{
-        if (!item || !item.manifest || !item.manifest.hidden === true) return true;
-        return false;
-    })
+  const visible = directory.filter((item) => {
+    if (!item || !item.manifest || !item.manifest.hidden === true) return true;
+    return false;
+  });
 
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {visible.map((p, i) => {
+        const { title, name, version, description, avatar } = p.manifest || {};
+        const installed = Boolean(p.installed);
+        const hasUpdate =
+          installed &&
+          p.installedVersion &&
+          version &&
+          semver.valid(version) &&
+          semver.valid(p.installedVersion) &&
+          semver.gt(version, p.installedVersion);
 
-    return (
-        <div className="dnp-cards">
-            {directory.map(p => {
-                // console.log(p);
-                // const { manifest, error, avatar = defaultAvatar, origin, tag } =
-                //   dnp || {};
-                const { title, name, version, description, avatar, avadocategory } = p.manifest || {};
-                // console.log(p.manifest);
-                /* Show the button as disabled (gray) if it's updated */
-                // const disabled = stringIncludes(tag, "updated");
-                /* Rename tag from "install" to "get" because there were too many "install" tags 
-                   Cannot change the actual tag because it is used for logic around the installer */
+        return (
+          <Card
+            key={`${name}_${i}`}
+            interactive
+            padding="md"
+            role="button"
+            tabIndex={0}
+            onClick={() => openDnp(p.manifesthash)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openDnp(p.manifesthash);
+              }
+            }}
+            className="group flex flex-col gap-3"
+          >
+            <div className="flex items-start gap-3">
+              <img
+                src={hashToUrl(avatar)}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.src = defaultAvatar;
+                }}
+                className="h-12 w-12 flex-shrink-0 rounded-lg border border-border object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <h5
+                    className="truncate font-semibold capitalize text-fg"
+                    title={title || name}
+                  >
+                    {title || name}
+                  </h5>
+                  {hasUpdate && (
+                    <Badge variant="accent" className="flex-shrink-0">
+                      Update
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-xs text-fg-subtle">v{version}</span>
+              </div>
+            </div>
 
-                const tagDisplay = p.installed ? "DETAILS" : "INSTALL";
-                const hasUpdate = p.installed && p.installedVersion && semver.gt(version,p.installedVersion);
-                return (
-                    <Card
-                        key={name + origin}
-                        className="dnp-card"
-                        shadow
-                        onClick={() => openDnp(p.manifesthash)}
-                    >
-                        <img src={hashToUrl(avatar)} alt="avatar" />
-                        <div className="info">
-                            <h5 className="title">{title || name}</h5>
-                            <div>{version}</div>
-                            {p.installed && (
-                                <div className="keywords">
-                                    <div className="ipfs">
-                                        <span>installed {p.installedVersion}</span>
-                                    </div>
-                                </div>)}
-                            {hasUpdate ? (
-                                <Button variant="dappnode attention" pill>UPDATE</Button>
-                            ) : (
-                                <Button variant="dappnode" pill>{tagDisplay}</Button>
-                                )}
-                        </div>
-                    </Card>
-                );
-            })}
-        </div>
-    );
+            {description && (
+              <p className="line-clamp-2 text-sm text-fg-muted">{description}</p>
+            )}
+
+            {installed && (
+              <div className="text-xs text-fg-subtle">
+                Installed{" "}
+                <span className="font-medium text-fg-muted">
+                  v{p.installedVersion}
+                </span>
+              </div>
+            )}
+
+            <Button
+              variant={hasUpdate ? "primary" : "secondary"}
+              size="sm"
+              pill
+              className="mt-auto w-full group-hover:border-accent/60 group-hover:text-accent"
+              onClick={(e) => {
+                e.stopPropagation();
+                openDnp(p.manifesthash);
+              }}
+            >
+              {hasUpdate ? "Update" : installed ? "Details" : "Install"}
+            </Button>
+          </Card>
+        );
+      })}
+    </div>
+  );
 }
 
-DnpStore.propTypes = {
-    directory: PropTypes.array.isRequired,
-    openDnp: PropTypes.func.isRequired
+ManifestStore.propTypes = {
+  directory: PropTypes.array.isRequired,
+  openDnp: PropTypes.func.isRequired,
 };
 
-// Use `compose` from "redux" if you need multiple HOC
-export default DnpStore;
+export default ManifestStore;

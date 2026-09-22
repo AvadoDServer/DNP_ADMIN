@@ -1,8 +1,7 @@
 import React from "react";
-// Components
-import Card from "components/Card";
-import SubTitle from "components/SubTitle";
-import ReadMore from "components/ReadMore";
+// UI kit
+import Card from "components/ui/Card";
+import { SectionHeader } from "../../PackagePresentation";
 // This
 import Links from "./Links";
 import Ports from "./Ports";
@@ -14,33 +13,33 @@ function PackageDetails({ dnp }) {
   const { manifest, state } = dnp;
   const { description, version, origin } = manifest || {};
   return (
-    <>
-      <SubTitle>Stats</SubTitle>
-      <Card>
-        <div>
-          <strong>Status: </strong>
-          <StateBadge state={state} />
+    <section>
+      <SectionHeader title="Stats" />
+      <Card padding="lg" className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-fg-subtle">Status</span>
+            <StateBadge state={state} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-fg-subtle">Version</span>
+            <span className="font-medium text-fg">
+              {version} {origin || ""}
+            </span>
+          </div>
         </div>
 
-        <ReadMore>
-          <header>
-            <strong>Description</strong>
-          </header>
-          {description}
-        </ReadMore>
+        {description && (
+          <p className="text-sm leading-relaxed text-fg-muted">{description}</p>
+        )}
 
-        <div>
-          <strong>Version: </strong>
-          {version + " " + (origin || "")}
-        </div>
-
-        <div className="dnp-details-list">
+        <div className="grid grid-cols-1 gap-6 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3">
           <Links dnp={dnp} />
           <Ports dnp={dnp} />
           <Vols dnp={dnp} />
         </div>
       </Card>
-    </>
+    </section>
   );
 }
 

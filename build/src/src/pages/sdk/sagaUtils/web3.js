@@ -5,4 +5,4 @@ function configureWeb3() {
   return new Web3(providerUrl);
 }
 
-export default (process.env.REACT_APP_MOCK_DATA ? {} : configureWeb3());
+export default (import.meta.env.REACT_APP_MOCK_DATA ? {} : configureWeb3());

@@ -2,15 +2,19 @@
 
 #read-more {
   overflow: hidden;
+  transition: max-height 0.3s ease;
 }
 #read-more.short {
   /* DO NOT CHANGE THIS VALUE. Linked to ReadMore.jsx */
   max-height: 121px;
 }
 .read-more-toggle {
-  color: var(--dappnode-gray-main-color);
+  color: var(--text-secondary);
   cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
 }
 .read-more-toggle:hover {
-  color: var(--dappnode-strong-main-color);
+  color: var(--accent-primary);
 }

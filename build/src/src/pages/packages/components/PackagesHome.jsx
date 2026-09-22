@@ -2,13 +2,16 @@ import React from "react";
 import { title } from "../data";
 // Components
 import PackageList from "./PackageList";
-import Title from "components/Title";
+import { PageHeader } from "./PackagePresentation";
 
 const PackagesHome = () => (
-  <>
-    <Title>My Dapps</Title>
+  <div className="animate-fade-in">
+    <PageHeader
+      title="My DApps"
+      subtitle="Manage, restart and configure your installed AVADO applications."
+    />
     <PackageList moduleName={title} coreDnps={false} />
-  </>
+  </div>
 );
 
 export default PackagesHome;

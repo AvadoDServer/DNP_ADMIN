@@ -97,8 +97,8 @@ function Publish({ match }) {
                   <Input {...{ value, onValueChange, placeholder }} />
                   {(validations || [])
                     .filter(x => x)
-                    .map(({ valid, message }) => (
-                      <div style={{ color: valid ? "green" : "red" }}>
+                    .map(({ valid, message }, i) => (
+                      <div key={i} style={{ color: valid ? "green" : "red" }}>
                         {message}
                       </div>
                     ))}

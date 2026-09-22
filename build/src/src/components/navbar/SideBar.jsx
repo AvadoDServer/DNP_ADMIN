@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
-import { NavLink } from "react-router-dom";
-import { sidenavItems } from "./navbarItems";
 import logo from "img/avado-logo-v1.1.svg";
-import "./sidebar.css";
-import { getDnpInstalled } from "services/dnpInstalled/selectors";
-import { createSelector, createStructuredSelector } from "reselect";
+import { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
+import { NavLink } from "react-router-dom";
+import { createSelector, createStructuredSelector } from "reselect";
+import { getDnpInstalled } from "services/dnpInstalled/selectors";
+import { sidenavItems } from "./navbarItems";
+import "./sidebar.css";
 
 if (!Array.isArray(sidenavItems)) throw Error("sidenavItems must be an array");
 
@@ -99,9 +99,7 @@ const SideBar = ({
       </NavLink>
 
       <div className="nav">
-        {/* <div className="sidenav-item">
-          <div className="subheader">ADMIN UI</div>
-        </div> */}
+        <div className="sidenav-section-label">Menu</div>
 
         {filteredSidenavItems.map(item => (
           <NavLink
@@ -119,7 +117,7 @@ const SideBar = ({
 
       {/* spacer keeps the funded-by section at the bottom (if possible) */}
       <div className="spacer" />
-      <div className="sidenav-item">Version {process.env.REACT_APP_VERSION}</div>
+      <div className="sidebar-version">Version {process.env.REACT_APP_VERSION}</div>
     </div>
   );
 }

@@ -24,7 +24,11 @@ function Links({ dnp }) {
       data={links.map(({ name, url }) => (
         <>
           <Soft>{name || "unnamed"}:</Soft>{" "}
-          <a href={url} {...newTabProps}>
+          <a
+            href={url}
+            {...newTabProps}
+            className="text-accent transition-colors hover:underline"
+          >
             {url}
           </a>
         </>

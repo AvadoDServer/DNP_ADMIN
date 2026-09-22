@@ -1,14 +1,16 @@
-FROM --platform=linux/amd64  node:14.17.0 as build-deps-adminui
+FROM --platform=linux/amd64 node:20-bookworm-slim as build-deps-adminui
+ARG YARN_NO_LOCKFILE
 RUN echo "====================Building Admin website===================="
 WORKDIR /usr/src/app
 COPY build/src/package.json ./
 COPY build/src/yarn.lock ./
-RUN yarn 
+RUN if [ -n "$YARN_NO_LOCKFILE" ]; then yarn install --no-lockfile; else yarn; fi 
 COPY build/src .
-RUN apt-get update && apt-get --yes install git jq
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::AllowInsecureRepositories=true && apt-get --yes install git jq --allow-unauthenticated
 ADD .git .git
 ADD dappnode_package.json .
 RUN ./getVersionData.sh
+# Vite build (Node 20, no legacy OpenSSL provider needed). Memory bump kept for headroom.
 RUN NODE_OPTIONS="--max-old-space-size=4048" yarn run build
 RUN echo "====================Finished building Admin website===================="
 

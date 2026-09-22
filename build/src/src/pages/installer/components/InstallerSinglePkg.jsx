@@ -1,33 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { connect } from "react-redux";
-import { withRouter, Redirect } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import withTitle from "components/hoc/withTitle";
 import { compose } from "redux";
 import { createStructuredSelector } from "reselect";
 import PropTypes from "prop-types";
-import { toSentence, stringIncludes } from "utils/strings";
+import { toSentence } from "utils/strings";
 import { isEmpty } from "lodash";
 // This module
 import * as s from "../selectors";
 import * as a from "../actions";
-import Details from "./InstallCardComponents/Details";
 import ProgressLogs from "./InstallCardComponents/ProgressLogs";
-import Dependencies from "./InstallCardComponents/Dependencies";
-import SpecialPermissions from "./InstallCardComponents/SpecialPermissions";
-import Vols from "./InstallCardComponents/Vols";
-import Envs from "./InstallCardComponents/Envs";
-import Ports from "./InstallCardComponents/Ports";
 // Selectors
 import { getProgressLogsByDnp } from "services/isInstallingLogs/selectors";
 import { rootPath as packagesRootPath } from "pages/packages/data";
-// Components
-import Loading from "components/generic/Loading";
-import Error from "components/generic/Error";
-import Button, { ButtonLight } from "components/Button";
-import Card from "components/Card";
+// UI kit
+import Card from "components/ui/Card";
+import Button from "components/ui/Button";
+import Spinner from "components/ui/Spinner";
 import Switch from "components/Switch";
-import axios from "axios";
+import { StoreEmpty } from "./StorePresentation";
+import defaultAvatar from "img/defaultAvatar.png";
 import humanFileSize from "utils/humanFileSize";
+import { PageHeader } from "components/ui/PageHeader";
 import ReactMarkdown from 'react-markdown'
 
 function InstallerInterface({
@@ -108,17 +103,47 @@ function InstallerInterface({
         return null;
     }
 
-    if (error && !manifest) return <Error msg={`Error: ${error}`} />;
-    if (loading) return <Loading msg={"Loading DNP data..."} />;
-    if (!dnp && !error) return <Error msg={"Package not found"} />;
+    if (error && !manifest)
+        return (
+            <StoreEmpty
+                icon={
+                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 8v4M12 16h.01" />
+                    </svg>
+                }
+                title="Could not load package"
+            >
+                {String(error)}
+            </StoreEmpty>
+        );
+    if (loading)
+        return (
+            <div className="flex flex-col items-center justify-center gap-3 py-24 text-fg-muted">
+                <Spinner size="lg" className="text-accent" />
+                <span className="text-sm">Loading package…</span>
+            </div>
+        );
+    if (!dnp && !error)
+        return (
+            <StoreEmpty
+                icon={
+                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
+                    </svg>
+                }
+                title="Package not found"
+            />
+        );
 
     let actionButtonTxt;
     if (!installedPackage) {
-        actionButtonTxt = "INSTALL"
+        actionButtonTxt = "Install"
     }
 
     if (installedPackage && manifest && installedPackage.version !== manifest.version) {
-        actionButtonTxt = `UPGRADE TO ${manifest.version}`
+        actionButtonTxt = `Update to ${manifest.version}`
     }
     const hasWizard = manifest && manifest.links && manifest.links.OnboardingWizard;
 
@@ -150,89 +175,94 @@ function InstallerInterface({
     }
 
     return (
-        <>
-
-            <div className="section-title">
-                <span className="pre-title">DappStore -</span> &nbsp;
-                {dnp.manifest.title}
-            </div>
+        <div className="animate-fade-in">
+            <PageHeader eyebrow="DappStore" title={dnp.manifest.title} />
 
             <ProgressLogs progressLogs={progressLogs} />
-            <Card className="installer-header">
 
-                <div className="installer-details">
-                    <img src={dnp.avatar} alt="Avatar" />
-                    <div>
-                        {/* <ReadMore> */}
+            <Card padding="lg" className="flex flex-col gap-6 md:flex-row md:items-start">
+                <img
+                    src={dnp.avatar || defaultAvatar}
+                    alt=""
+                    onError={(e) => {
+                        e.currentTarget.src = defaultAvatar;
+                    }}
+                    className="h-28 w-28 flex-shrink-0 rounded-xl border border-border object-cover"
+                />
 
-                        {showedPackage.descriptionmd ?
-                            (<ReactMarkdown>{showedPackage.descriptionmd}</ReactMarkdown>)
-                            :
-                            (<>
-                                <header>About this Package</header>
-                                <div>{dnp.manifest.description}</div>
-                            </>)
-                        }
+                <div className="min-w-0 flex-1">
+                    {showedPackage.descriptionmd ? (
+                        <div className="prose-installer max-w-none text-sm leading-relaxed text-fg-muted [&_a]:text-accent [&_a:hover]:underline [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:text-fg [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-fg [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">
+                            <ReactMarkdown>{showedPackage.descriptionmd}</ReactMarkdown>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="max-w-prose text-sm leading-relaxed text-fg-muted">
+                                {dnp.manifest.description}
+                            </p>
+                        </>
+                    )}
 
-                        <div className="data">
-                            {Object.entries(dnpData).map(([key, val]) => (
-                                <div key={key}>
-                                    <header>{key}</header>
-                                    <span>{val}</span>
-                                </div>
+                    {/* Metadata */}
+                    {/* Facts: label and value side by side, not spread across the card */}
+                    <dl className="mt-5 grid max-w-xl grid-cols-[auto_1fr] gap-x-8 gap-y-1.5 border-t border-border pt-4 text-sm sm:grid-cols-[auto_1fr_auto_1fr]">
+                        {Object.entries(dnpData).map(([key, val]) => (
+                            <React.Fragment key={key}>
+                                <dt className="text-fg-subtle">{key}</dt>
+                                <dd className="mb-0 truncate font-medium text-fg" title={String(val)}>
+                                    {val}
+                                </dd>
+                            </React.Fragment>
+                        ))}
+                    </dl>
+
+                    {/* Options (e.g. BYPASS_CORE_RESTRICTION) */}
+                    {availableOptions.length > 0 && (
+                        <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+                            {availableOptions.map((option) => (
+                                <Switch
+                                    key={option}
+                                    checked={options[option]}
+                                    onToggle={(value) => setOptions({ [option]: value })}
+                                    label={toSentence(option)}
+                                    id={"switch-" + option}
+                                />
                             ))}
                         </div>
+                    )}
+
+                    {installedPackage && (
+                        <p className="mt-4 text-sm text-fg-muted">
+                            Installed version{" "}
+                            <span className="font-medium text-fg">
+                                {installedPackage.version}
+                            </span>
+                        </p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        {actionButtonTxt && isEmpty(progressLogs) && (
+                            <Button variant="primary" onClick={() => install(id, options)}>
+                                {actionButtonTxt}
+                            </Button>
+                        )}
+                        {installedPackage && (
+                            <>
+                                {hasWizard && (
+                                    <Button variant="secondary" onClick={() => toWizard(name)}>
+                                        Configure package
+                                    </Button>
+                                )}
+                                <Button variant="secondary" onClick={() => manage(name)}>
+                                    Manage package
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
-
-
-                {/* <Details dnp={dnp} /> */}
-                {availableOptions.map(option => (
-                    <Switch
-                        checked={options[option]}
-                        onToggle={value => setOptions({ [option]: value })}
-                        label={toSentence(option)}
-                        id={"switch-" + option}
-                    />
-                ))}
-
-                {installedPackage && (
-                    <div>You have installed version {installedPackage.version}</div>
-                )}
-
-                {actionButtonTxt && isEmpty(progressLogs) && (
-                    <Button variant="dappnode" onClick={() => install(id, options)}>
-                        {actionButtonTxt}
-                    </Button>
-                )}
-
-                {installedPackage && (
-                    <>
-                        {hasWizard && (
-                            <Button variant="dappnode" onClick={() => toWizard(name)}>CONFIGURE PACKAGE</Button>
-                        )}
-                        <Button variant="dappnode" onClick={() => manage(name)}>MANAGE PACKAGE</Button>
-                    </>
-                )}
-
             </Card>
-            {/* <Dependencies
-                request={requestResult || {}}
-                resolving={resolving || false}
-            />
-            <SpecialPermissions />
-            {showSettings ? (
-                <>
-                    <Envs />
-                    <Ports />
-                    <Vols />
-                </>
-            ) : (
-                    <ButtonLight onClick={() => setShowSettings(true)}>
-                        Show advanced settings
-        </ButtonLight>
-                )} */}
-        </>
+        </div>
     );
 }
 

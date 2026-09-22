@@ -13,9 +13,7 @@ import FileManager from "./PackageViews/FileManager";
 import Controls from "./PackageViews/Controls";
 import NoDnpInstalled from "./NoDnpInstalled";
 // Components
-import Title from "components/Title";
-import Loading from "components/generic/Loading";
-import Error from "components/generic/Error";
+import { PageHeader, LoadingState, EmptyState } from "./PackagePresentation";
 // Selectors
 import {
     getIsLoading,
@@ -45,14 +43,14 @@ const PackageInterface = ({
                 <>
                     {dnp.manifest && dnp.manifest.links && dnp.manifest.links.OnboardingWizard ? (
                         <>
-                            <div className="fullheight">
+                            <div>
                                 <Wizard dnp={dnp} />
                             </div>
                         </>
                     ) :
                         (dnp.name === "remoteconnect.avado.dnp.dappnode.eth" ? (
                             <>
-                                <div className="fullheight">
+                                <div>
                                     <Wizard dnp={{ manifest: { links: { OnboardingWizard: "http://remoteconnect.my.ava.do" } } }} />
                                 </div>
                             </>
@@ -60,22 +58,37 @@ const PackageInterface = ({
                         ) :
 
                             (
-                                <>
-                                    <Title title="Dapp - " subtitle={dnp.manifest && dnp.manifest.title ? dnp.manifest.title : id} />
+                                <div className="animate-fade-in flex flex-col gap-2">
+                                    <PageHeader title={dnp.manifest && dnp.manifest.title ? dnp.manifest.title : id}>
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+                                            DApp
+                                        </span>
+                                    </PageHeader>
                                     <Details dnp={dnp} />
                                     <Controls dnp={dnp} />
                                     <Envs dnp={dnp} />
                                     <FileManager dnp={dnp} />
                                     <Logs id={dnp.name} />
-                                </>
+                                </div>
                             )
                         )
                     }
                 </>
             ) : loading ? (
-                <Loading msg="Loading installed Package..." />
+                <LoadingState label="Loading installed package…" />
             ) : error ? (
-                <Error msg={`Error loading installed Package: ${error}`} />
+                <EmptyState
+                    tone="danger"
+                    icon={
+                        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v4M12 16h.01" />
+                        </svg>
+                    }
+                    title="Could not load package"
+                >
+                    {String(error)}
+                </EmptyState>
             ) : areThereDnps ? (
                 <NoDnpInstalled id={id} moduleName={moduleName} />
             ) : null}

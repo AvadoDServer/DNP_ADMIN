@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import * as a from "../../../actions";
-// Components
-import Input from "components/Input";
-import { ButtonLight } from "components/Button";
+// UI kit
+import { Input } from "components/ui/Input";
+import Button from "components/ui/Button";
 // Utils
 import fileToDataUri from "utils/fileToDataUri";
 import humanFileSize from "utils/humanFileSize";
@@ -44,51 +44,61 @@ function To({ id, copyFileTo }) {
   }
 
   return (
-    <div className="card-subgroup">
-      <div className="section-card-subtitle">Upload to DNP</div>
-      {/* TO, choose source file */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-semibold text-fg">Upload to DApp</h3>
 
-      <div className="input-group mb-3">
-        <div className="custom-file">
-          <input
-            type="file"
-            className="custom-file-input"
-            onChange={e => setFile(e.target.files[0])}
-          />
-          <label className="custom-file-label" htmlFor="inputGroupFile01">
-            {name ? `${name} (${humanFileSize(size || 0)})` : "Choose file"}
-          </label>
-        </div>
-      </div>
+      {/* TO, choose source file */}
+      <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-border bg-bg-subtle px-3 py-2.5 text-sm text-fg-muted transition-colors hover:border-accent/60 hover:text-fg focus-within:shadow-focus">
+        <span className="inline-flex h-7 items-center rounded-md bg-surface px-2.5 text-xs font-semibold text-fg">
+          Choose file
+        </span>
+        <span className="min-w-0 truncate">
+          {name ? `${name} (${humanFileSize(size || 0)})` : "No file selected"}
+        </span>
+        <input
+          type="file"
+          className="sr-only"
+          onChange={(e) => setFile(e.target.files[0])}
+        />
+      </label>
 
       {name && size > fileSizeWarning && (
-        <div className="alert alert-secondary">
-          Note that this tool is not meant for large file transfers. Expect
-          unstable behaviour.
+        <div className="rounded-md border border-warning/25 bg-warning/12 px-3 py-2 text-xs text-warning">
+          This tool is not meant for large file transfers. Expect unstable
+          behaviour.
         </div>
       )}
 
       {/* TO, choose destination path */}
-      <Input
-        placeholder="Defaults to $WORKDIR/"
-        value={toPath}
-        onValueChange={setToPath}
-        append={<ButtonLight onClick={uploadFile}>Upload</ButtonLight>}
-      />
+      <form
+        className="flex items-stretch gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          uploadFile();
+        }}
+      >
+        <Input
+          className="flex-1"
+          aria-label="Destination path"
+          placeholder="Defaults to $WORKDIR/"
+          value={toPath}
+          onChange={(e) => setToPath(e.target.value)}
+        />
+        <Button type="submit" variant="secondary" disabled={!file}>
+          Upload
+        </Button>
+      </form>
     </div>
   );
 }
 
 To.propTypes = {
   id: PropTypes.string.isRequired,
-  copyFileTo: PropTypes.func.isRequired
+  copyFileTo: PropTypes.func.isRequired,
 };
 
 const mapDispatchToProps = {
-  copyFileTo: a.copyFileTo
+  copyFileTo: a.copyFileTo,
 };
 
-export default connect(
-  null,
-  mapDispatchToProps
-)(To);
+export default connect(null, mapDispatchToProps)(To);

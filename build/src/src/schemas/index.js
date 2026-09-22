@@ -2,7 +2,7 @@ import Joi from "joi";
 
 const schema = Joi.object({}).pattern(/.*/, Joi.boolean());
 
-window.test2 = value => Joi.assert(value, schema);
+window.test2 = (value) => Joi.assert(value, schema);
 
 // Generic
 
@@ -59,10 +59,10 @@ export const manifest = Joi.object({
   name: Joi.string().required(),
   version: Joi.string().required(),
   image: Joi.object({
-    path: Joi.string().required()
+    path: Joi.string().required(),
   })
     .pattern(/./, Joi.any())
-    .required()
+    .required(),
 }).pattern(/./, Joi.any());
 
 export const alertType = Joi.string().valid("danger", "warning", "success");
@@ -76,7 +76,7 @@ export const chainData = Joi.array()
       message: Joi.string().required(),
       syncing: Joi.boolean(),
       progress: Joi.number(),
-      error: Joi.boolean()
+      error: Joi.boolean(),
     })
   )
   .required();
@@ -93,19 +93,24 @@ export const params = Joi.object({
   upnpAvailable: Joi.boolean(),
   noNatLoopback: Joi.boolean(),
   alertToOpenPorts: Joi.boolean(),
-  internalIp: Joi.string().allow("", null)
+  internalIp: Joi.string().allow("", null),
 }).required();
 
 export const stats = Joi.object({
   cpu: Joi.string(),
+  cpuName: Joi.string(),
   memory: Joi.string(),
-  disk: Joi.string()
+  memTotal: Joi.string(),
+  memUsed: Joi.string(),
+  disk: Joi.string(),
+  diskTotal: Joi.string(),
+  diskUsed: Joi.string(),
 }).required();
 
 export const diagnose = Joi.object({
   name: Joi.string().required(),
   result: Joi.string(),
-  error: Joi.string()
+  error: Joi.string(),
 }).or("result", "error");
 
 // const pingReturns
@@ -113,7 +118,7 @@ export const diagnose = Joi.object({
 export const versionData = Joi.object({
   version: Joi.string().required(),
   branch: Joi.string().required(),
-  commit: Joi.string().required()
+  commit: Joi.string().required(),
 });
 
 // const ipfsConnectionStatus
@@ -124,12 +129,10 @@ export const device = Joi.object({
   id: Joi.string().required(),
   admin: Joi.boolean().required(),
   ip: Joi.string().allow(""),
-  url: Joi.string()
+  url: Joi.string(),
 }).required();
 
-export const devices = Joi.array()
-  .items(device)
-  .required();
+export const devices = Joi.array().items(device).required();
 
 // Service > dnpDirectory
 
@@ -138,7 +141,7 @@ export const dnpDirectoryItem = Joi.object({
   status: Joi.string(),
   directoryId: Joi.number(),
   manifest: manifest,
-  avatar: Joi.string().dataUri()
+  avatar: Joi.string().dataUri(),
 });
 export const dnpDirectory = Joi.array().items(dnpDirectoryItem);
 
@@ -165,12 +168,10 @@ export const dnpInstalledItem = Joi.object({
   portsToClose: Joi.array(),
   // Appended later
   envs: Joi.object(),
-  manifest: Joi.object() // #### Don't check this manifest at all
+  manifest: Joi.object(), // #### Don't check this manifest at all
 });
 
-export const dnpInstalled = Joi.array()
-  .items(dnpInstalledItem)
-  .required();
+export const dnpInstalled = Joi.array().items(dnpInstalledItem).required();
 
 // Service > isInstallingLogs
 
@@ -183,7 +184,7 @@ export const notification = Joi.object({
   type: alertType.required(),
   title: Joi.string().required(),
   body: Joi.string().required(),
-  timestamp: Joi.number()
+  timestamp: Joi.number(),
 });
 
 // Service > userActionLogs
@@ -196,5 +197,5 @@ export const userActionLog = Joi.object({
   kwargs: Joi.object().required(),
   result: Joi.any(),
   stack: Joi.string(),
-  name: Joi.string() // #### Backwards compatibility
+  name: Joi.string(), // #### Backwards compatibility
 });

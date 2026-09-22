@@ -8,4 +8,4 @@ function configureEns() {
   return new Ens(_provider);
 }
 
-export default (process.env.REACT_APP_MOCK_DATA ? {} : configureEns());
+export default (import.meta.env.REACT_APP_MOCK_DATA ? {} : configureEns());

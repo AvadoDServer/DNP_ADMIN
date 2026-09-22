@@ -1,27 +1,23 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { colors } from "utils/format";
+import Badge from "components/ui/Badge";
+
+const VARIANT = {
+  running: "success",
+  exited: "danger",
+};
 
 function StateBadge({ state }) {
+  const variant = VARIANT[state] || "neutral";
   return (
-    <span
-      className="stateBadge center"
-      style={{
-        backgroundColor:
-          state === "running"
-            ? colors.success
-            : state === "exited"
-            ? colors.error
-            : colors.default
-      }}
-    >
+    <Badge variant={variant} dot className="capitalize">
       {state}
-    </span>
+    </Badge>
   );
 }
 
 StateBadge.propTypes = {
-  state: PropTypes.string.isRequired
+  state: PropTypes.string.isRequired,
 };
 
 export default StateBadge;

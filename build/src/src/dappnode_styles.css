@@ -17,51 +17,63 @@ a.no-a-style:hover,
 }
 
 .page-content-wrapper {
-  background-color: #2e4e72;
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .section-title {
-  border-bottom: var(--border-style);
-  padding-bottom: 0.5rem;
-  font-size: 2rem;
-  font-weight: 400;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .section-title .pre-title {
-  opacity: 0.3;
-  font-weight: 300;
-  text-transform: "capitalize";
+  opacity: 0.4;
+  font-weight: 400;
+  text-transform: capitalize;
 }
 
 .section-subtitle {
   margin: 1rem 0 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 400;
+  font-size: 1.35rem;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.7;
+  color: var(--text-secondary);
 }
 
 .section-card-subtitle {
-  margin-bottom: 8px;
-  font-size: 22.6px;
-  font-weight: 400;
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.6;
+  color: var(--text-secondary);
 }
 
 /* Table styles to have light gray separators.
    Visible at /packages/:id, controls panel
  */
 
+.table {
+  color: var(--text-primary);
+}
+
 .table td {
   border-top: 0 !important;
+  padding: 1rem 0.75rem;
 }
 .table tr {
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+.table tr:hover {
+  background-color: var(--bg-hover);
 }
 .table tr:last-child {
   border-bottom: 0 !important;
@@ -77,6 +89,7 @@ a.no-a-style:hover,
 
 .alert {
   word-break: break-all;
+  border-radius: var(--radius-md);
 }
 
 /* #### DEV */
@@ -85,18 +98,21 @@ a.no-a-style:hover,
   padding: var(--default-spacing);
 }
 .card-list > *:not(:last-child) {
-  border-bottom: var(--border-style);
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* react-bootstrap's ProgressBar */
 .progress-bar {
-  background-color: var(--dappnode-color);
+  background: var(--gradient-primary);
   /* When the bar goes from full "starting" to downloading,
      it moves too slow an looks wierd */
   transition: none !important;
 }
 .progress {
-  height: 1.1rem;
+  height: 0.625rem;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
 }
 
 /* 
@@ -116,12 +132,15 @@ a.no-a-style:hover,
 
 .list-grid > header {
   opacity: 0.5;
-  text-transform: capitalize;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   /* When the screen is really small, hide the name of the actions */
   white-space: nowrap;
   overflow: hidden;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 .list-grid > *:not(header) {
   align-items: center;
@@ -132,7 +151,9 @@ a.no-a-style:hover,
   justify-self: left;
   white-space: normal;
   width: 100%;
-  font-size: 1.1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 /* Custom alignment */
@@ -146,9 +167,11 @@ a.no-a-style:hover,
   width: var(--icon-size);
   opacity: 0.5;
   cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .list-grid :not(.disabled) svg:hover {
-  opacity: 0.8;
+  opacity: 0.9;
+  transform: scale(1.1);
 }
 .list-grid svg.disabled {
   opacity: 0.15;
@@ -156,7 +179,7 @@ a.no-a-style:hover,
 }
 .list-grid > hr {
   grid-column: 1 / -1;
-  border-bottom: var(--border-style);
+  border-bottom: 1px solid var(--border-color);
   width: 100%;
   margin: 0;
   padding: 0;
@@ -172,7 +195,8 @@ a.no-a-style:hover,
   place-items: center;
   grid-gap: var(--default-spacing);
   text-align: center;
-  opacity: 0.5;
+  opacity: 0.6;
+  color: var(--text-secondary);
 }
 
 /* Card styling for children */

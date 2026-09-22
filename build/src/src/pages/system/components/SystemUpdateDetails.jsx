@@ -2,26 +2,27 @@ import React from "react";
 import PropTypes from "prop-types";
 import { createStructuredSelector } from "reselect";
 import { connect } from "react-redux";
-import DependencyList from "pages/installer/components/InstallCardComponents/DependencyList";
 import Linkify from "react-linkify";
+import DependencyList from "pages/installer/components/InstallCardComponents/DependencyList";
 // Actions
 import { updateCore } from "services/coreUpdate/actions";
 // Selectors
 import { getCoreDeps, getCoreManifest } from "services/coreUpdate/selectors";
 import { getIsLoadingStrictById } from "services/loadingStatus/selectors";
 import { loadingId as loadingIdCoreUpdate } from "services/coreUpdate/data";
+// UI kit
+import Card from "components/ui/Card";
+import Button from "components/ui/Button";
 // Components
-import Card from "components/Card";
-import Button from "components/Button";
-import Loading from "components/generic/Loading";
+import { LoadingState, Callout } from "./SystemPresentation";
 
 function OnInstallAlert({ manifest }) {
   const { onInstall } = (manifest || {}).warnings || {};
   if (!onInstall) return null;
   return (
-    <div className="alert alert-warning" style={{ margin: "12px 0 6px 0" }}>
+    <Callout tone="warning">
       <Linkify>{onInstall}</Linkify>
-    </div>
+    </Callout>
   );
 }
 
@@ -32,25 +33,35 @@ const SystemUpdateDetails = ({
   updateCore
 }) => {
   /* If loading, return a loading animation */
-  if (isLoading) return <Loading msg="Checking core version..." />;
+  if (isLoading) return <LoadingState label="Checking core version…" />;
   /* If no deps, don't show the card */
   if (!coreDeps.length) return null;
 
   const coreChangelog = (coreManifest || {}).changelog;
   return (
-    <Card className="system-update-grid">
-      <div>
-        <div className="section-card-subtitle">Core {coreManifest.version}</div>
-        {coreChangelog && <Linkify>{coreChangelog}</Linkify>}
+    <Card padding="lg" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <div className="text-sm font-bold uppercase tracking-wider text-fg-muted">
+          Core {coreManifest.version}
+        </div>
+        {coreChangelog && (
+          <div className="whitespace-pre-line text-sm leading-relaxed text-fg-muted">
+            <Linkify>{coreChangelog}</Linkify>
+          </div>
+        )}
         <OnInstallAlert manifest={coreManifest} />
       </div>
 
       {/* Dedicated per core version update and warnings */}
-      <DependencyList deps={coreDeps} />
+      <div className="border-t border-border pt-5">
+        <DependencyList deps={coreDeps} />
+      </div>
 
-      <Button variant="dappnode" onClick={updateCore}>
-        Update
-      </Button>
+      <div className="flex justify-end">
+        <Button variant="primary" onClick={updateCore}>
+          Update
+        </Button>
+      </div>
     </Card>
   );
 };

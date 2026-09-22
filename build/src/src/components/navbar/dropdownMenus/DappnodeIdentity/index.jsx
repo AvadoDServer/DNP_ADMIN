@@ -47,9 +47,9 @@ const DappnodeIdentity = ({ dappnodeParams = {}, setName }) => {
         <>{name && (
             <>
                 <CTE
-                    wrapperClass="dappnode-name svg-text mr-2"
+                    wrapperClass="dappnode-name mr-2 hidden text-sm font-medium sm:block"
                     textClass="text"
-                    inputClass="text white"
+                    inputClass="text"
                     initialValue={`${name}`}
                     endEditing={(value) => {
                         console.log(`Set name to ${value}`);
