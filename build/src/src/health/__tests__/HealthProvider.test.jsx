@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { HealthProvider, useHealth } from "health/HealthProvider";
@@ -103,8 +103,32 @@ describe("HealthProvider", () => {
 describe("HealthProvider readiness", () => {
   const okStore = { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null };
 
-  it("is not ready while dnpInstalled is still loading, and computes no findings", async () => {
+  // On a real box `dnpInstalled` usually arrives via a WAMP push, which never
+  // touches the loadingStatus reducer at all — so `isLoaded` can stay false
+  // forever even once packages are genuinely present. Ready must not depend
+  // on that flag alone.
+  it("is ready once packages have arrived, even if dnpInstalled's own isLoaded flag never fires", async () => {
     renderWith(okStore, undefined, { ...state, loadingStatus: { dnpInstalled: { isLoading: true, isLoaded: false } } });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ready").textContent).toBe("true");
+    // And findings are actually computed, not just the flag flipped.
+    expect(screen.getByTestId("ids").textContent).not.toBe("");
+  });
+
+  it("is ready once dnpInstalled loading has errored, even with no packages yet — diagnoses can still explain why", async () => {
+    const errored = {
+      ...state,
+      packages: [],
+      loadingStatus: { dnpInstalled: { isLoading: false, isLoaded: false, error: "RPC refused to connect" } },
+    };
+    renderWith(okStore, undefined, errored);
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ready").textContent).toBe("true");
+  });
+
+  it("is not ready when there are no packages yet, dnpInstalled hasn't loaded, and there's no error", async () => {
+    const nothingYet = { ...state, packages: [], loadingStatus: { dnpInstalled: { isLoading: true, isLoaded: false } } };
+    renderWith(okStore, undefined, nothingYet);
     await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
     expect(screen.getByTestId("ready").textContent).toBe("false");
     expect(screen.getByTestId("ids").textContent).toBe("");
@@ -113,19 +137,52 @@ describe("HealthProvider readiness", () => {
     expect(screen.getByTestId("checksTotal").textContent).toBe("0");
   });
 
-  it("is not ready before dnpInstalled has ever been received, even if isLoading is false", async () => {
-    renderWith(okStore, undefined, { ...state, loadingStatus: { dnpInstalled: { isLoading: false, isLoaded: false } } });
-    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
-    expect(screen.getByTestId("ready").textContent).toBe("false");
-    expect(screen.getByTestId("ids").textContent).toBe("");
-  });
-
-  it("is not ready when the loadingStatus slice itself is missing (e.g. before it is ever mounted)", async () => {
-    const stateWithoutLoadingStatus = { packages: state.packages, stats: state.stats, params: state.params };
+  it("is not ready when the loadingStatus slice itself is missing and there are no packages yet", async () => {
+    const stateWithoutLoadingStatus = { packages: [], stats: state.stats, params: state.params };
     renderWith(okStore, undefined, stateWithoutLoadingStatus);
     await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
     expect(screen.getByTestId("ready").textContent).toBe("false");
     expect(screen.getByTestId("ids").textContent).toBe("");
+  });
+});
+
+describe("HealthProvider: nodeid never arrives", () => {
+  it("gives up on the store fetch after ~20s and marks sources.updates failed, instead of 'loading' forever", async () => {
+    vi.useFakeTimers();
+    try {
+      const noNodeid = { ...state, params: {} };
+      renderWith(
+        { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null },
+        undefined,
+        noNodeid
+      );
+      expect(screen.getByTestId("updates").textContent).toBe("loading");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20000);
+      });
+
+      expect(screen.getByTestId("updates").textContent).toBe("failed");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not force a failure after 20s when nodeid is present from the start and the fetch already succeeded", async () => {
+    vi.useFakeTimers();
+    try {
+      renderWith(
+        { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null },
+        undefined,
+        state // has params.nodeid set, so the give-up timer is never even started
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20000);
+      });
+      expect(screen.getByTestId("updates").textContent).toBe("ok");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

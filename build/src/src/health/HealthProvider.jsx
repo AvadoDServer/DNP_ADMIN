@@ -5,7 +5,7 @@ import { getDappnodeStats, getDappnodeParams } from "services/dappnodeStatus/sel
 import { getChainData } from "services/chainData/selectors";
 import { getCoreUpdateAvailable } from "services/coreUpdate/selectors";
 import { getDiagnoses } from "pages/troubleshoot/selectors";
-import { getIsLoading, getIsLoaded } from "services/loadingStatus/selectors";
+import { getIsLoaded, getLoadingError } from "services/loadingStatus/selectors";
 import { fetchStore } from "services/store/fetchStore";
 import { computeUpdates } from "services/store/updates";
 import { fetchMetrics } from "./prometheus";
@@ -16,6 +16,7 @@ import { isDismissed, dismiss as persistDismiss } from "./dismissals";
 
 const STORE_INTERVAL = 10 * 60 * 1000;
 const METRICS_INTERVAL = 60 * 1000;
+const NODEID_TIMEOUT_MS = 20 * 1000;
 
 const HealthContext = createContext(null);
 
@@ -26,13 +27,19 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
   const chainData = useSelector(getChainData) || [];
   const coreAvailable = useSelector(getCoreUpdateAvailable);
   const diagnoses = useSelector(getDiagnoses) || [];
-  // `ready`: the installed-packages list has actually arrived at least once
-  // and isn't loading right now. Until then, findings/verdict would be
-  // computed over an empty `packages` array and look like a healthy AVADO
-  // with nothing installed — show a neutral "checking" state instead.
-  const dnpInstalledLoading = useSelector(getIsLoading.dnpInstalled);
+  // `ready`: the installed-packages list has actually arrived. On a real box
+  // `dnpInstalled` is usually populated by a WAMP push (API/subscriptions.js
+  // "packages.dappmanager…" -> updateDnpInstalled), which never touches the
+  // loadingStatus reducer's isLoading/isLoaded flags at all — those only
+  // reflect the initial `listPackages` saga, which can itself be slow
+  // (docker df) or fail. So `getIsLoaded.dnpInstalled` alone is not a
+  // reliable "has data arrived" signal: ready whenever ANY of a) packages
+  // are already there (a real AVADO always has core packages installed),
+  // b) the loadingStatus flag did fire, or c) dnpInstalled loading errored
+  // (show findings anyway — the core/connection diagnoses explain why).
   const dnpInstalledLoaded = useSelector(getIsLoaded.dnpInstalled);
-  const ready = !dnpInstalledLoading && dnpInstalledLoaded;
+  const dnpInstalledError = useSelector(getLoadingError.dnpInstalled);
+  const ready = packages.length > 0 || dnpInstalledLoaded || Boolean(dnpInstalledError);
 
   const [store, setStore] = useState({ status: "loading", packages: null });
   const [metrics, setMetrics] = useState({ status: "not-installed", data: null });
@@ -63,6 +70,24 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       clearInterval(t);
     };
   }, [params.nodeid, packageKey, tick]);
+
+  // If nodeid never arrives (e.g. dappnodeStatus is slow or fails), the
+  // effect above never runs and store.status would stay at its initial
+  // "loading" forever — spinning SystemUpdates' "Checking for updates…"
+  // indefinitely. After ~20s without a nodeid, surface it as a failure
+  // instead, so SystemUpdates falls back to its "can't reach the store"
+  // message rather than spinning forever.
+  useEffect(() => {
+    if (params.nodeid) return undefined;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      if (!cancelled) setStore(prev => (prev.status === "loading" ? { status: "failed", packages: prev.packages } : prev));
+    }, NODEID_TIMEOUT_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [params.nodeid]);
 
   // Prometheus metrics, only when the monitoring package runs. Depends on
   // `prometheusRunning`/`tick`, not `packageKey`: which packages are

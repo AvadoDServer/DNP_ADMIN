@@ -42,10 +42,10 @@ function SystemUpdates({ dnpInstalled, coreUpdateAvailable, coreDeps }) {
     pkg: (dnpInstalled || []).find(p => p.name === name) || { name },
     update,
   }));
+  // If nodeid never arrives, HealthProvider itself gives up on it after ~20s
+  // and sets sources.updates to "failed", so this never spins forever — it
+  // falls into the same "can't reach the store" message below instead.
   const failedToCheck = sources && sources.updates === "failed";
-  // Also true when nodeid has never arrived, since the fetch that would set
-  // sources.updates to "ok"/"failed" never runs until then, and the store
-  // status is initialised to "loading" (see health/HealthProvider).
   const checking = sources && sources.updates === "loading";
 
   return (
