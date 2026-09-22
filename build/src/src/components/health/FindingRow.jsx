@@ -13,7 +13,8 @@ const ICON = {
 };
 
 export default function FindingRow({ finding, compact = false }) {
-  const [open, setOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(false);
   const dispatch = useDispatch();
   const { dismiss } = useHealth();
   const icon = ICON[finding.severity] || ICON.info;
@@ -27,7 +28,7 @@ export default function FindingRow({ finding, compact = false }) {
     ) : fix && fix.kind === "action" ? (
       <Button size="sm" onClick={() => runFixAction(finding, dispatch)}>{fix.label}</Button>
     ) : fix && fix.kind === "steps" ? (
-      <Button size="sm" variant="secondary" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+      <Button size="sm" variant="secondary" onClick={() => setStepsOpen(o => !o)} aria-expanded={stepsOpen}>
         {fix.label}
       </Button>
     ) : null;
@@ -45,8 +46,8 @@ export default function FindingRow({ finding, compact = false }) {
           <div className="min-w-0">
             <p className="mb-0 break-words font-medium text-fg">{finding.title}</p>
             {!compact && finding.why && (
-              <button type="button" onClick={() => setOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={open}>
-                {open ? finding.why : "Why this matters"}
+              <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
+                {whyOpen ? finding.why : "Why this matters"}
               </button>
             )}
           </div>
@@ -60,7 +61,7 @@ export default function FindingRow({ finding, compact = false }) {
             )}
           </div>
         </div>
-        {open && finding.steps && finding.steps.length > 0 && (
+        {stepsOpen && finding.steps && finding.steps.length > 0 && (
           <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-fg-muted">
             {finding.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>

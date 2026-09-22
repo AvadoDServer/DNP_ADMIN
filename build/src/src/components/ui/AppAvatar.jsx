@@ -5,11 +5,15 @@ import { getClient } from "health/clients";
 // The generic AVADO logo that many package manifests ship as their avatar.
 export const PLACEHOLDER_AVATARS = ["/ipfs/QmYRmFCtdXvqq3drc6kBXxeWiiMatTfKVpVrmLX883cQbR"];
 
+// Backgrounds stay role-tinted, but the monogram text is always `text-fg`:
+// role-coloured text on a light tint of the same colour (e.g. text-brand on
+// bg-brand/15) fails WCAG AA contrast in the light theme (~3.3:1 for brand).
+// `text-fg` on any of these light tints (and the neutral fallback) passes AA.
 const ROLE_TINT = {
-  execution: "bg-accent/15 text-accent",
-  consensus: "bg-brand/15 text-brand",
-  monitoring: "bg-warning/15 text-warning",
-  mev: "bg-success/15 text-success",
+  execution: "bg-accent/15 text-fg",
+  consensus: "bg-brand/15 text-fg",
+  monitoring: "bg-warning/15 text-fg",
+  mev: "bg-success/15 text-fg",
   remote: "bg-fg/10 text-fg",
 };
 
@@ -42,7 +46,7 @@ export default function AppAvatar({ pkg, size = 40, className }) {
       style={style}
       className={cn(
         "flex flex-shrink-0 items-center justify-center rounded-[10px] font-display text-sm font-bold",
-        ROLE_TINT[client && client.role] || "bg-fg/10 text-fg-muted",
+        ROLE_TINT[client && client.role] || "bg-fg/10 text-fg",
         className
       )}
     >

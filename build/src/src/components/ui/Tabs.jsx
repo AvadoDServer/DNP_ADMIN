@@ -1,13 +1,33 @@
-import React from "react";
+import React, { useRef } from "react";
 import { cn } from "./cn";
 
 export default function Tabs({ tabs, active, onChange, className }) {
+  const tabRefs = useRef([]);
+
+  const focusAndChange = i => {
+    const next = tabs[i];
+    if (!next) return;
+    onChange(next.id);
+    const node = tabRefs.current[i];
+    if (node) node.focus();
+  };
+
   const onKeyDown = (e, i) => {
     const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!d) return;
-    e.preventDefault();
-    onChange(tabs[(i + d + tabs.length) % tabs.length].id);
+    if (d) {
+      e.preventDefault();
+      focusAndChange((i + d + tabs.length) % tabs.length);
+      return;
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      focusAndChange(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusAndChange(tabs.length - 1);
+    }
   };
+
   return (
     <div role="tablist" className={cn("flex gap-1 overflow-x-auto border-b border-border", className)}>
       {tabs.map((t, i) => {
@@ -15,6 +35,7 @@ export default function Tabs({ tabs, active, onChange, className }) {
         return (
           <button
             key={t.id}
+            ref={node => (tabRefs.current[i] = node)}
             role="tab"
             type="button"
             aria-selected={selected}
