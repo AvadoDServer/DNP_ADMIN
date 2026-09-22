@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 import { createStructuredSelector } from "reselect";
@@ -39,6 +39,59 @@ const iconBtn =
     "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning focus:outline-none focus-visible:shadow-focus";
 
 const linkCls = "text-sm font-medium text-accent transition-colors hover:underline";
+
+const AUTOUPDATE_PENDING_TIMEOUT = 10000;
+
+/**
+ * The auto-update switch gives immediate feedback: on click it shows the
+ * requested value right away and disables itself, since the real change only
+ * lands once the backend pushes the updated package back over WAMP (there is
+ * no optimistic redux update). It waits for redux to agree with the
+ * requested value, or reverts to whatever redux says after 10s.
+ */
+export function AutoUpdateSwitch({ dnp, title, setAutoUpdate }) {
+    const actual = getAutoUpdateState(dnp);
+    const [pending, setPending] = useState(null); // null | boolean (the requested value)
+    const timeoutRef = useRef(null);
+
+    // Redux caught up with the requested value (or moved on its own) — clear the pending state.
+    useEffect(() => {
+        if (pending !== null && actual === pending) {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setPending(null);
+        }
+    }, [actual, pending]);
+
+    // Clear any in-flight timeout on unmount.
+    useEffect(() => () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    }, []);
+
+    const checked = pending !== null ? pending : actual;
+
+    const onToggle = () => {
+        const next = !actual;
+        setPending(next);
+        setAutoUpdate(dnp.name, next);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setPending(null), AUTOUPDATE_PENDING_TIMEOUT);
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <span className="hidden text-xs text-fg-muted sm:inline" aria-hidden="true">
+                Auto-update
+            </span>
+            <Switch
+                id={`autoupdate-${dnp.name}`}
+                checked={checked}
+                disabled={pending !== null}
+                onToggle={onToggle}
+                aria-label={`Auto-update for ${title}`}
+            />
+        </div>
+    );
+}
 
 const PackagesList = ({
     dnps = [],
@@ -90,7 +143,6 @@ const PackagesList = ({
                         const description = appDescription(dnp);
                         const status = appStatus(dnp, { findings, updates });
                         const external = showOpen ? openUrl(dnp) : null;
-                        const autoUpdateOn = getAutoUpdateState(dnp);
 
                         return (
                             <li
@@ -137,17 +189,7 @@ const PackagesList = ({
                                         </button>
                                     )}
 
-                                    <div className="flex items-center gap-2">
-                                        <span className="hidden text-xs text-fg-muted sm:inline" aria-hidden="true">
-                                            Auto-update
-                                        </span>
-                                        <Switch
-                                            id={`autoupdate-${name}`}
-                                            checked={autoUpdateOn}
-                                            onToggle={() => setAutoUpdate(name, !autoUpdateOn)}
-                                            aria-label={`Auto-update for ${title}`}
-                                        />
-                                    </div>
+                                    <AutoUpdateSwitch dnp={dnp} title={title} setAutoUpdate={setAutoUpdate} />
                                 </div>
                             </li>
                         );
