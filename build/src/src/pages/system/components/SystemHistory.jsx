@@ -1,13 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
-import { title } from "../data";
 import { getUserActionLogs } from "services/userActionLogs/selectors";
 import { shortNameCapitalized } from "utils/format";
 // UI kit
 import Card from "components/ui/Card";
 import { Select } from "components/ui/Input";
-import { PageHeader } from "components/ui/PageHeader";
 import { cn } from "components/ui/cn";
 
 const LEVEL_TONE = { error: "bg-danger", warn: "bg-warning", info: "bg-success" };
@@ -63,12 +61,6 @@ function SystemHistory({ userActionLogs }) {
 
   return (
     <div className="animate-fade-in">
-      <PageHeader
-        title={title}
-        eyebrow="History"
-        subtitle="Recent installs, updates and other actions on your AVADO."
-      />
-
       {apps.length > 0 && (
         <div className="mb-4 max-w-xs">
           <Select

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
-import { title } from "../data";
 import * as a from "../actions";
 import { DISK_CLEANUP } from "../signedCommands";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
@@ -15,7 +14,7 @@ import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 import ProgressBar from "components/ui/ProgressBar";
 import AppAvatar from "components/ui/AppAvatar";
-import { PageHeader, SectionHeader } from "components/ui/PageHeader";
+import { SectionHeader } from "components/ui/PageHeader";
 import { confirmSignedCmd } from "./SystemPresentation";
 
 /**
@@ -80,8 +79,6 @@ function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
 
   return (
     <div className="animate-fade-in">
-      <PageHeader title={title} eyebrow="Storage" subtitle="Disk use across your AVADO box." />
-
       <Card padding="lg">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-fg">Disk</span>

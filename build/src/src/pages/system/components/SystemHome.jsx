@@ -13,7 +13,7 @@ import packages from "pages/packages";
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 // Components
-import { PageHeader, SectionHeader, Dialog, confirmSignedCmd } from "./SystemPresentation";
+import { SectionHeader, Dialog, confirmSignedCmd } from "./SystemPresentation";
 
 const PackageList = packages.components.PackageList;
 
@@ -138,11 +138,6 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
 
   return (
     <div className="animate-fade-in">
-      <PageHeader
-        title={title}
-        subtitle="Core packages, updates and maintenance for your AVADO box."
-      />
-
       <SectionHeader title="Core packages" first />
       <PackageList
         moduleName={title}

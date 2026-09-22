@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
-import { title } from "../data";
 import { useHealth } from "health/HealthProvider";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getCoreUpdateAvailable, getCoreDeps } from "services/coreUpdate/selectors";
@@ -11,7 +10,7 @@ import { appTitle } from "health/rules/apps";
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 import AppAvatar from "components/ui/AppAvatar";
-import { PageHeader, SectionHeader } from "components/ui/PageHeader";
+import { SectionHeader } from "components/ui/PageHeader";
 
 function AppUpdateRow({ pkg, update }) {
   return (
@@ -47,12 +46,6 @@ function SystemUpdates({ dnpInstalled, coreUpdateAvailable, coreDeps }) {
 
   return (
     <div className="animate-fade-in">
-      <PageHeader
-        title={title}
-        eyebrow="Updates"
-        subtitle="Newer versions of your installed apps, and the AVADO system update."
-      />
-
       <SectionHeader title="App updates" count={rows.length} first />
       <Card padding="none">
         {failedToCheck ? (
