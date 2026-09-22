@@ -296,8 +296,8 @@ function Priority({ dappnodeParams = {} }) {
           </div>
           <p className="text-sm text-fg-muted">
             Need help? Contact our priority support team at{" "}
-            <a className="font-medium text-accent hover:underline" href="mailto:priority@avado.cloud">
-              priority@avado.cloud
+            <a className="font-medium text-accent hover:underline" href="mailto:ziga@ava.do">
+              ziga@ava.do
             </a>
             .
           </p>

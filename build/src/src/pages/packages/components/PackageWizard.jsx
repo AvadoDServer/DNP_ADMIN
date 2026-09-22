@@ -12,6 +12,7 @@ import Envs from "./PackageViews/Envs";
 import FileManager from "./PackageViews/FileManager";
 import Controls from "./PackageViews/Controls";
 import NoDnpInstalled from "./NoDnpInstalled";
+import { useTheme } from "theme/ThemeProvider";
 // Components
 import { PageHeader, LoadingState, EmptyState } from "./PackagePresentation";
 // Selectors
@@ -36,6 +37,8 @@ const PackageInterface = ({
     loading,
     error
 }) => {
+    // Remote Connect's page follows the Admin theme (it reads ?theme=)
+    const { theme } = useTheme();
 
     return (
         <>
@@ -51,7 +54,7 @@ const PackageInterface = ({
                         (dnp.name === "remoteconnect.avado.dnp.dappnode.eth" ? (
                             <>
                                 <div>
-                                    <Wizard dnp={{ manifest: { links: { OnboardingWizard: "http://remoteconnect.my.ava.do" } } }} />
+                                    <Wizard dnp={{ manifest: { links: { OnboardingWizard: `http://remoteconnect.my.ava.do/?theme=${theme}` } } }} />
                                 </div>
                             </>
 
