@@ -58,6 +58,8 @@ export const removePackage = (id, deleteVolumes) => () =>
       toastMessage: `Removing ${sn(id)} ${
         deleteVolumes ? " and volumes" : ""
       }...`,
+      // Let the caller know it failed (the toast is still shown)
+      throw: true,
     },
   );
 

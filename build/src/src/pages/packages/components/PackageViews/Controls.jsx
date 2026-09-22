@@ -1,5 +1,7 @@
 import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
 import * as action from "../../actions";
+import { rootPath } from "../../data";
 // UI kit
 import Button from "components/ui/Button";
 import Card from "components/ui/Card";
@@ -23,6 +25,7 @@ function PackageControls({
   showResync = false,
   showReset = true,
   showRemove = true,
+  history,
 }) {
   function confirmRemovePackageVolumes(id) {
     confirm({
@@ -82,7 +85,14 @@ function PackageControls({
     actions.push({
       name: "Remove ",
       text: "Deletes a package permanently.",
-      action: () => confirmRemovePackage(dnp.name, removePackage),
+      // Back to the package list once it is gone; its own page no longer exists
+      action: () =>
+        confirmRemovePackage(dnp.name, (id, deleteVolumes) =>
+          Promise.resolve(removePackage(id, deleteVolumes)).then(
+            () => history && history.push(rootPath),
+            () => {} // the toast already reported the error
+          )
+        ),
       availableForCore: false,
       type: "danger",
     });
@@ -134,4 +144,6 @@ const mapDispatchToProps = {
   removePackage: action.removePackage,
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(PackageControls);
+export default withRouter(
+  connect(mapStateToProps, mapDispatchToProps)(PackageControls)
+);
