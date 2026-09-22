@@ -136,7 +136,12 @@ const SideBar = ({
 
         {/* spacer keeps the funded-by section at the bottom (if possible) */}
         <div className="spacer" />
-        <div className="sidebar-version">Version {process.env.REACT_APP_VERSION}</div>
+        {/* REACT_APP_VERSION is only set by getVersionData.sh during the Docker
+            build (yarn build run straight from the repo, e.g. a preview build,
+            never sees it) — hide the line rather than show a bare "Version". */}
+        {process.env.REACT_APP_VERSION && (
+          <div className="sidebar-version">Version {process.env.REACT_APP_VERSION}</div>
+        )}
       </div>
     </>
   );

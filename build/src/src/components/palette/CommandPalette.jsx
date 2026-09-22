@@ -190,7 +190,8 @@ export default function CommandPalette() {
           confirmSignedCmd(
             DISK_CLEANUP,
             { title: "Clean up disk", text: "Are you sure you want to perform a disk cleanup?" },
-            cmd => dispatch(runSignedCmd(cmd))
+            (cmd, label) => dispatch(runSignedCmd(cmd, label)),
+            "Disk cleanup"
           );
         }
       }
