@@ -4,7 +4,7 @@ Date: 2026-09-22 · Branch: `ux/self-help` (from `modernize/admin-ui`, released 
 
 ## 1. Why
 
-AVADO owners are mostly non-technical home stakers. Today the Admin tells them little about whether their node is healthy: Home shows CPU/memory/disk and truncated package cards, while real problems (Nimbus without an execution client, a missing Ethereum node for ENS) are only visible deep inside a package or not at all. Support requests cluster around six topics:
+AVADO owners are mostly non-technical home stakers. Today the Admin tells them little about whether their node is healthy: Home shows CPU/memory/disk and truncated package cards, while real problems (Nimbus without an execution client) are only visible deep inside a package. Support requests cluster around six topics:
 
 1. Validator setup (keys, fee recipient, which clients to pair)
 2. Sync / "is my node OK?"
@@ -81,7 +81,7 @@ The dead `home` page is removed; `/` redirects to `/dashboard`. `activity` moves
   packages,        // dnpInstalled: id, name, state, running, version, isCore, volumes[{size}], manifest, autoupdate
   stats,           // getStats: cpu, memory, disk, diskTotal, diskUsed
   params,          // getParams: alertToOpenPorts, upnpAvailable, noNatLoopback, …
-  diagnoses,       // troubleshoot selectors (IPFS, ENS, session, …)
+  diagnoses,       // troubleshoot selectors (session, DAPPMANAGER ping, IPFS, ports)
   chainData,       // requestChainData: per chain syncing + progress
   updates,         // store getUpdates → { [name]: latestVersion } | null when unreachable
   coreUpdate,      // services/coreUpdate selectors
@@ -124,7 +124,7 @@ A table in `src/health/clients.js` maps AVADO package names to roles (execution 
 | `no-nat-loopback` | access | info | `params.noNatLoopback` | Explanation of reaching the box from inside the LAN |
 | `remote-access-missing` | access | info | neither Remote Connect nor VPN installed | Link: DappStore |
 | `disk-high` | storage | warning ≥ 80 %, critical ≥ 90 % | `stats.disk` | Link: System → Storage; action: Clean up unused images |
-| `diagnose-failed` | core | warning | any DAPPMANAGER `diagnose` item fails (IPFS, ENS, …) | Per-item guidance |
+| `diagnose-failed` | core | warning | any failing item from the Admin's existing diagnoses (`pages/troubleshoot/selectors.getDiagnoses`: DAPPMANAGER connected, IPFS resolves, ports) other than disk, which `disk-high` covers | The diagnose's own solutions as steps |
 | `store-unreachable` | updates | info | store updates fetch failed | "Can't check for updates: your AVADO can't reach the internet" |
 
 Metric names are verified against the test box (head slot and peers exist today); `missed-attestations` is tested against fixtures because the test box has no validators. If a metric is absent the rule returns nothing and `sources` records why.
@@ -224,7 +224,7 @@ A vertical checklist of six steps, each with state (done / to do / optional), a 
 
 ## 6. Bug fixes in scope
 
-- Help (Support) page renders blank — find and fix the crash.
+- Unknown routes (for example `/#/support`) render an empty page → a "Page not found" screen with links to Home and Help, and `/support` redirects to `/help`.
 - Hardcoded "Online" badge on Home → driven by the WAMP session state.
 - Auto-update switch passes `manifest` instead of the package to `getAutoUpdateState` (`PackageList.jsx:197-199`).
 - `/Packages/...` and `/System/...` route casing.
@@ -238,7 +238,7 @@ A vertical checklist of six steps, each with state (done / to do / optional), a 
 
 - **Unit (Vitest + Testing Library, added as dev dependencies):** every rule with passing and failing fixtures; `runChecks` ordering and error isolation; client-role table coverage; report builder (asserts no env values or secrets); verdict derivation.
 - **Build:** `vite build` clean, no new console errors.
-- **Browser verification** against the test box (local dev server pointed at the box's WAMP, then the released image): every page in dark and light at 360, 768 and 1440 px; findings appear for the box's real state (Nimbus without execution client, ENS diagnose failing); actions work (restart, clean up, links); Help report contents.
+- **Browser verification** against the test box (local dev server pointed at the box's WAMP, then the released image): every page in dark and light at 360, 768 and 1440 px; findings appear for the box's real state (Nimbus without execution client); actions work (restart, clean up, links); Help report contents.
 - **Release:** ADMIN through staging to the test box, upgrade from 10.0.51 verified, then production when the owner decides.
 
 ## 8. Out of scope
