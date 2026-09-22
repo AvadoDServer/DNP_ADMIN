@@ -1,16 +1,15 @@
 import React from "react";
-import { Route } from "react-router-dom";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
 // Components
 import NotificationsMain from "./components/NotificationsMain";
 import NonAdmin from "./components/NonAdmin";
 import NoConnection from "components/NoConnection";
-import ErrorBoundary from "./components/generic/ErrorBoundary";
 import TopBar from "./components/navbar/TopBar";
 import SideBar from "./components/navbar/SideBar";
 import Loading from "components/generic/Loading";
 import ScrollToTop from "components/ScrollToTop";
+import { AppRoutes } from "./AppRoutes";
 // Pages
 import pages from "./pages";
 // Redux
@@ -41,18 +40,7 @@ class App extends React.Component {
                 <NotificationsMain />
               </ErrorBoundary> */}
 
-              {Object.values(pages).map(({ RootComponent, rootPath }) => (
-                <Route
-                  key={rootPath}
-                  path={rootPath}
-                  exact={rootPath === "/"}
-                  render={props => (
-                    <ErrorBoundary>
-                      <RootComponent {...props} />
-                    </ErrorBoundary>
-                  )}
-                />
-              ))}
+              <AppRoutes pages={pages} />
             </div>
 
             {/* Place here non-page components */}

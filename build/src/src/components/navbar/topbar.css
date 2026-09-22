@@ -62,3 +62,18 @@
 #topbar .avado.right {
   grid-template-columns: none;
 }
+
+/* Text label shown next to icon controls (Theme, Chain, Notifications, Help)
+   on wide screens, alongside the existing aria-label/title for narrow ones. */
+.topbar-label {
+  display: none;
+  margin-left: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+@media (min-width: 1024px) {
+  .topbar-label {
+    display: inline;
+  }
+}

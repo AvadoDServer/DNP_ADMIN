@@ -49,9 +49,9 @@ const ThemeToggle = () => {
       aria-checked={!isDark}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-      className="group relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted transition-colors duration-200 hover:border-border-strong hover:text-fg focus:outline-none focus-visible:shadow-focus"
+      className="group relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-surface text-fg-muted transition-colors duration-200 hover:border-border-strong hover:text-fg focus:outline-none focus-visible:shadow-focus lg:w-auto lg:px-2.5"
     >
-      <span className="relative block h-[18px] w-[18px]">
+      <span className="relative block h-[18px] w-[18px] shrink-0">
         <SunIcon
           className={`absolute inset-0 h-[18px] w-[18px] text-accent transition-all duration-300 ${
             isDark
@@ -67,6 +67,7 @@ const ThemeToggle = () => {
           }`}
         />
       </span>
+      <span className="topbar-label">Theme</span>
     </button>
   );
 };

@@ -9,7 +9,11 @@ import {
 import Loading from "components/generic/Loading";
 import ErrorView from "components/generic/Error";
 
-export default function withLoading(loadingId, loadingMsg) {
+// `renderError` is optional: when given, it takes over rendering the error
+// state entirely (e.g. to show a friendlier, situation-specific empty state
+// instead of the generic ErrorView). Every other caller of withLoading keeps
+// the default ErrorView behavior.
+export default function withLoading(loadingId, loadingMsg, renderError) {
   return function(WrappedComponent) {
     class WithLoading extends React.Component {
       render() {
@@ -18,6 +22,9 @@ export default function withLoading(loadingId, loadingMsg) {
           return <Loading msg={`Loading ${loadingMsg || loadingId}...`} />;
         }
         if (loadingError) {
+          if (typeof renderError === "function") {
+            return renderError(loadingError, props);
+          }
           return (
             <ErrorView
               msg={`Could not load ${loadingMsg || loadingId}: ${loadingError}`}
