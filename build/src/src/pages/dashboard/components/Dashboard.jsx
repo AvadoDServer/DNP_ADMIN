@@ -61,17 +61,15 @@ function Dashboard({
       <ChainLine chainData={chainData} />
 
       <section aria-labelledby="apps-title">
-        <div id="apps-title">
-          <SectionHeader
-            title="Your apps"
-            count={activePackages.length}
-            action={
-              <Button variant="ghost" size="sm" onClick={() => history.push("/installer")}>
-                DappStore
-              </Button>
-            }
-          />
-        </div>
+        <SectionHeader
+          title={<span id="apps-title">Your apps</span>}
+          count={activePackages.length}
+          action={
+            <Button variant="ghost" size="sm" onClick={() => history.push("/installer")}>
+              DappStore
+            </Button>
+          }
+        />
         {activePackages.length === 0 ? (
           <Card padding="lg" className="text-center">
             <p className="mb-1 font-display text-lg font-semibold text-fg">Your AVADO is ready</p>

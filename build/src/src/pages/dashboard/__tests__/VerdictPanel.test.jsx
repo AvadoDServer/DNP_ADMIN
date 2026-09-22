@@ -23,4 +23,21 @@ describe("VerdictView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show all 7" }));
     expect(screen.getByText("title g")).toBeInTheDocument();
   });
+
+  it("shows a checks-passed footer with a See all link to Help when healthy", () => {
+    render(
+      <MemoryRouter>
+        <VerdictView
+          verdict={{ level: "ok", label: "All good" }}
+          findings={[]}
+          checkedAt={new Date(0)}
+          onRefresh={() => {}}
+          checksPassed={12}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/12 checks passed/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Check again/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute("href", "/help");
+  });
 });

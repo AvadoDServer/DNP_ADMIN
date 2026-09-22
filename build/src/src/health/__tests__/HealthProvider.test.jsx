@@ -17,12 +17,14 @@ const state = {
 };
 
 function Probe() {
-  const { verdict, findings, sources } = useHealth();
+  const { verdict, findings, sources, checksPassed, checksTotal } = useHealth();
   return (
     <div>
       <span data-testid="verdict">{verdict.label}</span>
       <span data-testid="ids">{findings.map(f => f.id).join(",")}</span>
       <span data-testid="updates">{sources.updates}</span>
+      <span data-testid="checksPassed">{checksPassed}</span>
+      <span data-testid="checksTotal">{checksTotal}</span>
     </div>
   );
 }
@@ -46,6 +48,11 @@ describe("HealthProvider", () => {
     expect(screen.getByTestId("verdict").textContent).toBe("Action required");
     expect(screen.getByTestId("ids").textContent).toContain("consensus-without-execution:mainnet");
     expect(screen.getByTestId("ids").textContent).toContain("updates-available");
+    const passed = Number(screen.getByTestId("checksPassed").textContent);
+    const total = Number(screen.getByTestId("checksTotal").textContent);
+    expect(Number.isFinite(passed)).toBe(true);
+    expect(Number.isFinite(total)).toBe(true);
+    expect(passed).toBeLessThanOrEqual(total);
   });
 
   it("useHealth store failure: marks updates failed and still renders", async () => {

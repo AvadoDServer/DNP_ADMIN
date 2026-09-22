@@ -1,4 +1,4 @@
-import { runChecks, verdictOf } from "health/engine";
+import { runChecks, runChecksDetailed, verdictOf } from "health/engine";
 
 const f = (id, severity, topic = "core") => ({ id, severity, topic, title: id, why: "", fix: null });
 
@@ -19,6 +19,30 @@ describe("runChecks", () => {
     expect(runChecks({}, rules).map(x => x.id)).toEqual(["ok"]);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe("runChecksDetailed", () => {
+  it("counts rules that return null or [] as passed, a throwing rule as neither", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const rules = [
+      () => null,
+      () => [],
+      () => f("crit", "critical"),
+      () => {
+        throw Error("boom");
+      },
+    ];
+    const { findings, passed, total } = runChecksDetailed({}, rules);
+    expect(findings.map(x => x.id)).toEqual(["crit"]);
+    expect(passed).toBe(2);
+    expect(total).toBe(4);
+    spy.mockRestore();
+  });
+
+  it("runChecks delegates to runChecksDetailed and returns only the findings", () => {
+    const rules = [() => null, () => f("ok", "info")];
+    expect(runChecks({}, rules)).toEqual(runChecksDetailed({}, rules).findings);
   });
 });
 

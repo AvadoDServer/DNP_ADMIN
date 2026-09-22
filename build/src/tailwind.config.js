@@ -118,7 +118,7 @@ module.exports = {
         'spin-slow': 'spin-slow 1s linear infinite',
         'pulse-soft': 'pulse-soft 1.8s ease-in-out infinite',
         'shimmer': 'shimmer 1.6s infinite',
-        'pulse-once': 'pulse-once 1.2s ease-out 2',
+        'pulse-once': 'pulse-once 1.2s ease-out 1',
       },
     },
   },
