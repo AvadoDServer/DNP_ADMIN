@@ -13,9 +13,12 @@ vi.mock("../SystemStorage", () => ({ default: () => <p>storage tab</p> }));
 vi.mock("../SystemHistory", () => ({ default: () => <p>history tab</p> }));
 vi.mock("../SystemUpdate", () => ({ default: () => <p>core update flow</p> }));
 vi.mock("pages/packages/components/AppPage", () => ({ default: () => <p>core app page</p> }));
+const { TAB_PATHS } = vi.hoisted(() => ({
+  TAB_PATHS: ["/system", "/system/updates", "/system/storage", "/system/history"],
+}));
 vi.mock("../SystemTabs", () => ({
   default: () => <div role="tablist">tab bar</div>,
-  TAB_PATHS: ["/system", "/system/updates", "/system/storage", "/system/history"],
+  isTabPath: pathname => TAB_PATHS.some(p => p.toLowerCase() === String(pathname || "").toLowerCase()),
 }));
 
 const renderAt = path =>
@@ -36,6 +39,13 @@ describe("SystemRoot", () => {
     expect(screen.getAllByRole("heading", { name: "System" })).toHaveLength(1);
     expect(screen.getByRole("tablist")).toBeInTheDocument();
     expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  it("matches tab paths case-insensitively, same as the react-router routes underneath", () => {
+    renderAt("/system/Updates");
+    expect(screen.getAllByRole("heading", { name: "System" })).toHaveLength(1);
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByText("updates tab")).toBeInTheDocument();
   });
 
   it("does not show the System header or tab bar on the core update flow", () => {

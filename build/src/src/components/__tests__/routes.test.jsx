@@ -6,8 +6,16 @@ import { AppRoutes } from "../../AppRoutes";
 const pages = {
   dashboard: { rootPath: "/dashboard", RootComponent: () => <p>home page</p> },
   help: { rootPath: "/help", RootComponent: () => <p>help page</p> },
-  packages: { rootPath: "/packages", RootComponent: () => <Route path="/packages/:id" render={({ match }) => <p>app {match.params.id}</p>} /> },
-  system: { rootPath: "/system", RootComponent: () => <p>system page</p> },
+  packages: {
+    rootPath: "/packages",
+    RootComponent: () => (
+      <Route path="/packages/:id" render={({ match, location }) => <p>app {match.params.id}{location.search}</p>} />
+    ),
+  },
+  system: {
+    rootPath: "/system",
+    RootComponent: ({ location }) => <p>system page{location.search}</p>,
+  },
 };
 
 const at = path => render(<MemoryRouter initialEntries={[path]}><AppRoutes pages={pages} /></MemoryRouter>);
@@ -27,5 +35,15 @@ describe("routes", () => {
   it("shows a not-found page for unknown paths", () => {
     at("/nope");
     expect(screen.getByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+  });
+
+  it("keeps the query string when redirecting a legacy capitalized /System path", () => {
+    at("/System/updates?tab=core");
+    expect(screen.getByText("system page?tab=core")).toBeInTheDocument();
+  });
+
+  it("keeps the query string when redirecting a legacy capitalized /Packages path", () => {
+    at("/Packages/nimbus.avado.dnp.dappnode.eth?tab=logs");
+    expect(screen.getByText("app nimbus.avado.dnp.dappnode.eth?tab=logs")).toBeInTheDocument();
   });
 });

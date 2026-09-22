@@ -18,6 +18,13 @@ export const TAB_DEFS = [
  * core update flow or an individual core app page. */
 export const TAB_PATHS = TAB_DEFS.map(t => t.path);
 
+// The <Route>s these paths lead to are matched case-insensitively by
+// react-router v5 by default (no `sensitive` prop), so pathname comparisons
+// here must be too, or the tab bar / active-tab highlight can silently
+// disagree with which page is actually showing (e.g. "/system/Updates").
+const isSamePath = (a, b) => typeof a === "string" && typeof b === "string" && a.toLowerCase() === b.toLowerCase();
+export const isTabPath = pathname => TAB_PATHS.some(p => isSamePath(p, pathname));
+
 function SystemTabs({ coreUpdateAvailable }) {
   const history = useHistory();
   const location = useLocation();
@@ -30,7 +37,7 @@ function SystemTabs({ coreUpdateAvailable }) {
     ...(t.id === "updates" && updateCount ? { badge: updateCount } : {}),
   }));
 
-  const activeTab = TAB_DEFS.find(t => t.path === location.pathname) || TAB_DEFS[0];
+  const activeTab = TAB_DEFS.find(t => isSamePath(t.path, location.pathname)) || TAB_DEFS[0];
 
   return (
     <Tabs

@@ -18,7 +18,7 @@ export function AppRoutes({ pages }) {
           shadowing) their own lowercase redirect targets below, since react-router
           v5 path matching is case-insensitive by default. */}
       <Route sensitive path="/Packages/:rest+" render={({ match, location }) => <Redirect to={`/packages/${match.params.rest}${location.search}`} />} />
-      <Route sensitive path="/System/:rest+" render={({ match }) => <Redirect to={`/system/${match.params.rest}`} />} />
+      <Route sensitive path="/System/:rest+" render={({ match, location }) => <Redirect to={`/system/${match.params.rest}${location.search}`} />} />
       {Object.values(pages).map(({ RootComponent, rootPath }) => (
         <Route
           key={rootPath}

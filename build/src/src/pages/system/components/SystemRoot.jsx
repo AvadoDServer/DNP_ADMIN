@@ -7,7 +7,7 @@ import SystemUpdates from "./SystemUpdates";
 import SystemStorage from "./SystemStorage";
 import SystemHistory from "./SystemHistory";
 import SystemUpdate from "./SystemUpdate";
-import SystemTabs, { TAB_PATHS } from "./SystemTabs";
+import SystemTabs, { isTabPath } from "./SystemTabs";
 import AppPage from "pages/packages/components/AppPage";
 import { PageHeader } from "components/ui/PageHeader";
 
@@ -22,7 +22,7 @@ const SystemRoot = ({ location }) => (
         which have their own). Each tab's own component used to render its
         own PageHeader too — title "System" under a per-tab eyebrow read
         backwards, and duplicated "System" on every tab. */}
-    {TAB_PATHS.includes(location.pathname) && (
+    {isTabPath(location.pathname) && (
       <div className="animate-fade-in">
         <PageHeader title={title} subtitle="Updates, disk space and maintenance for your AVADO." />
         <SystemTabs />
