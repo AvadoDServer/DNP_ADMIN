@@ -22,6 +22,7 @@ import Switch from "components/Switch";
 import { StoreEmpty } from "./StorePresentation";
 import defaultAvatar from "img/defaultAvatar.png";
 import humanFileSize from "utils/humanFileSize";
+import { PageHeader } from "components/ui/PageHeader";
 import ReactMarkdown from 'react-markdown'
 
 function InstallerInterface({
@@ -138,11 +139,11 @@ function InstallerInterface({
 
     let actionButtonTxt;
     if (!installedPackage) {
-        actionButtonTxt = "INSTALL"
+        actionButtonTxt = "Install"
     }
 
     if (installedPackage && manifest && installedPackage.version !== manifest.version) {
-        actionButtonTxt = `UPGRADE TO ${manifest.version}`
+        actionButtonTxt = `Update to ${manifest.version}`
     }
     const hasWizard = manifest && manifest.links && manifest.links.OnboardingWizard;
 
@@ -175,15 +176,7 @@ function InstallerInterface({
 
     return (
         <div className="animate-fade-in">
-            {/* Hero header */}
-            <div className="mb-6 flex flex-col gap-1 border-b border-border pb-5">
-                <div className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-                    DappStore
-                </div>
-                <h1 className="text-3xl font-bold capitalize tracking-tight text-fg">
-                    {dnp.manifest.title}
-                </h1>
-            </div>
+            <PageHeader eyebrow="DappStore" title={dnp.manifest.title} />
 
             <ProgressLogs progressLogs={progressLogs} />
 
@@ -204,24 +197,22 @@ function InstallerInterface({
                         </div>
                     ) : (
                         <>
-                            <h2 className="mb-1 text-sm font-bold uppercase tracking-wider text-fg-muted">
-                                About this package
-                            </h2>
-                            <p className="text-sm leading-relaxed text-fg-muted">
+                            <p className="max-w-prose text-sm leading-relaxed text-fg-muted">
                                 {dnp.manifest.description}
                             </p>
                         </>
                     )}
 
                     {/* Metadata */}
-                    <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-2 border-t border-border pt-4 sm:grid-cols-2">
+                    {/* Facts: label and value side by side, not spread across the card */}
+                    <dl className="mt-5 grid max-w-xl grid-cols-[auto_1fr] gap-x-8 gap-y-1.5 border-t border-border pt-4 text-sm sm:grid-cols-[auto_1fr_auto_1fr]">
                         {Object.entries(dnpData).map(([key, val]) => (
-                            <div key={key} className="flex items-baseline justify-between gap-3 text-sm">
+                            <React.Fragment key={key}>
                                 <dt className="text-fg-subtle">{key}</dt>
-                                <dd className="truncate font-medium text-fg" title={String(val)}>
+                                <dd className="mb-0 truncate font-medium text-fg" title={String(val)}>
                                     {val}
                                 </dd>
-                            </div>
+                            </React.Fragment>
                         ))}
                     </dl>
 

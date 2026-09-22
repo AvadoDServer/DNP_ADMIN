@@ -9,7 +9,8 @@ import {
   CardDescription,
   Button,
   Badge,
-  Spinner
+  Spinner,
+  PageHeader
 } from "components/ui";
 import {
   getStatus,
@@ -210,13 +211,12 @@ function Priority({ dappnodeParams = {} }) {
   const cancelling = subscription && subscription.cancelAtPeriodEnd;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-fg">Priority Support</h1>
-        <p className="text-sm text-fg-muted">
-          Get faster, dedicated help from the AVADO team for your node.
-        </p>
-      </header>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Priority Support"
+        subtitle="Faster, dedicated help from the AVADO team for your node."
+      />
+      <div className="flex w-full flex-col gap-6">
 
       {notice && <Notice variant="success">{notice}</Notice>}
       {error && <Notice variant="danger">{error}</Notice>}
@@ -343,15 +343,15 @@ function Priority({ dappnodeParams = {} }) {
                 Subscribe monthly
               </Button>
             </div>
-            <div className="relative flex flex-col gap-3 rounded-lg border border-accent/60 bg-accent/[0.06] p-4">
-              <Badge variant="accent" className="absolute -top-2.5 right-3">
-                Best value
-              </Badge>
-              <div>
-                <div className="text-xl font-bold text-fg">
-                  €100<span className="text-sm font-normal text-fg-muted">/year</span>
+            <div className="flex flex-col gap-3 rounded-lg border border-accent/60 bg-accent/[0.06] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xl font-bold text-fg">
+                    €100<span className="text-sm font-normal text-fg-muted">/year</span>
+                  </div>
+                  <div className="mt-0.5 text-sm text-fg-muted">Billed yearly, save €44</div>
                 </div>
-                <div className="mt-0.5 text-sm text-fg-muted">Billed yearly, save €44</div>
+                <Badge variant="accent">Best value</Badge>
               </div>
               <Button
                 className="mt-auto w-full"
@@ -370,6 +370,7 @@ function Priority({ dappnodeParams = {} }) {
           </p>
         </Card>
       )}
+      </div>
     </div>
   );
 }

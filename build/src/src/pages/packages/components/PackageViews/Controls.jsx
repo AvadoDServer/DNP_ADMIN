@@ -106,7 +106,7 @@ function PackageControls({
 
   return (
     <section>
-      <SectionHeader title="Controls" />
+      <SectionHeader title="Controls" first />
       <Card padding="none">
         <ul className="divide-y divide-border">
           {actions.map(({ name, text, type, action }) => (

@@ -10,6 +10,7 @@
   --transition-time: 0.25s;
   --topbar-height: 4rem;
   --container-padding: 2rem;
+  --content-max-width: 72rem;
   --border-size: 1px;
   --default-spacing: 1.5rem;
 }
@@ -212,8 +213,25 @@ body,
   transition: background-color 0.3s ease;
 }
 
+/* One reading column: pages do not stretch across a wide display */
 #main > div {
-  margin-bottom: var(--default-spacing);
+  max-width: var(--content-max-width);
+  margin: 0 auto var(--default-spacing);
+}
+
+@media only screen and (max-width: 40rem) {
+  #main {
+    padding: 1rem;
+  }
+  #topbar {
+    padding: 0 0.75rem;
+  }
+  #topbar .right {
+    grid-gap: 0.5rem;
+  }
+  .topnav-icon-separator {
+    display: none;
+  }
 }
 
 /********************

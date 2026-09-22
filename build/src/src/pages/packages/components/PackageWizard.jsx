@@ -43,14 +43,14 @@ const PackageInterface = ({
                 <>
                     {dnp.manifest && dnp.manifest.links && dnp.manifest.links.OnboardingWizard ? (
                         <>
-                            <div className="fullheight">
+                            <div>
                                 <Wizard dnp={dnp} />
                             </div>
                         </>
                     ) :
                         (dnp.name === "remoteconnect.avado.dnp.dappnode.eth" ? (
                             <>
-                                <div className="fullheight">
+                                <div>
                                     <Wizard dnp={{ manifest: { links: { OnboardingWizard: "http://remoteconnect.my.ava.do" } } }} />
                                 </div>
                             </>

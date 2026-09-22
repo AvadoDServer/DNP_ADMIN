@@ -16,3 +16,4 @@ export {
   TD,
 } from "./Table";
 export { cn } from "./cn";
+export { PageHeader, SectionHeader } from "./PageHeader";

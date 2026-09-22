@@ -71,7 +71,7 @@ function TroubleshootHome({ diagnoses, fetchAllDappnodeStatus }) {
       />
 
       {/* Auto diagnose section */}
-      <SectionHeader title="Auto diagnose" />
+      <SectionHeader title="Health checks" first />
       <Card padding="none">
         <ul className="divide-y divide-border">
           {filteredDiagnoses.map(({ loading, ok, msg, solutions }, i) => (

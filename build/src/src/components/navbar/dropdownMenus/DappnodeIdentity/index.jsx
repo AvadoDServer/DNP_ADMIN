@@ -47,7 +47,7 @@ const DappnodeIdentity = ({ dappnodeParams = {}, setName }) => {
         <>{name && (
             <>
                 <CTE
-                    wrapperClass="dappnode-name mr-2 text-sm font-medium"
+                    wrapperClass="dappnode-name mr-2 hidden text-sm font-medium sm:block"
                     textClass="text"
                     inputClass="text"
                     initialValue={`${name}`}

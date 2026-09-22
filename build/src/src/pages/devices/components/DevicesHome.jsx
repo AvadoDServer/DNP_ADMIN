@@ -38,7 +38,7 @@ const DevicesHome = ({
         subtitle="Create credentials so users and devices can reach your AVADO over VPN or WiFi."
       />
 
-      <SectionHeader title="Add a user" />
+      <SectionHeader title="Add a user" first />
       <Card padding="lg">
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-end"

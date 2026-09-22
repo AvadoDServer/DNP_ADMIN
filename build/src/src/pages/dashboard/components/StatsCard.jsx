@@ -17,6 +17,8 @@ const ICONS = {
   ),
 };
 
+const LABELS = { Cpu: "CPU", Memory: "Memory", Disk: "Disk" };
+
 function statusFor(value) {
   if (value > 90) return "danger";
   if (value > 75) return "warning";
@@ -56,8 +58,8 @@ function StatsCard({ id, percent, used, total, subtitle }) {
             </svg>
           </span>
           <div>
-            <div className="text-sm font-semibold capitalize text-fg">{id}</div>
-            <div className="text-xs text-fg-subtle">usage</div>
+            <div className="text-sm font-semibold text-fg">{LABELS[id] || id}</div>
+            <div className="text-xs text-fg-subtle">in use</div>
           </div>
         </div>
         <div className={cn("text-2xl font-bold tabular-nums", STATUS_TEXT[status])}>

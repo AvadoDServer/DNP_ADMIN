@@ -14,6 +14,7 @@ import StatsCard from "./StatsCard";
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
 import Badge from "components/ui/Badge";
+import { PageHeader, SectionHeader } from "components/ui/PageHeader";
 import * as s from "../../packages/selectors.js";
 import { stringIncludes } from "utils/strings";
 import defaultAvatar from "img/defaultAvatar.png";
@@ -26,24 +27,6 @@ import defaultAvatar from "img/defaultAvatar.png";
  * NOTE: data wiring (selectors, fetchDappnodeStats polling, WAMP-backed
  * store, REACT_APP_MOCK_DATA path) is unchanged — only presentation.
  */
-function SectionHeader({ title, count, action }) {
-  return (
-    <div className="mb-4 mt-8 flex items-end justify-between gap-3 first:mt-0">
-      <div className="flex items-center gap-2.5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-fg-muted">
-          {title}
-        </h2>
-        {typeof count === "number" && (
-          <span className="rounded-full bg-fg/[0.06] px-2 py-0.5 text-xs font-semibold text-fg-subtle">
-            {count}
-          </span>
-        )}
-      </div>
-      {action}
-    </div>
-  );
-}
-
 function Dashboard({
   chainData,
   dappnodeStats,
@@ -74,21 +57,17 @@ function Dashboard({
 
   return (
     <div className="animate-fade-in">
-      {/* Hero header */}
-      <div className="mb-2 flex flex-col gap-1 border-b border-border pb-5">
-        <div className="flex items-center gap-3">
-          <h1 className="mb-0 text-3xl font-bold tracking-tight text-fg">Home</h1>
-          <Badge variant="success" dot>
-            Online
-          </Badge>
-        </div>
-        <p className="mb-0 text-sm text-fg-muted">
-          System health, chain sync status, and your active applications at a glance.
-        </p>
-      </div>
+      <PageHeader
+        title="Home"
+        subtitle="How your AVADO is doing and what is running on it."
+      >
+        <Badge variant="success" dot>
+          Online
+        </Badge>
+      </PageHeader>
 
       {/* Health */}
-      <SectionHeader title="Health" />
+      <SectionHeader title="Health" first />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatsCard
           id="Cpu"

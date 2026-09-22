@@ -187,7 +187,7 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
         subtitle="Core packages, updates and maintenance for your AVADO box."
       />
 
-      <SectionHeader title="Packages" />
+      <SectionHeader title="Core packages" first />
       <PackageList
         moduleName={title}
         coreDnps={true}
