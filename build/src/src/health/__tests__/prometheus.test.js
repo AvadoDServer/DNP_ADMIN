@@ -22,4 +22,24 @@ describe("fetchMetrics", () => {
     expect(await fetchMetrics(async () => ({ ok: false, json: async () => ({}) }))).toBeNull();
     expect(await fetchMetrics(async () => ({ ok: true, json: async () => ({ status: "error", error: "bad" }) }))).toBeNull();
   });
+
+  it("aborts a hung query after 10s (via AbortController) instead of hanging forever", async () => {
+    vi.useFakeTimers();
+    try {
+      // Never resolves on its own; only settles (by rejecting) once the
+      // AbortController's signal fires, exactly like a real fetch() would.
+      const fetchImpl = vi.fn(
+        (url, { signal } = {}) =>
+          new Promise((resolve, reject) => {
+            signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+          })
+      );
+      const pending = fetchMetrics(fetchImpl);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(await pending).toBeNull();
+      expect(fetchImpl.mock.calls[0][1].signal.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

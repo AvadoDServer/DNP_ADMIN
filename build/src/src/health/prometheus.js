@@ -13,16 +13,29 @@ export const QUERIES = {
     "sum by (client, network) (increase(validator_monitor_prev_epoch_on_chain_attester_hit_total[1h]))",
 };
 
+// A stuck/unreachable Prometheus (e.g. through Remote Connect, or a network
+// blip) must not hang a query indefinitely — the 60s poll interval in
+// HealthProvider would otherwise pile up more in-flight requests behind it.
+const PROMETHEUS_TIMEOUT_MS = 10000;
+
 async function query(q, fetchImpl) {
-  const res = await fetchImpl(`${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(q)}`);
-  if (!res.ok) throw Error(`Prometheus HTTP error`);
-  const body = await res.json();
-  if (body.status !== "success") throw Error(body.error || "Prometheus query failed");
-  return body.data.result.map(({ metric, value }) => ({
-    client: metric.client,
-    network: metric.network,
-    value: Number(value[1]),
-  }));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROMETHEUS_TIMEOUT_MS);
+  try {
+    const res = await fetchImpl(`${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(q)}`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) throw Error(`Prometheus HTTP error`);
+    const body = await res.json();
+    if (body.status !== "success") throw Error(body.error || "Prometheus query failed");
+    return body.data.result.map(({ metric, value }) => ({
+      client: metric.client,
+      network: metric.network,
+      value: Number(value[1]),
+    }));
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function fetchMetrics(fetchImpl = fetch) {
