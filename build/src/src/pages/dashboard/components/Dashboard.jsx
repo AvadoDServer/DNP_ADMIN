@@ -47,44 +47,50 @@ function Dashboard({
   );
 
   return (
-    <div className="animate-fade-in flex flex-col gap-6">
+    <div className="animate-fade-in">
       <PageHeader title="Home" subtitle="Whether your AVADO is healthy, and what runs on it.">
         <Badge variant={connection.isOpen ? "success" : "danger"} dot>
           {connection.isOpen ? "Connected" : "Disconnected"}
         </Badge>
       </PageHeader>
 
-      <VerdictPanel />
+      {/* PageHeader carries its own bottom margin, so it stays outside this
+          gapped column — otherwise its margin and the gap would stack into
+          one oversized space instead of an even 24 px between sections. */}
+      <div className="flex flex-col gap-6">
+        <VerdictPanel />
 
-      <ResourcesStrip stats={dappnodeStats} />
+        <ResourcesStrip stats={dappnodeStats} />
 
-      <ChainLine chainData={chainData} />
+        <ChainLine chainData={chainData} />
 
-      <section aria-labelledby="apps-title">
-        <SectionHeader
-          title={<span id="apps-title">Your apps</span>}
-          count={activePackages.length}
-          action={
-            <Button variant="ghost" size="sm" onClick={() => history.push("/installer")}>
-              DappStore
-            </Button>
-          }
-        />
-        {activePackages.length === 0 ? (
-          <Card padding="lg" className="text-center">
-            <p className="mb-1 font-display text-lg font-semibold text-fg">Your AVADO is ready</p>
-            <p className="mb-4 text-sm text-fg-muted">Start with Staking setup, or browse the DappStore for other apps.</p>
-            <div className="flex justify-center gap-2">
-              <Button size="sm" onClick={() => history.push("/staking")}>Staking setup</Button>
-              <Button size="sm" variant="secondary" onClick={() => history.push("/installer")}>DappStore</Button>
+        <section aria-labelledby="apps-title">
+          <SectionHeader
+            title={<span id="apps-title">Your apps</span>}
+            count={activePackages.length}
+            action={
+              <Button variant="ghost" size="sm" onClick={() => history.push("/installer")}>
+                DappStore
+              </Button>
+            }
+            first
+          />
+          {activePackages.length === 0 ? (
+            <Card padding="lg" className="text-center">
+              <p className="mb-1 font-display text-lg font-semibold text-fg">Your AVADO is ready</p>
+              <p className="mb-4 text-sm text-fg-muted">Start with Staking setup, or browse the DappStore for other apps.</p>
+              <div className="flex justify-center gap-2">
+                <Button size="sm" onClick={() => history.push("/staking")}>Staking setup</Button>
+                <Button size="sm" variant="secondary" onClick={() => history.push("/installer")}>DappStore</Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {activePackages.map(p => <AppCard key={p.name} pkg={p} />)}
             </div>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {activePackages.map(p => <AppCard key={p.name} pkg={p} />)}
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

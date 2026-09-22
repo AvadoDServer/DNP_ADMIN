@@ -18,8 +18,14 @@ export function verdictSentence(verdict, findings) {
 export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed }) {
   const [all, setAll] = useState(false);
   const band = BAND[verdict.level] || BAND.ok;
-  const shown = all ? findings : findings.slice(0, limit);
   const healthy = verdict.level === "ok";
+  // The headline (h2) is already the worst finding's title — showing that
+  // same finding again as the first row would just repeat it. Instead its
+  // `why`/fix/secondary render right under the headline, uncollapsed, and
+  // the row list below covers only the rest.
+  const headline = healthy ? null : findings[0];
+  const rest = healthy ? findings : findings.slice(1);
+  const shown = all ? rest : rest.slice(0, limit);
   const checkedAtButton = (
     <button type="button" onClick={onRefresh} className="hover:text-fg">
       Checked {checkedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Check again
@@ -34,6 +40,11 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
       <h2 id="verdict-title" className="mb-0 break-words font-display text-2xl font-bold leading-tight text-fg sm:text-[2.5rem]">
         {verdictSentence(verdict, findings)}
       </h2>
+      {headline && (
+        <ul className="mt-2 pl-0">
+          <FindingRow finding={headline} hideTitle showWhy />
+        </ul>
+      )}
       {shown.length > 0 && <ul className="mt-4 divide-y divide-border/70 pl-0">{shown.map(f => <FindingRow key={f.id} finding={f} />)}</ul>}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-fg-muted">
         {healthy ? (
@@ -45,9 +56,9 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
           </span>
         ) : (
           <>
-            {findings.length > limit ? (
+            {rest.length > limit ? (
               <button type="button" className="font-medium text-accent hover:underline" onClick={() => setAll(a => !a)}>
-                {all ? "Show fewer" : `Show all ${findings.length}`}
+                {all ? "Show fewer" : `Show all ${rest.length}`}
               </button>
             ) : <span />}
             {checkedAtButton}

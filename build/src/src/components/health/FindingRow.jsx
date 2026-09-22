@@ -12,7 +12,7 @@ const ICON = {
   info: { glyph: "M12 11v5M12 7.5h.01", cls: "bg-accent/15 text-accent", label: "Tip" },
 };
 
-export default function FindingRow({ finding, compact = false }) {
+export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false }) {
   const [whyOpen, setWhyOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const dispatch = useDispatch();
@@ -44,11 +44,15 @@ export default function FindingRow({ finding, compact = false }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="mb-0 break-words font-medium text-fg">{finding.title}</p>
+            {!hideTitle && <p className="mb-0 break-words font-medium text-fg">{finding.title}</p>}
             {!compact && finding.why && (
-              <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
-                {whyOpen ? finding.why : "Why this matters"}
-              </button>
+              showWhy ? (
+                <p className="mt-0.5 text-sm text-fg-muted">{finding.why}</p>
+              ) : (
+                <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
+                  {whyOpen ? finding.why : "Why this matters"}
+                </button>
+              )
             )}
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
