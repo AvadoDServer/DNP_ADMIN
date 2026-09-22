@@ -9,7 +9,7 @@ import { fetchStore } from "services/store/fetchStore";
 import { computeUpdates } from "services/store/updates";
 import { fetchMetrics } from "./prometheus";
 import { PROMETHEUS_PACKAGE } from "./clients";
-import { runChecks, verdictOf } from "./engine";
+import { runChecksDetailed, verdictOf } from "./engine";
 import { ALL_RULES } from "./rules";
 import { isDismissed, dismiss as persistDismiss } from "./dismissals";
 
@@ -99,7 +99,7 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       // fresh `metrics.headSlot` sample to compute how far behind a client is.
       now: Date.now(),
     };
-    const allFindings = runChecks(snapshot, ALL_RULES);
+    const { findings: allFindings, passed: checksPassed, total: checksTotal } = runChecksDetailed(snapshot, ALL_RULES);
     const findings = allFindings.filter(f => !(f.dismissable && isDismissed(f.id)));
     return {
       findings,
@@ -109,6 +109,8 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       sources: snapshot.sources,
       updates: updates || {},
       storePackages: store.packages,
+      checksPassed,
+      checksTotal,
       refresh: () => setTick(t => t + 1),
       dismiss: id => {
         persistDismiss(id);

@@ -22,7 +22,7 @@ const state = {
 // against this fixture regardless of the store/metrics impls passed in.
 
 function Probe({ dismissId }) {
-  const { verdict, findings, allFindings, sources, dismiss } = useHealth();
+  const { verdict, findings, allFindings, sources, dismiss, checksPassed, checksTotal } = useHealth();
   return (
     <div>
       <span data-testid="verdict">{verdict.label}</span>
@@ -34,6 +34,8 @@ function Probe({ dismissId }) {
           dismiss
         </button>
       )}
+      <span data-testid="checksPassed">{checksPassed}</span>
+      <span data-testid="checksTotal">{checksTotal}</span>
     </div>
   );
 }
@@ -61,6 +63,11 @@ describe("HealthProvider", () => {
     expect(screen.getByTestId("verdict").textContent).toBe("Action required");
     expect(screen.getByTestId("ids").textContent).toContain("consensus-without-execution:mainnet");
     expect(screen.getByTestId("ids").textContent).toContain("updates-available");
+    const passed = Number(screen.getByTestId("checksPassed").textContent);
+    const total = Number(screen.getByTestId("checksTotal").textContent);
+    expect(Number.isFinite(passed)).toBe(true);
+    expect(Number.isFinite(total)).toBe(true);
+    expect(passed).toBeLessThanOrEqual(total);
   });
 
   it("useHealth store failure: marks updates failed and still renders", async () => {
