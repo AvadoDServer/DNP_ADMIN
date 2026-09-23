@@ -1,4 +1,5 @@
 import React, { useId } from "react";
+import { cn } from "components/ui/cn";
 
 /**
  * AvadoDevice — the "Appliance" hero illustration (Home): the owner's AVADO
@@ -32,7 +33,9 @@ export default function AvadoDevice({ light, className }) {
       viewBox="0 0 360 250"
       role="img"
       aria-label={`Your AVADO box, status light ${status.word}`}
-      className={className}
+      // Scales down with its container (the viewBox keeps the aspect ratio)
+      // so a 320-360 px phone never scrolls sideways.
+      className={cn("h-auto w-full max-w-[330px]", className)}
     >
       <defs>
         <radialGradient id={glowId} cx="50%" cy="50%" r="50%">

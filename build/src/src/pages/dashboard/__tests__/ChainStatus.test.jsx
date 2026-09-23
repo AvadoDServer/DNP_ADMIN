@@ -256,3 +256,20 @@ describe("ChainStatus — chain client reports an error", () => {
     expect(screen.queryByText(/In step/)).not.toBeInTheDocument();
   });
 });
+
+describe("ChainStatus — epoch strip layout", () => {
+  it("wraps the epoch into two rows on narrow screens and one row from sm", () => {
+    useModeMock.mockReturnValue({ isAdvanced: true });
+    useHealthMock.mockReturnValue(
+      health({
+        chainData: [{ name: "Nimbus", syncing: false }],
+        metrics: { headSlot: [{ client: "nimbus", network: "mainnet", value: 100 }], peers: [] },
+      })
+    );
+    render(<ChainStatus />);
+    const cells = screen.getByTestId("epoch-cells");
+    expect(cells.style.getPropertyValue("--epoch-cols")).toBe("32");
+    expect(cells.style.getPropertyValue("--epoch-cols-narrow")).toBe("16");
+    expect(cells.children).toHaveLength(32);
+  });
+});

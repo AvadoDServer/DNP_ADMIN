@@ -51,7 +51,7 @@ const DappnodeIdentity = ({ dappnodeParams = {}, setName }) => {
         identityRows.map(([title, body]) => (
           <div key={title} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
             <div className="text-xs font-bold text-fg-subtle">{title}</div>
-            <div className="mt-1 break-words text-fg-muted">{body}</div>
+            <div className="mt-1 break-all text-fg-muted">{body}</div>
           </div>
         ))
       ) : (

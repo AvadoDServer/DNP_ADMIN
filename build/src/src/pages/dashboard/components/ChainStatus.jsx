@@ -63,21 +63,29 @@ function EpochStrip({ progress, networkLabel, clientLabel, peers }) {
   const seenCount = progress.cells.filter(c => c === "seen").length;
   const missingCount = progress.cells.filter(c => c === "missing").length;
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-[260px_minmax(0,1fr)_150px] sm:items-center sm:gap-7">
+    // Three columns only from xl: below that the strip gets the panel's full
+    // width, so cells never shrink to a couple of pixels (e.g. 640-1200 px
+    // with the sidebar docked). On phones the epoch wraps into two rows so
+    // each cell keeps a usable width down to 320 px.
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_150px] xl:items-center xl:gap-7">
       <div className="flex flex-col gap-1">
         <span className="text-[0.8125rem] text-fg-muted">{`${networkLabel}, via ${clientLabel}`}</span>
         <span className="font-display text-xl font-bold text-fg">{`Epoch ${progress.epoch}`}</span>
       </div>
       <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${progress.cells.length}, minmax(0, 1fr))` }}
+        data-testid="epoch-cells"
+        className="grid grid-cols-[repeat(var(--epoch-cols-narrow),minmax(0,1fr))] gap-1 sm:grid-cols-[repeat(var(--epoch-cols),minmax(0,1fr))]"
+        style={{
+          "--epoch-cols": progress.cells.length,
+          "--epoch-cols-narrow": Math.ceil(progress.cells.length / 2),
+        }}
         aria-label={`Slots in this epoch: ${seenCount} seen, ${missingCount} not seen yet, now at slot ${progress.slotInEpoch}`}
       >
         {progress.cells.map((cell, i) => (
           <span key={i} aria-hidden="true" className={cn("h-[26px] rounded-[5px]", CELL_TONE[cell])} />
         ))}
       </div>
-      <div className="flex flex-col gap-1 sm:text-right">
+      <div className="flex flex-col gap-1 xl:text-right">
         <span className="font-display text-lg font-bold text-fg">{behindLabel(progress)}</span>
         {peers && <span className="text-[0.8125rem] text-fg-muted">{`${peers.value} peer${peers.value === 1 ? "" : "s"}`}</span>}
       </div>
