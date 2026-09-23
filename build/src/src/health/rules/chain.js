@@ -22,6 +22,13 @@ function chainEntryMatchesPkg(chainName, pkgName) {
   return name === short;
 }
 
+// Space-grouped thousands (e.g. 15273292 -> "15 273 292") for slot numbers in
+// `detail` lines — a fixed, locale-independent grouping rather than
+// `toLocaleString`, whose separator depends on the runtime's ICU data.
+function formatSlot(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
 export function chainSyncing({ chainData }) {
   return (chainData || [])
     .filter(c => c && c.syncing)
@@ -56,6 +63,7 @@ export function headBehind({ packages, metrics, chainData, now }) {
         appId: match.pkg.name,
         title: `${appTitle(match.pkg)} is ${wall - s.value} slots behind the chain`,
         why: "It is not keeping up with the network, so your validators may miss attestations.",
+        detail: `Head slot ${formatSlot(s.value)}, wall-clock slot ${formatSlot(wall)} (${wall - s.value} behind)`,
         fix: { kind: "steps", label: "What to check" },
         steps: [
           "Check that your execution client is running and synced.",
@@ -78,6 +86,7 @@ export function lowPeers({ packages, metrics }) {
       appId: match.pkg.name,
       title: `${appTitle(match.pkg)} has only ${s.value} peers`,
       why: "With few peers your client hears about new blocks late and can fall behind or miss attestations.",
+      detail: `${s.value} peers (Prometheus libp2p_peers)`,
       fix: { kind: "link", to: "/help/access", label: "Improve connectivity" },
     }));
 }

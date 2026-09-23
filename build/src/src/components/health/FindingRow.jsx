@@ -5,6 +5,7 @@ import Button from "components/ui/Button";
 import { cn } from "components/ui/cn";
 import { runFixAction } from "health/fixActions";
 import { useHealth } from "health/HealthProvider";
+import { useMode } from "settings/ModeProvider";
 
 const ICON = {
   critical: { glyph: "M18 6 6 18M6 6l12 12", cls: "bg-danger/15 text-danger", label: "Action required" },
@@ -20,6 +21,7 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
   const [starting, setStarting] = useState(false);
   const dispatch = useDispatch();
   const { dismiss } = useHealth();
+  const { isAdvanced } = useMode();
   const icon = ICON[finding.severity] || ICON.info;
   const { fix } = finding;
 
@@ -67,6 +69,9 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
                   {whyOpen ? finding.why : "Why this matters"}
                 </button>
               )
+            )}
+            {!compact && isAdvanced && finding.detail && (
+              <p className="mt-0.5 break-words text-xs text-fg-subtle">{finding.detail}</p>
             )}
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
