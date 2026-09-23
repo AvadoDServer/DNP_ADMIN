@@ -4,6 +4,8 @@ import { connect } from "react-redux";
 import { NavLink, useLocation } from "react-router-dom";
 import { createSelector, createStructuredSelector } from "reselect";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
+import { useMode } from "settings/ModeProvider";
+import { visibleNavItems } from "settings/visibility";
 import { sidenavItems } from "./navbarItems";
 import "./sidebar.css";
 
@@ -34,6 +36,7 @@ const SideBar = ({
 
   const sidebarEl = useRef(null);
   const location = useLocation();
+  const { mode } = useMode();
 
   function toggleSideNav() {
     setCollapsed(!collapsed);
@@ -81,24 +84,10 @@ const SideBar = ({
     };
   }, [collapsed]);
 
-  const filteredSidenavItems =
-    sidenavItems.reduce((accum, item) => {
-      if (!item.package) {
-        accum.push(item);
-        return accum;
-      }
-      if (
-        dnps.find((dnp) => { return dnp.name === item.package }) &&
-        (
-          !item.hideif ||
-          !dnps.find((dnp) => { return item.hideif.includes(dnp.name) })
-        )
-      ) {
-        accum.push(item);
-        return accum;
-      }
-      return accum;
-    }, []);
+  const filteredSidenavItems = visibleNavItems(sidenavItems, {
+    mode,
+    installedNames: dnps.map(dnp => dnp.name),
+  });
 
   return (
     <>

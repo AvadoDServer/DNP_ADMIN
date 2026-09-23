@@ -17,6 +17,7 @@ import pages from "./pages";
 import { getConnectionStatus } from "services/connectionStatus/selectors";
 import { ToastContainer } from "react-toastify";
 import { HealthProvider } from "health/HealthProvider";
+import { ModeProvider } from "settings/ModeProvider";
 
 if (typeof pages !== "object") throw Error("pages must be an object");
 
@@ -32,23 +33,25 @@ class App extends React.Component {
     if (isOpen) {
       return (
         <HealthProvider>
-          <div className="body">
-            {/* SideNav expands on big screens, while content-wrapper moves left */}
-            <SideBar />
-            <TopBar />
-            <div id="main">
-              {/* <ErrorBoundary>
-                <NotificationsMain />
-              </ErrorBoundary> */}
+          <ModeProvider>
+            <div className="body">
+              {/* SideNav expands on big screens, while content-wrapper moves left */}
+              <SideBar />
+              <TopBar />
+              <div id="main">
+                {/* <ErrorBoundary>
+                  <NotificationsMain />
+                </ErrorBoundary> */}
 
-              <AppRoutes pages={pages} />
+                <AppRoutes pages={pages} />
+              </div>
+
+              {/* Place here non-page components */}
+              <ToastContainer />
+              <ScrollToTop />
+              <CommandPalette />
             </div>
-
-            {/* Place here non-page components */}
-            <ToastContainer />
-            <ScrollToTop />
-            <CommandPalette />
-          </div>
+          </ModeProvider>
         </HealthProvider>
       );
     } else if (isNotAdmin) {
