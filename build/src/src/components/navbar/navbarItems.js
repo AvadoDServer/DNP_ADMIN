@@ -35,18 +35,22 @@ export const sidenavItems = [
     href: "/devices",
     icon: Devices,
     package: "vpn.dnp.dappnode.eth",
-    hideif: ["remoteconnect.avado.dnp.dappnode.eth"]
+    hideif: ["remoteconnect.avado.dnp.dappnode.eth"],
+    advanced: true
   },
   {
     name: "Remote Connect",
     href: "/packages/remoteconnect.avado.dnp.dappnode.eth",
     icon: Devices,
     package: "remoteconnect.avado.dnp.dappnode.eth",
+    advanced: true,
+    simpleIfInstalled: true
   },
   {
     name: "Priority",
     href: "/priority",
-    icon: Priority
+    icon: Priority,
+    advanced: true
   },
   {
     name: "Help",
@@ -57,7 +61,8 @@ export const sidenavItems = [
   {
     name: "System",
     href: "/system",
-    icon: Settings
+    icon: Settings,
+    advanced: true
   }
 
   //   {
