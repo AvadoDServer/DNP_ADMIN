@@ -35,6 +35,18 @@
   /* ---- Motion ------------------------------------------------------ */
   --theme-transition: 220ms cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* ---- AVADO device illustration ------------------------------------
+     Home's hero drawing (components/box/AvadoDevice.jsx): the physical
+     casing is rendered identically in both themes (per the approved
+     mockups — only the status light itself is theme/verdict driven, via
+     --success/--warning/--danger/--fg-subtle), so these live under :root
+     rather than being duplicated per [data-theme]. */
+  --device-body-start: 42 47 58;   /* #2A2F3A */
+  --device-body-end: 20 23 30;     /* #14171E */
+  --device-vent: 58 64 77;         /* #3A404D */
+  --device-label: 233 236 242;     /* #E9ECF2 */
+  --device-center: 26 29 36;       /* #1A1D24 */
+
   color-scheme: dark;
 }
 

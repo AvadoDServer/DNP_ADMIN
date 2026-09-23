@@ -146,6 +146,11 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       verdict: verdictOf(findings),
       checkedAt: new Date(snapshot.now),
       sources: snapshot.sources,
+      // Raw Prometheus samples (headSlot/peers/... per client+network), so
+      // consumers that need more than the derived findings — e.g. Home's
+      // chain strip (Advanced mode) — can read them directly instead of
+      // re-deriving from `sources.metrics` (which only carries the status).
+      metrics: snapshot.metrics,
       updates: updates || {},
       storePackages: store.packages,
       checksPassed,
