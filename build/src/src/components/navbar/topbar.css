@@ -1,15 +1,3 @@
-:root {
-  --icon-size: 24px;
-  --bubble-size: 12px;
-}
-
-.topnav-icon-separator {
-  /* Since the div is empty, show only one side of the border */
-  border-right: 1px solid var(--border-color);
-  height: var(--icon-size);
-  opacity: 0.5;
-}
-
 /* General topnav styles */
 
 .topnav {
@@ -19,22 +7,6 @@
   justify-content: space-between;
   padding: 0.5rem 1rem;
   transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.dappnode-name {
-  /* max-width: 25vw; */
-  /* white-space: nowrap; */
-  /* overflow: hidden; */
-  text-overflow: ellipsis;
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.blockies-icon {
-  border-radius: var(--radius-full);
-  width: var(--icon-size);
-  height: var(--icon-size);
-  box-shadow: var(--shadow-sm);
 }
 
 /* Sidenav toggler */
@@ -59,12 +31,8 @@
   background-color: var(--bg-hover);
 }
 
-#topbar .avado.right {
-  grid-template-columns: none;
-}
-
-/* Text label shown next to icon controls (Theme, Chain, Notifications, Help)
-   on wide screens, alongside the existing aria-label/title for narrow ones. */
+/* Text label shown next to icon controls (Search, Notifications) on wide
+   screens, alongside the existing aria-label/title for narrow ones. */
 .topbar-label {
   display: none;
   margin-left: 0.4rem;

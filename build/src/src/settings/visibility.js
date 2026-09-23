@@ -6,7 +6,8 @@
  * mode rule on top: an item flagged `advanced: true` is dropped in simple
  * mode, unless it's also flagged `simpleIfInstalled: true` — in which case
  * it stays visible in simple mode once its package is installed (Remote
- * Connect: it's how people reach the box from away — spec §5).
+ * Connect and Connect (VPN): each is how some owners reach the box from
+ * away — spec §5 and the controller ruling on VPN-only boxes).
  */
 
 function isPackageVisible(item, installedNames) {

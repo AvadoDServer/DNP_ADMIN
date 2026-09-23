@@ -24,11 +24,16 @@ describe("visibleNavItems", () => {
     ]);
   });
 
-  it("simple mode: Connect (VPN) never shows, even installed (it's advanced-only, unlike Remote Connect)", () => {
+  it("simple mode: Connect (VPN) stays visible once its package is installed (owners on VPN-only boxes must still reach it, same rule as Remote Connect)", () => {
     const visible = visibleNavItems(sidenavItems, {
       mode: "simple",
       installedNames: ["vpn.dnp.dappnode.eth"],
     });
+    expect(names(visible)).toContain("Connect (VPN)");
+  });
+
+  it("simple mode: Connect (VPN) absent when its package isn't installed", () => {
+    const visible = visibleNavItems(sidenavItems, { mode: "simple", installedNames: [] });
     expect(names(visible)).not.toContain("Connect (VPN)");
   });
 
