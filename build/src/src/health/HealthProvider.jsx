@@ -145,6 +145,10 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
     const findings = ready ? allFindings.filter(f => !(f.dismissable && isDismissed(f.id))) : [];
     return {
       ready,
+      // Installed packages and per-client chain status, for consumers that
+      // render them directly (Home's chain strip).
+      packages,
+      chainData,
       findings,
       allFindings,
       verdict: verdictOf(findings),
