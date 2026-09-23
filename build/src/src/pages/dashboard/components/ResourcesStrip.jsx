@@ -46,10 +46,10 @@ function Gauge({ kind, label, pct }) {
 /** Box readings (Home hero, under the AVADO device): processor, memory, disk space. */
 export default function ResourcesStrip({ stats = {} }) {
   return (
-    <div aria-label="Box readings" className="flex w-full max-w-[330px] flex-col gap-3">
+    <section aria-label="Box readings" className="flex w-full max-w-[330px] flex-col gap-3">
       <Gauge kind="processor" label="Processor" pct={parsePercent(stats.cpu)} />
       <Gauge kind="memory" label="Memory" pct={parsePercent(stats.memory)} />
       <Gauge kind="disk" label="Disk" pct={parsePercent(stats.disk)} />
-    </div>
+    </section>
   );
 }

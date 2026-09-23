@@ -9,8 +9,8 @@ import { useHealth } from "health/HealthProvider";
 // --success (the same token AvadoDevice's green light uses), so the dot
 // here and the box's status light always agree.
 const TONE = {
-  critical: { dot: "bg-danger", ring: "ring-danger/30", text: "text-danger" },
-  warning: { dot: "bg-warning", ring: "ring-warning/30", text: "text-warning" },
+  critical: { dot: "bg-danger", ring: "ring-danger/30", text: "text-danger-text" },
+  warning: { dot: "bg-warning", ring: "ring-warning/30", text: "text-warning-text" },
   ok: { dot: "bg-success", ring: "ring-success/30", text: "text-fg" },
 };
 

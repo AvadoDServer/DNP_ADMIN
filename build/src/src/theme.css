@@ -94,6 +94,8 @@
   --warning-subtle: 56 43 14;
   --danger: 255 122 107;         /* crit #FF7A6B */
   --danger-subtle: 58 28 24;
+  --warning-text: 242 184 75;    /* status words on --bg (AA 4.5:1) */
+  --danger-text: 255 138 122;    /* #FF8A7A */
 
   /* Verdict surfaces (status-tinted backgrounds) */
   --verdict-ok: 17 38 48;
@@ -151,6 +153,8 @@
   --warning-subtle: 253 244 224;
   --danger: 229 72 63;          /* crit #E5483F */
   --danger-subtle: 253 232 230;
+  --warning-text: 138 83 0;     /* status words on --bg (AA 4.5:1) — #8A5300 */
+  --danger-text: 179 38 30;     /* #B3261E */
 
   --verdict-ok: 240 250 249;    /* lightened so the --brand/--success dot clears 3:1 */
   --verdict-warn: 255 247 228;  /* lightened so the --warning dot clears 3:1 with margin */
