@@ -100,7 +100,11 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
     let cancelled = false;
     const load = () =>
       fetchMetricsImpl().then(
-        data => !cancelled && setMetrics({ status: data ? "ok" : "failed", data })
+        // `fetchedAt` travels with the sample: Home's chain strip compares a
+        // head slot against the wall clock *at the time it was fetched*, not
+        // against `checkedAt`, which the 5 s stats poll keeps moving forward
+        // while this sample is up to METRICS_INTERVAL old.
+        data => !cancelled && setMetrics({ status: data ? "ok" : "failed", data, fetchedAt: data ? Date.now() : null })
       );
     load();
     const t = setInterval(load, METRICS_INTERVAL);
@@ -146,6 +150,13 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       verdict: verdictOf(findings),
       checkedAt: new Date(snapshot.now),
       sources: snapshot.sources,
+      // Raw Prometheus samples (headSlot/peers/... per client+network), so
+      // consumers that need more than the derived findings — e.g. Home's
+      // chain strip (Advanced mode) — can read them directly instead of
+      // re-deriving from `sources.metrics` (which only carries the status).
+      metrics: snapshot.metrics,
+      // When `metrics` was fetched (a Date), null while there is no sample.
+      metricsFetchedAt: metrics.data && metrics.fetchedAt ? new Date(metrics.fetchedAt) : null,
       updates: updates || {},
       storePackages: store.packages,
       checksPassed,

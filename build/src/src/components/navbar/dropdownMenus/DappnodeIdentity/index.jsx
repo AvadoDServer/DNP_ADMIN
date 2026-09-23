@@ -2,92 +2,78 @@ import React from "react";
 import PropTypes from "prop-types";
 import { createStructuredSelector } from "reselect";
 import { connect } from "react-redux";
-import BaseDropdown from "../BaseDropdown";
-import makeBlockie from "ethereum-blockies-base64";
-import { getDappnodeIdentityClean, getDappnodeParams } from "services/dappnodeStatus/selectors";
 import CTE from "react-click-to-edit";
-import "./DappnodeIdentity.css"
+import { getDappnodeParams } from "services/dappnodeStatus/selectors";
+import "./DappnodeIdentity.css";
 import * as a from "./actions";
 
+/**
+ * Identity details — box name (editable) and network identity (node ID,
+ * external/internal IP). Used to live in its own top-bar dropdown; the
+ * visual redesign moved identity out of the top bar, so this is now
+ * rendered as plain content inside the sidebar footer's identity popover
+ * (see SidebarFooter.jsx), which owns the trigger button and popover
+ * chrome. This component only renders the fields themselves.
+ */
 const DappnodeIdentity = ({ dappnodeParams = {}, setName }) => {
+  if (typeof dappnodeParams !== "object") {
+    console.error("dappnodeParams must be an object");
+    return null;
+  }
 
-    if (typeof dappnodeParams !== "object") {
-        console.error("dappnodeParams must be an object");
-        return null;
-    }
+  const name = dappnodeParams.name;
 
-    const fullIdentity = {
-        // ...dappnodeParams,
-        "External IP": dappnodeParams.ip,
-        "Internal IP": dappnodeParams.internalip || dappnodeParams.internalIp,
-        "Node ID": dappnodeParams.nodeid,
-        // "Name": dappnodeParams.name,
-        // "External host name" : dappnodeParams.domain,
-        // "NAT Loopback available" : dappnodeParams.noNatLoopback ? "No" : "Yes",
-        // "Upnp available" : dappnodeParams.upnpAvailable ? "Yes" : "No",
-    }
+  const fullIdentity = {
+    "External IP": dappnodeParams.ip,
+    "Internal IP": dappnodeParams.internalip || dappnodeParams.internalIp,
+    "Node ID": dappnodeParams.nodeid
+  };
 
-    const name = dappnodeParams.name;
+  const identityRows = Object.entries(fullIdentity).filter(([, value]) => value);
 
-    // Show a 24x24px blockie icon from the DAppNode's domain or ip+name
-    // const { name = "", ip = "", domain = "" } = fullIdentity;
-    const seed = `${dappnodeParams.nodeid}${name}` || `${name}`;
-
-    const Icon = () => (
-        <React.Fragment>
-            {seed ? (
-                <img src={makeBlockie(seed)} className="blockies-icon" alt="icon" />
-            ) : (
-                "?"
-            )}
-        </React.Fragment>
-    );
-
-    return (
-        <>{name && (
-            <>
-                <CTE
-                    wrapperClass="dappnode-name mr-2 hidden text-sm font-medium sm:block"
-                    textClass="text"
-                    inputClass="text"
-                    initialValue={`${name}`}
-                    endEditing={(value) => {
-                        console.log(`Set name to ${value}`);
-                        setName(value);
-                    }}
-                />
-            </>)
-        }
-            <BaseDropdown
-                name="My AVADO"
-                messages={Object.entries(fullIdentity)
-                    .filter(([_, value]) => value)
-                    .map(([key, value]) => {
-                        return { title: key, body: value }; //parseIdentityKeyValue(key, value) };
-                    })}
-                Icon={Icon}
-                className={"dappnodeidentity"}
-                placeholder="No identity available, click the report icon"
-            />
-        </>
-    );
+  return (
+    <div className="dappnodeidentity flex flex-col gap-3 text-sm">
+      <div>
+        <div className="text-xs font-bold text-fg-subtle">Box name</div>
+        {name ? (
+          <CTE
+            wrapperClass="CTE--text mt-1 block font-medium"
+            textClass="text"
+            inputClass="text"
+            initialValue={name}
+            endEditing={value => setName(value)}
+          />
+        ) : (
+          <div className="mt-1 text-fg-muted">Unknown</div>
+        )}
+      </div>
+      {identityRows.length ? (
+        identityRows.map(([title, body]) => (
+          <div key={title} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
+            <div className="text-xs font-bold text-fg-subtle">{title}</div>
+            <div className="mt-1 break-all text-fg-muted">{body}</div>
+          </div>
+        ))
+      ) : (
+        <div className="border-t border-border pt-3 text-fg-muted">No identity available yet.</div>
+      )}
+    </div>
+  );
 };
 
 DappnodeIdentity.propTypes = {
-    // dappnodeIdentity: PropTypes.object.isRequired,
-    dappnodeParams: PropTypes.object.isRequired
+  dappnodeParams: PropTypes.object.isRequired
 };
 
 const mapStateToProps = createStructuredSelector({
-    //   dappnodeIdentity: getDappnodeIdentityClean,
-    dappnodeParams: getDappnodeParams
+  dappnodeParams: getDappnodeParams
 });
 
 const mapDispatchToProps = {
-    setName: a.setName,
+  setName: a.setName
 };
 
 export default connect(
-    mapStateToProps,
-    mapDispatchToProps
+  mapStateToProps,
+  mapDispatchToProps
 )(DappnodeIdentity);

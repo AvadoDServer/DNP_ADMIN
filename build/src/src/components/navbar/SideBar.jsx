@@ -1,10 +1,12 @@
-import logo from "img/avado-logo-v1.1.svg";
 import { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
 import { NavLink, useLocation } from "react-router-dom";
 import { createSelector, createStructuredSelector } from "reselect";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
+import { useMode } from "settings/ModeProvider";
+import { visibleNavItems } from "settings/visibility";
 import { sidenavItems } from "./navbarItems";
+import SidebarFooter from "./SidebarFooter";
 import "./sidebar.css";
 
 if (!Array.isArray(sidenavItems)) throw Error("sidenavItems must be an array");
@@ -34,6 +36,7 @@ const SideBar = ({
 
   const sidebarEl = useRef(null);
   const location = useLocation();
+  const { mode } = useMode();
 
   function toggleSideNav() {
     setCollapsed(!collapsed);
@@ -81,24 +84,10 @@ const SideBar = ({
     };
   }, [collapsed]);
 
-  const filteredSidenavItems =
-    sidenavItems.reduce((accum, item) => {
-      if (!item.package) {
-        accum.push(item);
-        return accum;
-      }
-      if (
-        dnps.find((dnp) => { return dnp.name === item.package }) &&
-        (
-          !item.hideif ||
-          !dnps.find((dnp) => { return item.hideif.includes(dnp.name) })
-        )
-      ) {
-        accum.push(item);
-        return accum;
-      }
-      return accum;
-    }, []);
+  const filteredSidenavItems = visibleNavItems(sidenavItems, {
+    mode,
+    installedNames: dnps.map(dnp => dnp.name),
+  });
 
   return (
     <>
@@ -113,12 +102,10 @@ const SideBar = ({
         />
       )}
       <div id="sidebar" ref={sidebarEl} className={collapsed ? "collapsed" : ""}>
-        <NavLink className="sidenav-item top" to={"/"} onClick={collapseSideNav}>
-          <img className="sidebar-logo header" src={logo} alt="logo" />
-        </NavLink>
-
-        <div className="nav">
-          <div className="sidenav-section-label">Menu</div>
+        <div className="sidebar-inner">
+          <NavLink className="sidebar-brand" to={"/"} onClick={collapseSideNav}>
+            AVADO
+          </NavLink>
 
           {filteredSidenavItems.map(item => (
             <NavLink
@@ -128,20 +115,16 @@ const SideBar = ({
               onClick={collapseSideNav}
               to={item.href}
             >
-              <item.icon scale={0.8} />
+              <item.icon scale={5 / 6} />
               <span className="name svg-text">{item.name}</span>
             </NavLink>
           ))}
-        </div>
 
-        {/* spacer keeps the funded-by section at the bottom (if possible) */}
-        <div className="spacer" />
-        {/* REACT_APP_VERSION is only set by getVersionData.sh during the Docker
-            build (yarn build run straight from the repo, e.g. a preview build,
-            never sees it) — hide the line rather than show a bare "Version". */}
-        {process.env.REACT_APP_VERSION && (
-          <div className="sidebar-version">Version {process.env.REACT_APP_VERSION}</div>
-        )}
+          {/* spacer keeps the footer pinned to the bottom (if possible) */}
+          <div className="spacer" />
+
+          <SidebarFooter />
+        </div>
       </div>
     </>
   );

@@ -154,7 +154,7 @@ function DeviceGrid({
               <TD align="center">
                 <button
                   type="button"
-                  className={cn(iconBtn, "hover:text-warning")}
+                  className={cn(iconBtn, "hover:text-warning-text")}
                   onClick={() => resetDeviceConfirm(id)}
                   aria-label={`Reset ${id}`}
                 >
@@ -168,7 +168,7 @@ function DeviceGrid({
                     iconBtn,
                     admin
                       ? "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-fg-muted"
-                      : "hover:text-danger"
+                      : "hover:text-danger-text"
                   )}
                   disabled={admin}
                   onClick={() => (admin ? null : removeDeviceConfirm(id))}

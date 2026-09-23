@@ -1,4 +1,4 @@
-import { getClient, ROLES } from "health/clients";
+import { getClient, ROLES, PROMETHEUS_PACKAGE } from "health/clients";
 
 const shortName = (name = "") => name.split(".")[0];
 export const appTitle = pkg => (pkg && pkg.manifest && pkg.manifest.title) || shortName(pkg && pkg.name);
@@ -10,7 +10,10 @@ const logsLink = name => `/packages/${name}?tab=logs`;
 
 export function appStopped({ packages }) {
   return (packages || [])
-    .filter(p => p && !p.isCore && (p.state === "exited" || p.state === "dead"))
+    // Prometheus gets its own, more specific finding (monitoringStopped, in
+    // health/rules/setup.js) so a stopped monitoring package surfaces once,
+    // not as a generic "X is stopped" here as well.
+    .filter(p => p && !p.isCore && p.name !== PROMETHEUS_PACKAGE && (p.state === "exited" || p.state === "dead"))
     .map(p => ({
       id: `app-stopped:${p.name}`,
       severity: isClient(p) ? "critical" : "warning",
@@ -39,7 +42,7 @@ export function appRestarting({ packages }) {
       steps: [
         "Open the logs and look at the last error before the restart.",
         "If it says the disk is full, free space in System → Storage.",
-        "If it mentions a setting you changed, undo it in the app's Settings tab.",
+        "If it mentions a setting you changed, switch to Advanced mode (bottom of the sidebar) and undo it in the app's Settings tab.",
         "Still restarting? Download the diagnostics report in Help and send it to support.",
       ],
     }));

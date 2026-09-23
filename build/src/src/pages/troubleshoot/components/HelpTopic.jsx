@@ -39,7 +39,7 @@ export default function HelpTopic({ match }) {
             ))}
           </ul>
         ) : (
-          <p className="mb-0 text-sm text-success">No problems found for this topic.</p>
+          <p className="mb-0 text-sm text-success-text">No problems found for this topic.</p>
         )}
       </Card>
 

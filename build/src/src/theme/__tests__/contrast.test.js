@@ -42,11 +42,43 @@ describe.each(Object.entries(THEMES))("%s theme contrast", (_, selector) => {
     ["fg", "bg", 4.5],
     ["fg", "surface", 4.5],
     ["fg-muted", "surface", 4.5],
+    ["fg-muted", "bg", 4.5],
+    ["fg-subtle", "surface", 4.5],
+    ["fg-subtle", "bg", 4.5],
+    ["accent-fg", "accent", 4.5],
     ["accent", "surface", 3],
     ["success", "surface", 3],
     ["warning", "surface", 3],
     ["danger", "surface", 3],
     ["brand", "surface", 3],
+    // Verdict band tints — status dots (VerdictPanel.jsx: bg-brand on
+    // bg-verdict-ok, bg-warning on bg-verdict-warn, bg-danger on
+    // bg-verdict-crit) are UI components, so 3:1 rather than 4.5:1.
+    ["brand", "verdict-ok", 3],
+    ["success", "verdict-ok", 3],
+    ["warning", "verdict-warn", 3],
+    ["danger", "verdict-crit", 3],
+    // Status words on the bare canvas (VerdictPanel "Action required") are text.
+    ["danger-text", "bg", 4.5],
+    ["warning-text", "bg", 4.5],
+    // Status words used as text anywhere (StatusPill, AppCard, Badge, Tabs
+    // count, Input error, HelpTopic, Priority, ...): AA on both canvases,
+    // the raised surface, and the *-subtle tint they sit on in Badge/Tabs.
+    ["success-text", "surface", 4.5],
+    ["success-text", "bg", 4.5],
+    ["success-text", "surface-raised", 4.5],
+    ["success-text", "success-subtle", 4.5],
+    ["warning-text", "surface", 4.5],
+    ["warning-text", "surface-raised", 4.5],
+    ["warning-text", "warning-subtle", 4.5],
+    ["danger-text", "surface", 4.5],
+    ["danger-text", "surface-raised", 4.5],
+    ["danger-text", "danger-subtle", 4.5],
+    // Filled status buttons (Button danger/success) and toasts: text on the
+    // solid fill.
+    ["danger-fg", "danger-solid", 4.5],
+    ["success-fg", "success-solid", 4.5],
+    ["warning-fg", "warning-solid", 4.5],
   ])("%s on %s ≥ %s", (fg, bg, min) => {
     expect(t[fg]).toBeDefined();
     expect(t[bg]).toBeDefined();

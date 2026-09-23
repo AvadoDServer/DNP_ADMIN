@@ -23,7 +23,7 @@ const state = {
 // against this fixture regardless of the store/metrics impls passed in.
 
 function Probe({ dismissId }) {
-  const { verdict, findings, allFindings, sources, dismiss, checksPassed, checksTotal, ready } = useHealth();
+  const { verdict, findings, allFindings, sources, dismiss, checksPassed, checksTotal, ready, metrics } = useHealth();
   return (
     <div>
       <span data-testid="ready">{String(ready)}</span>
@@ -38,6 +38,7 @@ function Probe({ dismissId }) {
       )}
       <span data-testid="checksPassed">{checksPassed}</span>
       <span data-testid="checksTotal">{checksTotal}</span>
+      <span data-testid="metrics">{metrics ? JSON.stringify(metrics) : "null"}</span>
     </div>
   );
 }
@@ -97,6 +98,32 @@ describe("HealthProvider", () => {
       fetchMetricsImpl: async () => null,
     });
     await waitFor(() => expect(screen.getByTestId("ready").textContent).toBe("true"));
+  });
+
+  it("exposes the raw Prometheus samples as `metrics`, null while monitoring isn't running", async () => {
+    renderWith({
+      fetchStoreImpl: async () => ({ packages: [] }),
+      fetchMetricsImpl: async () => null,
+    });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    // `state` (module scope) has no prometheus package installed, so metrics
+    // is never fetched at all and stays null — not an empty object.
+    expect(screen.getByTestId("metrics").textContent).toBe("null");
+  });
+
+  it("exposes `metrics` once Prometheus is installed and the scrape succeeds", async () => {
+    const withPrometheus = {
+      ...state,
+      packages: [...state.packages, { name: "prometheus.avado.dappnode.eth", version: "1.0.0", state: "running", running: true, manifest: { title: "Prometheus" } }],
+    };
+    const headSlot = [{ client: "nimbus", network: "mainnet", value: 15273292 }];
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => ({ headSlot, peers: [] }) },
+      undefined,
+      withPrometheus
+    );
+    await waitFor(() => expect(screen.getByTestId("metrics").textContent).toContain("15273292"));
+    expect(JSON.parse(screen.getByTestId("metrics").textContent)).toEqual({ headSlot, peers: [] });
   });
 });
 
@@ -221,5 +248,32 @@ describe("HealthProvider dismissals", () => {
 
     await waitFor(() => expect(screen.getByTestId("verdict").textContent).toBe("Action required"));
     expect(screen.getByTestId("ids").textContent).toContain("consensus-without-execution:mainnet");
+  });
+});
+
+describe("HealthProvider metricsFetchedAt", () => {
+  function FetchedAtProbe() {
+    const { metricsFetchedAt } = useHealth();
+    return <span data-testid="fetchedAt">{metricsFetchedAt ? String(metricsFetchedAt.getTime()) : "null"}</span>;
+  }
+
+  it("is null without metrics and records when the Prometheus sample was fetched", async () => {
+    const withPrometheus = {
+      ...state,
+      packages: [...state.packages, { name: "prometheus.avado.dappnode.eth", version: "1.0.0", state: "running", running: true, manifest: { title: "Prometheus" } }],
+    };
+    const before = Date.now();
+    render(
+      <Provider store={createStore(() => withPrometheus)}>
+        <HealthProvider fetchStoreImpl={async () => ({ packages: [] })} fetchMetricsImpl={async () => ({ headSlot: [], peers: [] })}>
+          <FetchedAtProbe />
+        </HealthProvider>
+      </Provider>
+    );
+    expect(screen.getByTestId("fetchedAt").textContent).toBe("null");
+    await waitFor(() => expect(screen.getByTestId("fetchedAt").textContent).not.toBe("null"));
+    const at = Number(screen.getByTestId("fetchedAt").textContent);
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(Date.now());
   });
 });

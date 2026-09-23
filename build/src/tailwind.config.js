@@ -28,6 +28,9 @@ module.exports = {
           subtle: ch('--bg-subtle'),
           inset: ch('--bg-inset'),
         },
+        chrome: {
+          DEFAULT: ch('--chrome'),
+        },
         surface: {
           DEFAULT: ch('--surface'),
           hover: ch('--surface-hover'),
@@ -50,9 +53,9 @@ module.exports = {
           fg: ch('--accent-fg'),
           subtle: ch('--accent-subtle'),
         },
-        success: { DEFAULT: ch('--success'), subtle: ch('--success-subtle') },
-        warning: { DEFAULT: ch('--warning'), subtle: ch('--warning-subtle') },
-        danger: { DEFAULT: ch('--danger'), subtle: ch('--danger-subtle') },
+        success: { DEFAULT: ch('--success'), subtle: ch('--success-subtle'), text: ch('--success-text'), solid: ch('--success-solid'), fg: ch('--success-fg') },
+        warning: { DEFAULT: ch('--warning'), subtle: ch('--warning-subtle'), text: ch('--warning-text'), solid: ch('--warning-solid'), fg: ch('--warning-fg') },
+        danger: { DEFAULT: ch('--danger'), subtle: ch('--danger-subtle'), text: ch('--danger-text'), solid: ch('--danger-solid'), fg: ch('--danger-fg') },
         brand: { DEFAULT: ch('--brand'), subtle: ch('--brand-subtle') },
         verdict: { ok: ch('--verdict-ok'), warn: ch('--verdict-warn'), crit: ch('--verdict-crit') },
       },
@@ -64,6 +67,8 @@ module.exports = {
         xl: 'var(--radius-xl)',
         '2xl': 'var(--radius-2xl)',
         full: 'var(--radius-full)',
+        tile: 'var(--radius-tile)',
+        control: 'var(--radius-control)',
       },
       boxShadow: {
         xs: 'var(--shadow-xs)',
@@ -84,9 +89,9 @@ module.exports = {
         '2xl': 'var(--space-2xl)',
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
-        display: ['Sen', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Sen', '"Public Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         'fade-in': {

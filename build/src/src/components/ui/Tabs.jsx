@@ -28,8 +28,14 @@ export default function Tabs({ tabs, active, onChange, className }) {
     }
   };
 
+  // If `active` isn't among the rendered tabs (e.g. deep-linked to an
+  // Advanced-only tab while in Simple mode), nothing is `selected` below, so
+  // no tab would get tabIndex=0 and the tablist would drop out of the tab
+  // order entirely. Fall back to making the first rendered tab reachable.
+  const hasSelected = tabs.some(t => t.id === active);
+
   return (
-    <div role="tablist" className={cn("flex gap-1 overflow-x-auto border-b border-border", className)}>
+    <div role="tablist" className={cn("flex flex-wrap gap-1 overflow-x-auto", className)}>
       {tabs.map((t, i) => {
         const selected = t.id === active;
         return (
@@ -39,16 +45,16 @@ export default function Tabs({ tabs, active, onChange, className }) {
             role="tab"
             type="button"
             aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected || (!hasSelected && i === 0) ? 0 : -1}
             onClick={() => onChange(t.id)}
             onKeyDown={e => onKeyDown(e, i)}
             className={cn(
-              "-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:shadow-focus",
-              selected ? "border-brand text-fg" : "border-transparent text-fg-muted hover:text-fg"
+              "inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:shadow-focus",
+              selected ? "bg-accent/10 text-fg" : "text-fg-muted hover:bg-fg/[0.05] hover:text-fg"
             )}
           >
             {t.label}
-            {t.badge ? <span className="rounded-full bg-warning/15 px-1.5 text-xs text-warning">{t.badge}</span> : null}
+            {t.badge ? <span className="rounded-full bg-warning-subtle px-1.5 text-xs text-warning-text">{t.badge}</span> : null}
           </button>
         );
       })}

@@ -35,13 +35,20 @@ export const sidenavItems = [
     href: "/devices",
     icon: Devices,
     package: "vpn.dnp.dappnode.eth",
-    hideif: ["remoteconnect.avado.dnp.dappnode.eth"]
+    hideif: ["remoteconnect.avado.dnp.dappnode.eth"],
+    advanced: true,
+    // Owners on VPN-only boxes (no Remote Connect installed) still need a
+    // way to reach their AVADO from away in Simple mode — same rule as
+    // Remote Connect below.
+    simpleIfInstalled: true
   },
   {
     name: "Remote Connect",
     href: "/packages/remoteconnect.avado.dnp.dappnode.eth",
     icon: Devices,
     package: "remoteconnect.avado.dnp.dappnode.eth",
+    advanced: true,
+    simpleIfInstalled: true
   },
   {
     name: "Priority",
@@ -57,7 +64,8 @@ export const sidenavItems = [
   {
     name: "System",
     href: "/system",
-    icon: Settings
+    icon: Settings,
+    advanced: true
   }
 
   //   {

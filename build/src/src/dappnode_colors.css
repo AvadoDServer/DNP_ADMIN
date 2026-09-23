@@ -6,9 +6,14 @@
   --dappnode-strong-main-color: #a7dcde;
   --dappnode-light-main-color: #f0fffe;
   --dappnode-gray-main-color: #e7f7f7;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
-  --success-color: #10b981;
+  /* --danger-color / --warning-color / --success-color are NOT redeclared
+     here: they must stay the token-driven values theme.css sets (legacy
+     aliases for --danger / --warning / --success), which loads first.
+     Re-declaring them here on :root would win the cascade (same
+     specificity, later source) and silently pin every consumer — the
+     toast colours (.Toastify__toast--*) and legacy .btn-outline-danger /
+     .btn-dappnode.attention — back to fixed hex, out of sync with the
+     light/dark Appliance tokens. */
   /* Shortcuts */
   --dappnode-color: var(--dappnode-strong-main-color);
 }
@@ -30,16 +35,18 @@ a:hover {
 }
 
 .btn-outline-danger {
-  color: white;
-  background-color: var(--danger-color);
-  border-color: var(--danger-color);
+  color: var(--danger-fg-color);
+  background-color: var(--danger-solid-color);
+  border-color: var(--danger-solid-color);
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
 }
 
 .btn-outline-danger:hover {
-  background-color: #dc2626;
-  border-color: #dc2626;
+  color: var(--danger-fg-color);
+  background-color: var(--danger-solid-color);
+  border-color: var(--danger-solid-color);
+  filter: brightness(1.08);
 }
 
 /* btn styles - extend bootstrap v4. Use with:
@@ -72,7 +79,8 @@ a:hover {
 
 .btn-dappnode.attention {
   box-shadow: 0 0 0 3px var(--accent-primary-alpha);
-  background: var(--warning-color);
+  background: var(--warning-solid-color);
+  color: var(--warning-fg-color);
 }
 
 .btn-dappnode.disabled,
@@ -154,7 +162,7 @@ a:hover {
 }
 
 /* Pending / neutral toasts: react-toastify's default is white with #aaa text,
-   unreadable in both themes. Coloured variants keep their white text. */
+   unreadable in both themes. Coloured variants: see the *-solid rules below. */
 .Toastify__toast--default {
   background: rgb(var(--surface-raised)) !important;
   color: rgb(var(--fg)) !important;
@@ -168,12 +176,24 @@ a:hover {
   background: rgb(var(--accent));
 }
 
+/* Coloured toasts sit on the *-solid fill with the matching *-fg text
+   (theme.css): AA 4.5:1 in both themes — white on a deeper fill in light,
+   dark navy on the light status fills in dark. */
 .Toastify__toast--success {
-  background: var(--success-color) !important;
+  background: var(--success-solid-color) !important;
+  color: var(--success-fg-color) !important;
 }
 .Toastify__toast--warning {
-  background: var(--warning-color) !important;
+  background: var(--warning-solid-color) !important;
+  color: var(--warning-fg-color) !important;
 }
 .Toastify__toast--error {
-  background: var(--danger-color) !important;
+  background: var(--danger-solid-color) !important;
+  color: var(--danger-fg-color) !important;
+}
+.Toastify__toast--success .Toastify__close-button,
+.Toastify__toast--warning .Toastify__close-button,
+.Toastify__toast--error .Toastify__close-button {
+  color: inherit;
+  opacity: 0.8;
 }

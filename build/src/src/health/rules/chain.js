@@ -22,6 +22,13 @@ function chainEntryMatchesPkg(chainName, pkgName) {
   return name === short;
 }
 
+// Space-grouped thousands (e.g. 15273292 -> "15 273 292") for slot numbers in
+// `detail` lines — a fixed, locale-independent grouping rather than
+// `toLocaleString`, whose separator depends on the runtime's ICU data.
+function formatSlot(n) {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
 export function chainSyncing({ chainData }) {
   return (chainData || [])
     .filter(c => c && c.syncing)
@@ -34,6 +41,36 @@ export function chainSyncing({ chainData }) {
         title: `${c.name} is syncing${pct}`,
         why: "Your client is catching up with the chain. Validators can only attest once it is synced.",
         fix: null,
+      };
+    });
+}
+
+// DAPPMANAGER (watchers/chains) reports a client whose API it can't reach as
+// `{ name, error: true, message }` with no `syncing` field. Without this rule
+// that entry would read as "nothing wrong" everywhere; it covers execution
+// clients as well as consensus clients (any chainData entry).
+export function chainError({ chainData, packages }) {
+  return (chainData || [])
+    .filter(c => c && c.error)
+    .map(c => {
+      const pkg = (packages || []).find(p => p && chainEntryMatchesPkg(c.name, p.name)) || null;
+      const title = pkg ? appTitle(pkg) : c.name;
+      return {
+        id: `chain-error:${c.name}`,
+        severity: "warning",
+        topic: "sync",
+        ...(pkg ? { appId: pkg.name } : {}),
+        title: `${title} can't be reached`,
+        why: "Your AVADO couldn't ask this client how far it has synced. If it isn't answering, your validators may miss attestations.",
+        ...(c.message ? { detail: String(c.message) } : {}),
+        fix: pkg
+          ? { kind: "link", to: `/packages/${pkg.name}`, label: "Open the app" }
+          : { kind: "link", to: "/packages", label: "Open My DApps" },
+        steps: [
+          "Open the app and check that it is running.",
+          "If it was just started or updated, give it a few minutes to come up.",
+          "Still can't be reached? Restart it and look at the last lines of its logs.",
+        ],
       };
     });
 }
@@ -56,6 +93,7 @@ export function headBehind({ packages, metrics, chainData, now }) {
         appId: match.pkg.name,
         title: `${appTitle(match.pkg)} is ${wall - s.value} slots behind the chain`,
         why: "It is not keeping up with the network, so your validators may miss attestations.",
+        detail: `Head slot ${formatSlot(s.value)}, wall-clock slot ${formatSlot(wall)} (${wall - s.value} behind)`,
         fix: { kind: "steps", label: "What to check" },
         steps: [
           "Check that your execution client is running and synced.",
@@ -78,6 +116,7 @@ export function lowPeers({ packages, metrics }) {
       appId: match.pkg.name,
       title: `${appTitle(match.pkg)} has only ${s.value} peers`,
       why: "With few peers your client hears about new blocks late and can fall behind or miss attestations.",
+      detail: `${s.value} peers (Prometheus libp2p_peers)`,
       fix: { kind: "link", to: "/help/access", label: "Improve connectivity" },
     }));
 }

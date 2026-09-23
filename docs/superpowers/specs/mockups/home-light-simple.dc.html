@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home — light, simple mode</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sen:wght@500;600;700;800&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:"Public Sans",system-ui,sans-serif;background:#EEF1F5;color:#0E1830}
+a{color:#0B2C71}a:hover{color:#123E9C}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1100px; box-sizing: border-box; background: #EEF1F5; display: grid; grid-template-columns: 248px minmax(0, 1fr);">
+  <nav aria-label="Main" style="background: #FFFFFF; border-right: 1px solid #DCE2EC; display: flex; flex-direction: column; padding: 24px 16px; gap: 4px;">
+    <div style="font-family: Sen, sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.05em; color: #0E1830; padding: 4px 12px 24px;">AVADO</div>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px; background: #0B2C71; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11 12 4l9 7v9H3z"></path></svg>Home</a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px; color: #3A4866; text-decoration: none; font-weight: 500; font-size: 15px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16l-1.5 12h-13z"></path><path d="M9 7a3 3 0 0 1 6 0"></path></svg>DappStore</a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px; color: #3A4866; text-decoration: none; font-weight: 500; font-size: 15px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>My DApps</a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px; color: #3A4866; text-decoration: none; font-weight: 500; font-size: 15px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7H4V5h11"></path></svg>Staking setup</a>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px; color: #3A4866; text-decoration: none; font-weight: 500; font-size: 15px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"></path><path d="M12 17h.01"></path></svg>Help</a>
+    <div style="flex-grow: 1;"></div>
+    <div style="padding: 14px; border-radius: 14px; background: #F4F6FA; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600;"><span style="width: 32px; height: 32px; border-radius: 10px; background: #E3F2F1; display: inline-flex; align-items: center; justify-content: center; font-family: Sen, sans-serif; font-weight: 800; font-size: 13px;">AV</span>My AVADO</div>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" aria-pressed="true" style="flex-grow: 1; height: 34px; border-radius: 10px; border: 0; background: #FFFFFF; box-shadow: 0 1px 2px rgba(14,24,48,0.12); font: inherit; font-size: 13px; font-weight: 600; color: #0E1830;">Light</button>
+        <button type="button" aria-pressed="false" style="flex-grow: 1; height: 34px; border-radius: 10px; border: 0; background: transparent; font: inherit; font-size: 13px; color: #5A6883;">Dark</button>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" aria-pressed="true" style="flex-grow: 1; height: 34px; border-radius: 10px; border: 0; background: #FFFFFF; box-shadow: 0 1px 2px rgba(14,24,48,0.12); font: inherit; font-size: 13px; font-weight: 600; color: #0E1830;">Simple</button>
+        <button type="button" aria-pressed="false" style="flex-grow: 1; height: 34px; border-radius: 10px; border: 0; background: transparent; font: inherit; font-size: 13px; color: #5A6883;">Advanced</button>
+      </div>
+      <div style="font-size: 12px; color: #5A6883;">Version 10.0.53</div>
+    </div>
+  </nav>
+
+  <div style="display: flex; flex-direction: column; min-width: 0;">
+    <header style="height: 68px; box-sizing: border-box; padding: 0 44px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; border-bottom: 1px solid #DCE2EC; background: #F6F8FB;">
+      <button type="button" style="height: 42px; min-width: 280px; padding: 0 14px; border-radius: 12px; border: 1px solid #DCE2EC; background: #FFFFFF; color: #5A6883; font: inherit; font-size: 14px; display: flex; align-items: center; gap: 10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="flex-grow: 1; text-align: left;">Search or jump to…</span><span style="font-size: 12px; border: 1px solid #DCE2EC; border-radius: 6px; padding: 1px 6px;">⌘K</span></button>
+      <button type="button" aria-label="Notifications" style="width: 42px; height: 42px; border-radius: 12px; border: 1px solid #DCE2EC; background: #FFFFFF; color: #3A4866; display: inline-flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"></path><path d="M10 21h4"></path></svg></button>
+    </header>
+
+    <main style="box-sizing: border-box; padding: 32px 44px 40px; display: flex; flex-direction: column; gap: 28px;">
+      <section aria-label="Chain status" style="background: #FFFFFF; border-radius: 20px; padding: 18px 24px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 0 #DCE2EC;">
+        <span style="width: 12px; height: 12px; border-radius: 50%; background: #2E9E97;"></span>
+        <span style="font-weight: 600; font-size: 16px;">Following Ethereum</span>
+        <span style="font-size: 15px; color: #5A6883;">Nimbus is keeping up with the network.</span>
+        <a href="#" style="margin-left: auto; font-weight: 600; font-size: 14px; text-decoration: none;">Show details</a>
+      </section>
+
+      <section style="display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 56px; align-items: center; padding: 8px 0;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+          <svg width="330" height="230" viewBox="0 0 360 250" role="img" aria-label="Your AVADO box, status light red">
+            <defs><radialGradient id="gl" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#E5483F" stop-opacity="0.55"></stop><stop offset="100%" stop-color="#E5483F" stop-opacity="0"></stop></radialGradient><linearGradient id="bd" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2A2F3A"></stop><stop offset="100%" stop-color="#14171E"></stop></linearGradient></defs>
+            <ellipse cx="180" cy="236" rx="150" ry="10" fill="#0E1830" opacity="0.12"></ellipse>
+            <rect x="30" y="40" width="300" height="186" rx="26" fill="url(#bd)"></rect>
+            <rect x="30" y="40" width="300" height="14" rx="7" fill="#3A404D"></rect>
+            <text x="58" y="206" font-family="Sen, sans-serif" font-weight="800" font-size="20" letter-spacing="2" fill="#E9ECF2">AVADO</text>
+            <circle cx="252" cy="134" r="70" fill="url(#gl)"></circle><circle cx="252" cy="134" r="30" fill="none" stroke="#E5483F" stroke-width="6"></circle><circle cx="252" cy="134" r="16" fill="#1A1D24"></circle>
+          </svg>
+          <div style="width: 330px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: grid; grid-template-columns: 80px minmax(0, 1fr) 40px; align-items: center; gap: 12px; font-size: 14px;"><span style="color: #5A6883;">Processor</span><span style="height: 6px; border-radius: 3px; background: #DCE2EC; display: block;"><span style="display: block; width: 6%; height: 6px; border-radius: 3px; background: #2E9E97;"></span></span><span style="text-align: right;">6%</span></div>
+            <div style="display: grid; grid-template-columns: 80px minmax(0, 1fr) 40px; align-items: center; gap: 12px; font-size: 14px;"><span style="color: #5A6883;">Memory</span><span style="height: 6px; border-radius: 3px; background: #DCE2EC; display: block;"><span style="display: block; width: 12%; height: 6px; border-radius: 3px; background: #2E9E97;"></span></span><span style="text-align: right;">12%</span></div>
+            <div style="display: grid; grid-template-columns: 80px minmax(0, 1fr) 40px; align-items: center; gap: 12px; font-size: 14px;"><span style="color: #5A6883;">Disk</span><span style="height: 6px; border-radius: 3px; background: #DCE2EC; display: block;"><span style="display: block; width: 2%; height: 6px; border-radius: 3px; background: #2E9E97;"></span></span><span style="text-align: right;">2%</span></div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px; max-width: 700px;">
+          <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: #B3261E;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #E5483F;"></span>Action required</div>
+          <h1 style="margin: 0; font-family: Sen, sans-serif; font-weight: 700; font-size: 54px; line-height: 1.06; letter-spacing: -0.02em;">Nimbus can't attest yet.</h1>
+          <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #3A4866; max-width: 600px;">Your consensus client needs an execution client on Ethereum mainnet to follow the chain. Until you install one, your validators miss rewards.</p>
+          <div style="display: flex; gap: 12px; align-items: center;"><a href="#" style="height: 50px; padding: 0 24px; border-radius: 999px; background: #0B2C71; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-flex; align-items: center;">Install an execution client</a><a href="#" style="height: 50px; padding: 0 18px; color: #0B2C71; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-flex; align-items: center;">Why this matters</a></div>
+          <div style="font-size: 14px; color: #5A6883;">20 other checks passed. Checked at 00:25.</div>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between;"><h2 style="margin: 0; font-family: Sen, sans-serif; font-weight: 700; font-size: 22px;">Running on your AVADO</h2><a href="#" style="font-weight: 600; font-size: 15px; text-decoration: none;">Add an app</a></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+          <a href="#" style="text-decoration: none; color: #0E1830; background: #FFFFFF; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 #DCE2EC, inset 0 0 0 2px #F4C7C3;"><div style="display: flex; justify-content: space-between; align-items: center;"><span style="width: 44px; height: 44px; border-radius: 12px; background: #F6A93B; display: inline-flex; align-items: center; justify-content: center; color: #FFFFFF; font-family: Sen, sans-serif; font-weight: 800;">N</span><span style="width: 10px; height: 10px; border-radius: 50%; background: #E5483F;"></span></div><div style="font-family: Sen, sans-serif; font-weight: 700; font-size: 18px;">Nimbus</div><div style="font-size: 14px; color: #B3261E; font-weight: 500;">Needs an execution client</div></a>
+          <a href="#" style="text-decoration: none; color: #0E1830; background: #FFFFFF; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 #DCE2EC;"><div style="display: flex; justify-content: space-between; align-items: center;"><span style="width: 44px; height: 44px; border-radius: 12px; background: #E3F2F1; display: inline-flex; align-items: center; justify-content: center; font-family: Sen, sans-serif; font-weight: 800;">G</span><span style="width: 10px; height: 10px; border-radius: 50%; background: #2E9E97;"></span></div><div style="font-family: Sen, sans-serif; font-weight: 700; font-size: 18px;">Grafana</div><div style="font-size: 14px; color: #5A6883;">Running, dashboards ready</div></a>
+          <a href="#" style="text-decoration: none; color: #0E1830; background: #FFFFFF; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 #DCE2EC;"><div style="display: flex; justify-content: space-between; align-items: center;"><span style="width: 44px; height: 44px; border-radius: 12px; background: #E3F2F1; display: inline-flex; align-items: center; justify-content: center; font-family: Sen, sans-serif; font-weight: 800;">P</span><span style="width: 10px; height: 10px; border-radius: 50%; background: #2E9E97;"></span></div><div style="font-family: Sen, sans-serif; font-weight: 700; font-size: 18px;">Prometheus</div><div style="font-size: 14px; color: #5A6883;">Running, 38 MB of history</div></a>
+          <a href="#" style="text-decoration: none; color: #0E1830; background: #FFFFFF; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 #DCE2EC;"><div style="display: flex; justify-content: space-between; align-items: center;"><span style="width: 44px; height: 44px; border-radius: 12px; background: #E3F2F1; display: inline-flex; align-items: center; justify-content: center; font-family: Sen, sans-serif; font-weight: 800;">NE</span><span style="width: 10px; height: 10px; border-radius: 50%; background: #2E9E97;"></span></div><div style="font-family: Sen, sans-serif; font-weight: 700; font-size: 18px;">Node exporter</div><div style="font-size: 14px; color: #5A6883;">Running</div></a>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

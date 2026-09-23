@@ -19,6 +19,10 @@
   --radius-xl: 20px;
   --radius-2xl: 28px;
   --radius-full: 9999px;
+  /* Appliance system: app "bay" tiles (18px) and control chrome — inputs,
+     icon tiles, non-pill buttons (12px). See design spec §3 shape scale. */
+  --radius-tile: 18px;
+  --radius-control: 12px;
 
   /* ---- Spacing scale ---------------------------------------------- */
   --space-xs: 0.25rem;
@@ -31,6 +35,18 @@
   /* ---- Motion ------------------------------------------------------ */
   --theme-transition: 220ms cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* ---- AVADO device illustration ------------------------------------
+     Home's hero drawing (components/box/AvadoDevice.jsx): the physical
+     casing is rendered identically in both themes (per the approved
+     mockups — only the status light itself is theme/verdict driven, via
+     --success/--warning/--danger/--fg-subtle), so these live under :root
+     rather than being duplicated per [data-theme]. */
+  --device-body-start: 42 47 58;   /* #2A2F3A */
+  --device-body-end: 20 23 30;     /* #14171E */
+  --device-vent: 58 64 77;         /* #3A404D */
+  --device-label: 233 236 242;     /* #E9ECF2 */
+  --device-center: 26 29 36;       /* #1A1D24 */
+
   color-scheme: dark;
 }
 
@@ -42,46 +58,61 @@
   color-scheme: dark;
 
   /* Surfaces (channels) */
-  --bg: 7 12 24;            /* app canvas — deep navy */
-  --bg-subtle: 11 18 34;
-  --bg-inset: 6 10 19;
-  --surface: 15 23 41;      /* cards */
-  --surface-hover: 21 31 54;
-  --surface-raised: 22 32 58;
+  --bg: 10 21 48;            /* app canvas — #0A1530 navy */
+  --bg-subtle: 14 27 55;
+  --bg-inset: 8 18 42;
+  --surface: 19 33 63;       /* cards — #13213F */
+  --surface-hover: 25 41 76;
+  --surface-raised: 26 43 79; /* #1A2B4F */
+  --chrome: 13 26 54;        /* top bar — #0D1A36 */
 
   /* Borders */
-  --border: 34 48 83;
-  --border-strong: 50 66 104;
+  --border: 34 56 95;        /* #22385F */
+  --border-strong: 50 74 116;
 
   /* Foreground / text */
-  --fg: 237 242 250;
-  --fg-muted: 154 167 192;
-  --fg-subtle: 110 124 150;
+  --fg: 234 240 250;         /* #EAF0FA */
+  --fg-muted: 157 176 211;   /* #9DB0D3 */
+  --fg-subtle: 124 138 163;
   --fg-inverse: 9 14 26;
 
-  /* AVADO brand blue accent */
-  --accent: 80 133 245;          /* signal #5085F5 */
-  --accent-hover: 110 155 247;
-  --accent-active: 58 112 226;
-  --accent-fg: 255 255 255;      /* text on accent fills */
-  --accent-subtle: 24 47 84;     /* tinted accent surface */
+  /* AVADO accent — tide (dark text on it in this theme) */
+  --accent: 122 203 199;         /* tide #7ACBC7 */
+  --accent-hover: 148 217 213;
+  --accent-active: 96 178 173;
+  --accent-fg: 10 21 48;         /* dark navy text on the tide fill */
+  --accent-subtle: 20 44 50;     /* tinted accent surface */
 
   /* AVADO brand teal (tide) */
-  --brand: 122 203 199;          /* tide #7ACBC7 */
+  --brand: 92 195 188;           /* tide #5CC3BC */
   --brand-subtle: 20 44 50;
 
   /* Status */
-  --success: 61 203 138;
-  --success-subtle: 18 48 38;
-  --warning: 242 184 75;
+  --success: 92 195 188;         /* ok — tide #5CC3BC */
+  --success-subtle: 16 44 48;
+  --warning: 242 184 75;         /* warn #F2B84B */
   --warning-subtle: 56 43 14;
-  --danger: 242 100 100;
-  --danger-subtle: 56 24 28;
+  --danger: 255 122 107;         /* crit #FF7A6B */
+  --danger-subtle: 58 28 24;
+  /* Status colours used AS TEXT (AA 4.5:1 on --bg, --surface,
+     --surface-raised and their own *-subtle tint). */
+  --success-text: 92 195 188;    /* #5CC3BC */
+  --warning-text: 242 184 75;    /* #F2B84B */
+  --danger-text: 255 138 122;    /* #FF8A7A */
+  /* Filled status controls (Button danger/success, toasts): the fill and
+     the text on it (AA 4.5:1). Dark: the light status fills keep their
+     look, with dark navy text on them (like --accent-fg). */
+  --success-solid: 92 195 188;
+  --warning-solid: 242 184 75;
+  --danger-solid: 255 122 107;
+  --success-fg: 10 21 48;
+  --warning-fg: 10 21 48;
+  --danger-fg: 10 21 48;
 
   /* Verdict surfaces (status-tinted backgrounds) */
   --verdict-ok: 17 38 48;
   --verdict-warn: 44 36 22;
-  --verdict-crit: 48 24 32;
+  --verdict-crit: 50 26 24;
 
   /* Shadows (tuned for dark — deep, low-spread) */
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.30);
@@ -102,40 +133,55 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --bg: 243 245 249;
-  --bg-subtle: 237 242 248;
-  --bg-inset: 232 238 246;
+  --bg: 238 241 245;          /* app canvas — #EEF1F5 porcelain */
+  --bg-subtle: 232 238 244;
+  --bg-inset: 227 234 242;
   --surface: 255 255 255;
   --surface-hover: 247 250 254;
-  --surface-raised: 255 255 255;
+  --surface-raised: 255 255 255; /* white + shadow for elevation */
+  --chrome: 246 248 251;       /* top bar — #F6F8FB */
 
-  --border: 220 226 236;
+  --border: 220 226 236;       /* #DCE2EC */
   --border-strong: 203 213 228;
 
-  --fg: 14 24 48;
-  --fg-muted: 74 87 115;
-  --fg-subtle: 130 144 168;
+  --fg: 14 24 48;               /* #0E1830 */
+  --fg-muted: 90 104 131;       /* #5A6883 */
+  --fg-subtle: 97 109 132;      /* darkened for AA: 4.5+:1 on both --surface and --bg (real 12px text) */
   --fg-inverse: 255 255 255;
 
-  --accent: 47 107 232;          /* slightly deeper for contrast on white */
-  --accent-hover: 24 92 196;
-  --accent-active: 18 78 172;
+  /* AVADO accent — deep navy (white text on it in this theme) */
+  --accent: 11 44 113;          /* AVADO navy #0B2C71 */
+  --accent-hover: 30 64 140;
+  --accent-active: 8 33 88;
   --accent-fg: 255 255 255;
   --accent-subtle: 228 238 252;
 
-  --brand: 46 143 138;
+  --brand: 46 158 151;          /* tide #2E9E97 */
   --brand-subtle: 224 242 241;
 
-  --success: 22 137 90;
-  --success-subtle: 224 246 235;
-  --warning: 168 106 0;
-  --warning-subtle: 252 243 219;
-  --danger: 198 47 47;
-  --danger-subtle: 252 230 230;
+  --success: 46 158 151;        /* ok — tide #2E9E97 */
+  --success-subtle: 222 241 239;
+  --warning: 199 124 0;         /* warn #C77C00 */
+  --warning-subtle: 253 244 224;
+  --danger: 229 72 63;          /* crit #E5483F */
+  --danger-subtle: 253 232 230;
+  /* Status colours used AS TEXT (AA 4.5:1 on --bg, --surface,
+     --surface-raised and their own *-subtle tint). */
+  --success-text: 20 110 104;   /* #146E68 */
+  --warning-text: 138 83 0;     /* #8A5300 */
+  --danger-text: 179 38 30;     /* #B3261E */
+  /* Filled status controls (Button danger/success, toasts): a deeper fill
+     than the status colour so white text on it clears AA 4.5:1. */
+  --success-solid: 23 118 112;  /* #177670 */
+  --warning-solid: 158 92 0;    /* #9E5C00 */
+  --danger-solid: 196 46 38;    /* #C42E26 */
+  --success-fg: 255 255 255;
+  --warning-fg: 255 255 255;
+  --danger-fg: 255 255 255;
 
-  --verdict-ok: 230 245 244;
-  --verdict-warn: 253 243 224;
-  --verdict-crit: 252 232 232;
+  --verdict-ok: 240 250 249;    /* lightened so the --brand/--success dot clears 3:1 */
+  --verdict-warn: 255 247 228;  /* lightened so the --warning dot clears 3:1 with margin */
+  --verdict-crit: 253 233 230;
 
   --shadow-xs: 0 1px 2px rgb(15 26 45 / 0.05);
   --shadow-sm: 0 1px 3px rgb(15 26 45 / 0.07), 0 1px 2px rgb(15 26 45 / 0.04);
@@ -200,4 +246,11 @@
   --danger-color: rgb(var(--danger));
   --warning-color: rgb(var(--warning));
   --success-color: rgb(var(--success));
+  /* Filled status surfaces with text on them (toasts): fill + text colour. */
+  --success-solid-color: rgb(var(--success-solid));
+  --warning-solid-color: rgb(var(--warning-solid));
+  --danger-solid-color: rgb(var(--danger-solid));
+  --success-fg-color: rgb(var(--success-fg));
+  --warning-fg-color: rgb(var(--warning-fg));
+  --danger-fg-color: rgb(var(--danger-fg));
 }

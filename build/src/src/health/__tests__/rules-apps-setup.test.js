@@ -1,5 +1,6 @@
 import { appStopped, appRestarting, coreAppDown } from "health/rules/apps";
-import { consensusWithoutExecution, executionWithoutConsensus, monitoringMissing, metricsUnavailable } from "health/rules/setup";
+import { consensusWithoutExecution, executionWithoutConsensus, monitoringMissing, metricsUnavailable, monitoringStopped } from "health/rules/setup";
+import { PROMETHEUS_PACKAGE } from "health/clients";
 import { pkg, snapshot } from "./fixtures";
 
 const NIMBUS = "nimbus.avado.dnp.dappnode.eth";
@@ -28,12 +29,21 @@ describe("appStopped", () => {
     const s = snapshot({ packages: [pkg("rotki.avado.dnp.dappnode.eth", { state: "created", running: false })] });
     expect(appStopped(s)).toEqual([]);
   });
+  it("skips a stopped Prometheus package — monitoringStopped covers it instead", () => {
+    const s = snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] });
+    expect(appStopped(s)).toEqual([]);
+  });
 });
 
 describe("appRestarting", () => {
   it("flags a restarting app with a link to its logs", () => {
     const [f] = appRestarting(snapshot({ packages: [pkg(NIMBUS, { state: "restarting", running: true })] }));
     expect(f).toMatchObject({ severity: "critical", fix: { kind: "link", to: `/packages/${NIMBUS}?tab=logs` } });
+  });
+  it("tells Simple-mode owners how to reach the Settings tab (hidden in Simple)", () => {
+    const [f] = appRestarting(snapshot({ packages: [pkg(NIMBUS, { state: "restarting", running: true })] }));
+    const step = f.steps.find(s => s.includes("Settings tab"));
+    expect(step).toMatch(/Advanced mode/);
   });
 });
 
@@ -86,10 +96,38 @@ describe("metricsUnavailable", () => {
   });
 });
 
+describe("monitoringStopped", () => {
+  it("flags a warning when Prometheus is installed but not running", () => {
+    const f = monitoringStopped(snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] }));
+    expect(f).toMatchObject({
+      id: "monitoring-stopped",
+      severity: "warning",
+      topic: "attestations",
+      appId: PROMETHEUS_PACKAGE,
+      title: "Monitoring has stopped",
+    });
+    expect(f.fix).toMatchObject({ kind: "action", action: "restartPackage", label: "Restart monitoring" });
+  });
+
+  it("is quiet when Prometheus is not installed, or is installed and running", () => {
+    expect(monitoringStopped(snapshot({ packages: [] }))).toBeNull();
+    expect(monitoringStopped(snapshot({ packages: [pkg(PROMETHEUS_PACKAGE)] }))).toBeNull();
+  });
+
+  it("produces exactly one finding for a stopped Prometheus — no duplicate app-stopped finding", () => {
+    const s = snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] });
+    const monitoring = monitoringStopped(s);
+    const all = [...appStopped(s), ...(monitoring ? [monitoring] : [])];
+    expect(all).toHaveLength(1);
+    expect(all[0].id).toBe("monitoring-stopped");
+    expect(all.some(f => f.id === `app-stopped:${PROMETHEUS_PACKAGE}`)).toBe(false);
+  });
+});
+
 describe("robustness", () => {
   it("rules tolerate manifest-less packages", () => {
     const s = snapshot({ packages: [{ name: "weird.public.dappnode.eth", state: "exited", running: false }] });
-    for (const rule of [appStopped, appRestarting, coreAppDown, consensusWithoutExecution, executionWithoutConsensus, monitoringMissing])
+    for (const rule of [appStopped, appRestarting, coreAppDown, consensusWithoutExecution, executionWithoutConsensus, monitoringMissing, monitoringStopped])
       expect(() => rule(s)).not.toThrow();
     expect(appStopped(s)[0].title).toBe("weird is stopped");
   });

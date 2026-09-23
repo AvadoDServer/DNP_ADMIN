@@ -9,7 +9,6 @@ import * as a from "../actions";
 import NoPackagesYet from "./NoPackagesYet";
 import { LoadingState, EmptyState } from "./PackagePresentation";
 // UI kit
-import Card from "components/ui/Card";
 import AppAvatar from "components/ui/AppAvatar";
 import StatusPill from "components/ui/StatusPill";
 import Switch from "components/Switch";
@@ -36,7 +35,7 @@ const xnor = (a, b) => Boolean(a) === Boolean(b);
 export const getAutoUpdateState = dnp => Boolean(dnp) && dnp.autoupdate !== false;
 
 const iconBtn =
-    "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning focus:outline-none focus-visible:shadow-focus";
+    "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning-text focus:outline-none focus-visible:shadow-focus";
 
 const linkCls = "text-sm font-medium text-accent transition-colors hover:underline";
 
@@ -133,69 +132,70 @@ const PackagesList = ({
 
     if (!filteredDnps.length) return <NoPackagesYet />;
 
+    // My DApps = a list of "bays" (the same visual language as the Home app
+    // bays — see components/apps/AppCard.jsx — laid out as full-width rows
+    // instead of a grid, so every control has room next to it).
     return (
         <section>
-            <Card padding="none" className="overflow-hidden">
-                <ul className="divide-y divide-border">
-                    {filteredDnps.map(dnp => {
-                        const { name } = dnp;
-                        const title = appTitle(dnp);
-                        const description = appDescription(dnp);
-                        const status = appStatus(dnp, { findings, updates });
-                        const external = showOpen ? openUrl(dnp) : null;
+            <ul className="flex flex-col gap-3">
+                {filteredDnps.map(dnp => {
+                    const { name } = dnp;
+                    const title = appTitle(dnp);
+                    const description = appDescription(dnp);
+                    const status = appStatus(dnp, { findings, updates });
+                    const external = showOpen ? openUrl(dnp) : null;
 
-                        return (
-                            <li
-                                key={name}
-                                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                            >
-                                <div className="flex min-w-0 items-center gap-3">
-                                    <AppAvatar pkg={dnp} size={32} />
-                                    <div className="min-w-0">
-                                        <div className="break-words font-medium text-fg">{title}</div>
-                                        {description && (
-                                            <p className="mb-0 break-words text-sm text-fg-muted">{description}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-3 sm:flex-shrink-0">
-                                    <StatusPill status={status} />
-
-                                    {showOpen && (
-                                        external ? (
-                                            <a href={external} target="_blank" rel="noopener noreferrer" className={linkCls}>
-                                                Open
-                                            </a>
-                                        ) : (
-                                            <Link to={`${base}/${name}?tab=setup`} className={linkCls}>
-                                                Open
-                                            </Link>
-                                        )
+                    return (
+                        <li
+                            key={name}
+                            className="flex flex-col gap-3 rounded-tile bg-surface p-4 shadow-[0_1px_0_rgb(var(--border))] dark:border dark:border-border dark:shadow-none sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
+                        >
+                            <div className="flex min-w-0 items-center gap-3.5">
+                                <AppAvatar pkg={dnp} size={44} />
+                                <div className="min-w-0">
+                                    <div className="break-words font-display text-lg font-bold text-fg">{title}</div>
+                                    {description && (
+                                        <p className="mb-0 break-words text-sm text-fg-muted">{description}</p>
                                     )}
-
-                                    <Link to={`${base}/${name}`} className="text-sm font-medium text-fg-muted transition-colors hover:text-fg">
-                                        Manage
-                                    </Link>
-
-                                    {showRestart && (
-                                        <button
-                                            type="button"
-                                            className={iconBtn}
-                                            aria-label={`Restart ${title}`}
-                                            onClick={() => confirmRestartPackage(name, restartPackage)}
-                                        >
-                                            <MdRefresh />
-                                        </button>
-                                    )}
-
-                                    <AutoUpdateSwitch dnp={dnp} title={title} setAutoUpdate={setAutoUpdate} />
                                 </div>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </Card>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3 sm:flex-shrink-0">
+                                <StatusPill status={status} />
+
+                                {showOpen && (
+                                    external ? (
+                                        <a href={external} target="_blank" rel="noopener noreferrer" className={linkCls}>
+                                            Open
+                                        </a>
+                                    ) : (
+                                        <Link to={`${base}/${name}?tab=setup`} className={linkCls}>
+                                            Open
+                                        </Link>
+                                    )
+                                )}
+
+                                <Link to={`${base}/${name}`} className="text-sm font-medium text-fg-muted transition-colors hover:text-fg">
+                                    Manage
+                                </Link>
+
+                                {showRestart && (
+                                    <button
+                                        type="button"
+                                        className={iconBtn}
+                                        aria-label={`Restart ${title}`}
+                                        onClick={() => confirmRestartPackage(name, restartPackage)}
+                                    >
+                                        <MdRefresh />
+                                    </button>
+                                )}
+
+                                <AutoUpdateSwitch dnp={dnp} title={title} setAutoUpdate={setAutoUpdate} />
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
         </section>
     );
 };
