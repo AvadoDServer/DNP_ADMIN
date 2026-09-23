@@ -28,6 +28,9 @@ module.exports = {
           subtle: ch('--bg-subtle'),
           inset: ch('--bg-inset'),
         },
+        chrome: {
+          DEFAULT: ch('--chrome'),
+        },
         surface: {
           DEFAULT: ch('--surface'),
           hover: ch('--surface-hover'),
@@ -84,9 +87,9 @@ module.exports = {
         '2xl': 'var(--space-2xl)',
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Public Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
-        display: ['Sen', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Sen', '"Public Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         'fade-in': {
