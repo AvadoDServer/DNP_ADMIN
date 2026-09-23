@@ -100,6 +100,25 @@ describe("HealthProvider", () => {
     await waitFor(() => expect(screen.getByTestId("ready").textContent).toBe("true"));
   });
 
+  it("exposes the installed `packages` and `chainData` (Home's chain strip reads them)", async () => {
+    function PkgProbe() {
+      const { packages, chainData } = useHealth();
+      return (
+        <span data-testid="pkgs">
+          {(packages || []).map(p => p.name).join(",")}|{Array.isArray(chainData) ? "chain-array" : "chain-missing"}
+        </span>
+      );
+    }
+    render(
+      <Provider store={createStore(() => state)}>
+        <HealthProvider fetchStoreImpl={async () => ({ packages: [] })} fetchMetricsImpl={async () => null}>
+          <PkgProbe />
+        </HealthProvider>
+      </Provider>
+    );
+    expect(screen.getByTestId("pkgs").textContent).toBe("nimbus.avado.dnp.dappnode.eth|chain-array");
+  });
+
   it("exposes the raw Prometheus samples as `metrics`, null while monitoring isn't running", async () => {
     renderWith({
       fetchStoreImpl: async () => ({ packages: [] }),
