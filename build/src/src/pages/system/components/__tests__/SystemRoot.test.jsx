@@ -1,6 +1,7 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route } from "react-router-dom";
+import { ModeProvider } from "settings/ModeProvider";
 import SystemRoot from "../SystemRoot";
 
 // Every tab's own page used to render its own "System" PageHeader (with a
@@ -27,6 +28,21 @@ const renderAt = path =>
       <Route render={props => <SystemRoot {...props} />} />
     </MemoryRouter>
   );
+
+const renderAtInMode = (path, mode) => {
+  localStorage.setItem("avado.mode", mode);
+  return render(
+    <ModeProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <Route render={props => <SystemRoot {...props} />} />
+      </MemoryRouter>
+    </ModeProvider>
+  );
+};
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 describe("SystemRoot", () => {
   it.each([
@@ -60,5 +76,21 @@ describe("SystemRoot", () => {
     expect(screen.queryByRole("heading", { name: "System" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.getByText("core app page")).toBeInTheDocument();
+  });
+
+  it("shows the 'Advanced page' note on a tab page reached in simple mode", () => {
+    renderAtInMode("/system/storage", "simple");
+    expect(screen.getByRole("button", { name: "Switch to advanced mode" })).toBeInTheDocument();
+  });
+
+  it("does not show the 'Advanced page' note in advanced mode", () => {
+    renderAtInMode("/system/storage", "advanced");
+    expect(screen.queryByRole("button", { name: "Switch to advanced mode" })).not.toBeInTheDocument();
+  });
+
+  it("switching to advanced mode from the note hides it", () => {
+    renderAtInMode("/system/storage", "simple");
+    fireEvent.click(screen.getByRole("button", { name: "Switch to advanced mode" }));
+    expect(screen.queryByRole("button", { name: "Switch to advanced mode" })).not.toBeInTheDocument();
   });
 });
