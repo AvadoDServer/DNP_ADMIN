@@ -5,6 +5,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { FiSearch } from "react-icons/fi";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { useHealth } from "health/HealthProvider";
+import { useMode } from "settings/ModeProvider";
+import { visibleNavItems } from "settings/visibility";
+import { useTheme } from "theme/ThemeProvider";
 import { sidenavItems } from "components/navbar/navbarItems";
 import { TOPICS } from "pages/troubleshoot/topics";
 import { restartPackage } from "pages/packages/actions";
@@ -20,24 +23,6 @@ function isTypingTarget(el) {
   if (!el) return false;
   const tag = el.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
-}
-
-/**
- * Same package/hideif filter `SideBar.jsx` applies to `sidenavItems`, so the
- * palette never offers a page that points at a package the box doesn't have
- * installed (Connect (VPN), Remote Connect, ...).
- */
-function filterNav(items, packages) {
-  return (items || []).reduce((accum, item) => {
-    if (!item.package) {
-      accum.push(item);
-      return accum;
-    }
-    const hasPackage = packages.some(p => p.name === item.package);
-    const isHidden = item.hideif && packages.some(p => item.hideif.includes(p.name));
-    if (hasPackage && !isHidden) accum.push(item);
-    return accum;
-  }, []);
 }
 
 /**
@@ -90,11 +75,24 @@ export default function CommandPalette() {
   const dispatch = useDispatch();
   const packages = useSelector(getDnpInstalled) || [];
   const { storePackages } = useHealth();
+  const { mode, setMode } = useMode();
+  const { setPreference } = useTheme();
 
-  const nav = useMemo(() => filterNav(sidenavItems, packages), [packages]);
+  const installedNames = useMemo(() => packages.map(p => p.name), [packages]);
+  // `nav`: this mode's visible pages (same list SideBar.jsx shows). `advancedNav`:
+  // whatever visibleNavItems additionally drops in Simple purely because of the
+  // mode gate — still real commands (buildCommands marks them `restricted`),
+  // findable on an exact label match. Diffed by reference: visibleNavItems only
+  // filters `sidenavItems`, it never clones entries.
+  const nav = useMemo(() => visibleNavItems(sidenavItems, { mode, installedNames }), [mode, installedNames]);
+  const advancedNav = useMemo(() => {
+    if (mode !== "simple") return [];
+    const shown = new Set(nav);
+    return visibleNavItems(sidenavItems, { mode: "advanced", installedNames }).filter(item => !shown.has(item));
+  }, [mode, nav, installedNames]);
   const commands = useMemo(
-    () => buildCommands({ nav, packages, storePackages, topics: TOPICS }),
-    [nav, packages, storePackages]
+    () => buildCommands({ nav, advancedNav, packages, storePackages, topics: TOPICS, mode }),
+    [nav, advancedNav, packages, storePackages, mode]
   );
   const { groups: groupedForRender, flat: results } = useMemo(
     () => groupResults(searchCommands(commands, query)),
@@ -181,7 +179,7 @@ export default function CommandPalette() {
         return;
       }
       if (command.action) {
-        const { type, id } = command.action;
+        const { type, id, value } = command.action;
         if (type === "restart") {
           close();
           confirmRestartPackage(id, restartId => dispatch(restartPackage(restartId)));
@@ -193,10 +191,16 @@ export default function CommandPalette() {
             (cmd, label) => dispatch(runSignedCmd(cmd, label)),
             "Disk cleanup"
           );
+        } else if (type === "setMode") {
+          close();
+          setMode(value);
+        } else if (type === "setTheme") {
+          close();
+          setPreference(value);
         }
       }
     },
-    [close, history, dispatch]
+    [close, history, dispatch, setMode, setPreference]
   );
 
   const onInputKeyDown = e => {

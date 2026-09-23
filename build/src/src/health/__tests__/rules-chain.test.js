@@ -15,7 +15,11 @@ describe("chain rules", () => {
 
   it("flags a head more than two epochs behind the wall clock", () => {
     const behind = snapshot({ now, packages: [NIMBUS], metrics: metrics({ headSlot: [{ client: "nimbus", network: "mainnet", value: 15273294 - 65 }] }) });
-    expect(headBehind(behind)[0]).toMatchObject({ severity: "warning", appId: "nimbus.avado.dnp.dappnode.eth" });
+    expect(headBehind(behind)[0]).toMatchObject({
+      severity: "warning",
+      appId: "nimbus.avado.dnp.dappnode.eth",
+      detail: "Head slot 15 273 229, wall-clock slot 15 273 294 (65 behind)",
+    });
     const fine = snapshot({ now, packages: [NIMBUS], metrics: metrics({ headSlot: [{ client: "nimbus", network: "mainnet", value: 15273292 }] }) });
     expect(headBehind(fine)).toEqual([]);
     expect(headBehind(snapshot({ packages: [NIMBUS], metrics: null }))).toEqual([]);
@@ -57,7 +61,11 @@ describe("chain rules", () => {
 
   it("flags fewer than 10 peers", () => {
     const s = snapshot({ packages: [NIMBUS], metrics: metrics({ peers: [{ client: "nimbus", network: "mainnet", value: 4 }] }) });
-    expect(lowPeers(s)[0]).toMatchObject({ severity: "warning", title: "Nimbus Consensus Client has only 4 peers" });
+    expect(lowPeers(s)[0]).toMatchObject({
+      severity: "warning",
+      title: "Nimbus Consensus Client has only 4 peers",
+      detail: "4 peers (Prometheus libp2p_peers)",
+    });
     const ok = snapshot({ packages: [NIMBUS], metrics: metrics({ peers: [{ client: "nimbus", network: "mainnet", value: 16 }] }) });
     expect(lowPeers(ok)).toEqual([]);
   });

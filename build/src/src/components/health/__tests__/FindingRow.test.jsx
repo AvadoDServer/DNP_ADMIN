@@ -5,15 +5,20 @@ import { Provider } from "react-redux";
 import { createStore } from "redux";
 import FindingRow from "components/health/FindingRow";
 
-const { dismissSpy } = vi.hoisted(() => ({ dismissSpy: vi.fn() }));
+const { dismissSpy, modeState } = vi.hoisted(() => ({ dismissSpy: vi.fn(), modeState: { isAdvanced: false } }));
 vi.mock("health/HealthProvider", () => ({ useHealth: () => ({ dismiss: dismissSpy }) }));
 // The "action" fix kind dispatches a real redux-thunk action (see health/fixActions);
 // the test store below has no thunk middleware, so stub it out for these tests —
 // dispatch behaviour itself is covered by health/__tests__/fixActions.test.js.
 vi.mock("health/fixActions", () => ({ runFixAction: vi.fn() }));
+// `finding.detail` only renders in Advanced (see settings/visibility.js /
+// settings/__tests__/ModeProvider.test.jsx for the mode system itself) —
+// stubbed here so each test controls it directly via `modeState`.
+vi.mock("settings/ModeProvider", () => ({ useMode: () => modeState }));
 
 beforeEach(() => {
   dismissSpy.mockClear();
+  modeState.isAdvanced = false;
 });
 
 const renderRow = finding =>
@@ -105,6 +110,24 @@ describe("FindingRow", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("shows finding.detail in Advanced but not in Simple", () => {
+    const finding = stepsAndWhyFinding({ detail: "Head slot 15 273 229, wall-clock slot 15 273 294 (65 behind)" });
+
+    const { unmount } = renderRow(finding);
+    expect(screen.queryByText(finding.detail)).not.toBeInTheDocument();
+    unmount();
+
+    modeState.isAdvanced = true;
+    renderRow(finding);
+    expect(screen.getByText(finding.detail)).toBeInTheDocument();
+  });
+
+  it("does not render a detail line when the finding has none, even in Advanced", () => {
+    modeState.isAdvanced = true;
+    renderRow(stepsAndWhyFinding({ detail: undefined }));
+    expect(screen.queryByText(/peers|slot/)).not.toBeInTheDocument();
   });
 
   it("re-enables the action fix button after 15s", () => {
