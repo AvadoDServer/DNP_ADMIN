@@ -20,6 +20,11 @@ describe("AdvancedNote", () => {
     expect(screen.getByText(/advanced page/i)).toBeInTheDocument();
   });
 
+  it("exposes itself as a status region for assistive tech", () => {
+    renderNote();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
   it("shows the caller's own message when children are given", () => {
     renderNote("Logs is an advanced page.");
     expect(screen.getByText("Logs is an advanced page.")).toBeInTheDocument();

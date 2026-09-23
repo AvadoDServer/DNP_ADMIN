@@ -18,7 +18,10 @@ const DEFAULT_MESSAGE = "Advanced page. It's usually hidden in simple mode.";
 export default function AdvancedNote({ children }) {
   const { setMode } = useMode();
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent/25 bg-accent/5 px-4 py-2.5 text-sm">
+    <div
+      role="status"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent/25 bg-accent/5 px-4 py-2.5 text-sm"
+    >
       <span className="text-fg-muted">{children || DEFAULT_MESSAGE}</span>
       <Button variant="outline" size="sm" pill onClick={() => setMode("advanced")}>
         Switch to advanced mode

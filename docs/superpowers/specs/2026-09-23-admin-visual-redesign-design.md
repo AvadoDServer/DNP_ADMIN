@@ -67,7 +67,7 @@ A persistent preference (localStorage `avado.mode`, default `simple`), switched 
 
 | Area | Simple | Advanced |
 |---|---|---|
-| Sidebar | Home, DappStore, My DApps, Staking setup, Help | + Remote Connect, Priority, System |
+| Sidebar | Home, DappStore, My DApps, Staking setup, Help, Priority | + Remote Connect, System |
 | Chain status | One plain line | Epoch strip, slots behind, peers |
 | Box readings | Processor, memory, disk space | Same, plus "Open in Grafana" when monitoring is installed |
 | App page tabs | Overview, Setup | + Logs, Settings, Files |

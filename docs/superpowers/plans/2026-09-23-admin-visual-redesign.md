@@ -65,9 +65,9 @@ export const ADVANCED_TABS = ["logs", "settings", "files"];
 export function tabsForMode(tabs, mode) // simple drops ADVANCED_TABS
 export const SIMPLE_HIDDEN_STORE_CATEGORIES = ["testnets", "thelab", "sunset", "aux", "avadosystem"];
 ```
-navbarItems: `System`, `Priority`, `Connect (VPN)` get `advanced: true`; `Remote Connect` gets `advanced: true, simpleIfInstalled: true`.
+navbarItems: `System`, `Connect (VPN)` get `advanced: true`; `Remote Connect` gets `advanced: true, simpleIfInstalled: true`. Priority stays visible in simple (ruling: the paid support offer's audience is non-technical owners).
 
-- [ ] Tests first: default simple; persistence; corrupted storage → simple; `visibleNavItems` simple = Home, DappStore, My DApps, Staking setup, Help (+ Remote Connect when installed); advanced = all (package/hideif still applied); `tabsForMode`.
+- [ ] Tests first: default simple; persistence; corrupted storage → simple; `visibleNavItems` simple = Home, DappStore, My DApps, Staking setup, Help, Priority (+ Remote Connect when installed); advanced = all (package/hideif still applied); `tabsForMode`.
 - [ ] Implement; mount `<ModeProvider>` in App.jsx inside `<HealthProvider>` (App.jsx: minimal change).
 - [ ] Suite, lint, build; commit `feat(settings): simple/advanced mode`.
 
