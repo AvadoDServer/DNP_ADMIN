@@ -21,9 +21,9 @@ const VARIANTS = {
   ghost:
     "bg-transparent text-fg-muted hover:bg-fg/[0.06] hover:text-fg focus-visible:shadow-focus",
   danger:
-    "bg-danger text-white shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
+    "bg-danger-solid text-danger-fg shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
   success:
-    "bg-success text-white shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
+    "bg-success-solid text-success-fg shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
 };
 
 // Appliance visual system: primary and secondary buttons are pills; every

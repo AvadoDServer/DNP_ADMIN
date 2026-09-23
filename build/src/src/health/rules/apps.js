@@ -42,7 +42,7 @@ export function appRestarting({ packages }) {
       steps: [
         "Open the logs and look at the last error before the restart.",
         "If it says the disk is full, free space in System → Storage.",
-        "If it mentions a setting you changed, undo it in the app's Settings tab.",
+        "If it mentions a setting you changed, switch to Advanced mode (bottom of the sidebar) and undo it in the app's Settings tab.",
         "Still restarting? Download the diagnostics report in Help and send it to support.",
       ],
     }));

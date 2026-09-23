@@ -63,7 +63,7 @@ function To({ id, copyFileTo }) {
       </label>
 
       {name && size > fileSizeWarning && (
-        <div className="rounded-md border border-warning/25 bg-warning/12 px-3 py-2 text-xs text-warning">
+        <div className="rounded-md border border-warning/25 bg-warning-subtle px-3 py-2 text-xs text-warning-text">
           This tool is not meant for large file transfers. Expect unstable
           behaviour.
         </div>

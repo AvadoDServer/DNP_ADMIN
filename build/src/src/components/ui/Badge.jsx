@@ -9,9 +9,9 @@ import { cn } from "./cn";
 const VARIANTS = {
   neutral: "bg-fg/[0.06] text-fg-muted border border-border",
   accent: "bg-accent/12 text-accent border border-accent/25",
-  success: "bg-success/12 text-success border border-success/25",
-  warning: "bg-warning/14 text-warning border border-warning/25",
-  danger: "bg-danger/12 text-danger border border-danger/25",
+  success: "bg-success-subtle text-success-text border border-success/25",
+  warning: "bg-warning-subtle text-warning-text border border-warning/25",
+  danger: "bg-danger-subtle text-danger-text border border-danger/25",
 };
 
 const DOT = {

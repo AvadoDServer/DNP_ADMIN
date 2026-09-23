@@ -118,7 +118,7 @@ function OverflowMenu({ label, items }) {
               }}
               className={cn(
                 "flex w-full items-center px-3 py-2 text-left transition-colors hover:bg-fg/[0.06]",
-                item.tone === "danger" ? "text-danger" : "text-fg"
+                item.tone === "danger" ? "text-danger-text" : "text-fg"
               )}
             >
               {item.label}

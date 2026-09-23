@@ -39,9 +39,9 @@ const BUBBLE = {
 
 // Map legacy message "type" onto token text colors for titles.
 const TITLE_COLOR = {
-  danger: "text-danger",
-  warning: "text-warning",
-  success: "text-success"
+  danger: "text-danger-text",
+  warning: "text-warning-text",
+  success: "text-success-text"
 };
 
 function BaseDropdown({

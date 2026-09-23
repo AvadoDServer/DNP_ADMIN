@@ -1,6 +1,7 @@
 
 .CTE--text {
   color: var(--text-primary);
+  overflow-wrap: anywhere;
   text-decoration: underline;
   transition: color 0.3s ease;
 }
@@ -12,4 +13,7 @@
   border-radius: var(--radius-sm, 4px);
   padding: 0.25rem 0.5rem;
   text-decoration: none;
+  /* Fits the sidebar-width identity popover. */
+  max-width: 100%;
+  box-sizing: border-box;
 }

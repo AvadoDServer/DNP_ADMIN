@@ -42,7 +42,7 @@ const POLL_TIMEOUT_MS = 60000;
 
 const CheckIcon = () => (
   <svg
-    className="mt-0.5 h-4 w-4 shrink-0 text-success"
+    className="mt-0.5 h-4 w-4 shrink-0 text-success-text"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -70,9 +70,9 @@ function BenefitList({ items }) {
 
 function Notice({ variant, children }) {
   const styles = {
-    danger: "border-danger/40 bg-danger/10 text-danger",
+    danger: "border-danger/40 bg-danger-subtle text-danger-text",
     warning: "border-warning/50 bg-warning/10 text-fg",
-    success: "border-success/40 bg-success/10 text-success",
+    success: "border-success/40 bg-success-subtle text-success-text",
     neutral: "border-border bg-bg-subtle text-fg-muted"
   };
   return (

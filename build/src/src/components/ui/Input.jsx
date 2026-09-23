@@ -35,12 +35,12 @@ function Field({
           className="text-sm font-medium text-fg-muted"
         >
           {label}
-          {required && <span className="ml-0.5 text-danger">*</span>}
+          {required && <span className="ml-0.5 text-danger-text">*</span>}
         </label>
       )}
       {children({ fieldId, describedBy, invalid: Boolean(error) })}
       {error ? (
-        <span id={`${fieldId}-error`} className="text-xs text-danger">
+        <span id={`${fieldId}-error`} className="text-xs text-danger-text">
           {error}
         </span>
       ) : hint ? (

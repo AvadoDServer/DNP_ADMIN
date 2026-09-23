@@ -19,21 +19,25 @@ function findSample(samples, client) {
   return (samples || []).find(s => s.client === client.promClient && s.network === client.network) || null;
 }
 
-// One of: "unknown" (no chain data yet), "syncing" (chainData says so),
+// One of: "unknown" (no chain data yet), "error" (DAPPMANAGER couldn't reach
+// the client to ask — `{ error: true, message }`, no `syncing` field, so it
+// must never fall through to "synced"), "syncing" (chainData says so),
 // "behind" (chainData says synced, but Prometheus shows it has drifted more
 // than 2 slots behind wall-clock), "synced" (in step, with or without
 // metrics to confirm it).
 function chainState({ chainEntry, progress }) {
   if (!chainEntry) return "unknown";
+  if (chainEntry.error) return "error";
   if (chainEntry.syncing) return "syncing";
   if (progress && progress.behind > 2) return "behind";
   return "synced";
 }
 
-const DOT_TONE = { unknown: "neutral", syncing: "warning", behind: "warning", synced: "success" };
+const DOT_TONE = { unknown: "neutral", error: "warning", syncing: "warning", behind: "warning", synced: "success" };
 
 function simpleSentence(clientLabel, state, progress) {
   if (state === "unknown") return "Waiting for chain data.";
+  if (state === "error") return `${clientLabel} can't be reached.`;
   if (state === "syncing") return `${clientLabel} is syncing with the network.`;
   if (state === "behind") return `${clientLabel} is ${progress.behind} slots behind.`;
   return progress ? `${clientLabel} is in step with the network.` : `${clientLabel} is synced.`;
@@ -59,21 +63,29 @@ function EpochStrip({ progress, networkLabel, clientLabel, peers }) {
   const seenCount = progress.cells.filter(c => c === "seen").length;
   const missingCount = progress.cells.filter(c => c === "missing").length;
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-[260px_minmax(0,1fr)_150px] sm:items-center sm:gap-7">
+    // Three columns only from xl: below that the strip gets the panel's full
+    // width, so cells never shrink to a couple of pixels (e.g. 640-1200 px
+    // with the sidebar docked). On phones the epoch wraps into two rows so
+    // each cell keeps a usable width down to 320 px.
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_150px] xl:items-center xl:gap-7">
       <div className="flex flex-col gap-1">
         <span className="text-[0.8125rem] text-fg-muted">{`${networkLabel}, via ${clientLabel}`}</span>
         <span className="font-display text-xl font-bold text-fg">{`Epoch ${progress.epoch}`}</span>
       </div>
       <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${progress.cells.length}, minmax(0, 1fr))` }}
+        data-testid="epoch-cells"
+        className="grid grid-cols-[repeat(var(--epoch-cols-narrow),minmax(0,1fr))] gap-1 sm:grid-cols-[repeat(var(--epoch-cols),minmax(0,1fr))]"
+        style={{
+          "--epoch-cols": progress.cells.length,
+          "--epoch-cols-narrow": Math.ceil(progress.cells.length / 2),
+        }}
         aria-label={`Slots in this epoch: ${seenCount} seen, ${missingCount} not seen yet, now at slot ${progress.slotInEpoch}`}
       >
         {progress.cells.map((cell, i) => (
           <span key={i} aria-hidden="true" className={cn("h-[26px] rounded-[5px]", CELL_TONE[cell])} />
         ))}
       </div>
-      <div className="flex flex-col gap-1 sm:text-right">
+      <div className="flex flex-col gap-1 xl:text-right">
         <span className="font-display text-lg font-bold text-fg">{behindLabel(progress)}</span>
         {peers && <span className="text-[0.8125rem] text-fg-muted">{`${peers.value} peer${peers.value === 1 ? "" : "s"}`}</span>}
       </div>
@@ -96,7 +108,7 @@ function EpochStrip({ progress, networkLabel, clientLabel, peers }) {
  * Hidden entirely when no consensus client is installed.
  */
 export default function ChainStatus() {
-  const { packages, chainData, metrics, checkedAt } = useHealth();
+  const { packages, chainData, metrics, metricsFetchedAt, checkedAt } = useHealth();
   const { isAdvanced } = useMode();
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -107,8 +119,13 @@ export default function ChainStatus() {
   const networkLabel = (NETWORKS[client.network] && NETWORKS[client.network].label) || client.network;
   const chainEntry = findChainEntry(chainData, pkg.name);
   const headSample = metrics && findSample(metrics.headSlot, client);
+  // Measure the head sample against the wall clock at the moment it was
+  // fetched: `checkedAt` moves every 5 s (stats poll) while the sample is
+  // refreshed only every 60 s, so using it would call a synced client
+  // "behind" for most of every minute.
+  const sampleAt = (metricsFetchedAt || checkedAt).getTime();
   const progress = headSample
-    ? epochProgress({ network: client.network, headSlot: headSample.value, now: checkedAt.getTime() })
+    ? epochProgress({ network: client.network, headSlot: headSample.value, now: sampleAt })
     : null;
   const peersSample = metrics && findSample(metrics.peers, client);
 
@@ -144,7 +161,12 @@ export default function ChainStatus() {
         </div>
       ) : (
         <>
-          {metricsUnavailable ? (
+          {state === "error" ? (
+            <div className="flex flex-col gap-2">
+              {simpleLine}
+              {chainEntry.message && <p className="mb-0 break-words text-sm text-fg-subtle">{chainEntry.message}</p>}
+            </div>
+          ) : metricsUnavailable ? (
             <div className="flex flex-col gap-2">
               {simpleLine}
               <p className="mb-0 text-sm text-fg-subtle">Install monitoring to see the chain strip.</p>

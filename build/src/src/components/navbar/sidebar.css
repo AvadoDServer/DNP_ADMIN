@@ -129,14 +129,19 @@
   white-space: nowrap;
 }
 
+/* Anchored to the footer card's width (the negative inset cancels the
+   footer's 0.875rem padding): #sidebar has overflow-x: hidden, so a popover
+   wider than the sidebar is clipped. #sidebar also sets white-space: nowrap
+   (for the collapse animation) — reset it so long values (Node ID) wrap. */
 .sidebar-footer-popover {
   position: absolute;
-  left: 0;
+  left: -0.875rem;
+  right: -0.875rem;
   bottom: calc(100% + 0.5rem);
   z-index: 1100;
-  width: 19rem;
-  max-width: 85vw;
+  width: auto;
   max-height: min(28rem, 70vh);
+  white-space: normal;
   overflow-y: auto;
   padding: 1rem;
   border-radius: var(--radius-lg);

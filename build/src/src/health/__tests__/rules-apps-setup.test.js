@@ -40,6 +40,11 @@ describe("appRestarting", () => {
     const [f] = appRestarting(snapshot({ packages: [pkg(NIMBUS, { state: "restarting", running: true })] }));
     expect(f).toMatchObject({ severity: "critical", fix: { kind: "link", to: `/packages/${NIMBUS}?tab=logs` } });
   });
+  it("tells Simple-mode owners how to reach the Settings tab (hidden in Simple)", () => {
+    const [f] = appRestarting(snapshot({ packages: [pkg(NIMBUS, { state: "restarting", running: true })] }));
+    const step = f.steps.find(s => s.includes("Settings tab"));
+    expect(step).toMatch(/Advanced mode/);
+  });
 });
 
 describe("coreAppDown", () => {
