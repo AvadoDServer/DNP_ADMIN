@@ -43,12 +43,21 @@ describe.each(Object.entries(THEMES))("%s theme contrast", (_, selector) => {
     ["fg", "surface", 4.5],
     ["fg-muted", "surface", 4.5],
     ["fg-muted", "bg", 4.5],
+    ["fg-subtle", "surface", 4.5],
+    ["fg-subtle", "bg", 4.5],
     ["accent-fg", "accent", 4.5],
     ["accent", "surface", 3],
     ["success", "surface", 3],
     ["warning", "surface", 3],
     ["danger", "surface", 3],
     ["brand", "surface", 3],
+    // Verdict band tints — status dots (VerdictPanel.jsx: bg-brand on
+    // bg-verdict-ok, bg-warning on bg-verdict-warn, bg-danger on
+    // bg-verdict-crit) are UI components, so 3:1 rather than 4.5:1.
+    ["brand", "verdict-ok", 3],
+    ["success", "verdict-ok", 3],
+    ["warning", "verdict-warn", 3],
+    ["danger", "verdict-crit", 3],
   ])("%s on %s ≥ %s", (fg, bg, min) => {
     expect(t[fg]).toBeDefined();
     expect(t[bg]).toBeDefined();

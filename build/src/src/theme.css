@@ -116,7 +116,7 @@
 
   --fg: 14 24 48;               /* #0E1830 */
   --fg-muted: 90 104 131;       /* #5A6883 */
-  --fg-subtle: 110 124 150;
+  --fg-subtle: 97 109 132;      /* darkened for AA: 4.5+:1 on both --surface and --bg (real 12px text) */
   --fg-inverse: 255 255 255;
 
   /* AVADO accent — deep navy (white text on it in this theme) */
@@ -136,8 +136,8 @@
   --danger: 229 72 63;          /* crit #E5483F */
   --danger-subtle: 253 232 230;
 
-  --verdict-ok: 230 245 244;
-  --verdict-warn: 253 243 224;
+  --verdict-ok: 240 250 249;    /* lightened so the --brand/--success dot clears 3:1 */
+  --verdict-warn: 255 247 228;  /* lightened so the --warning dot clears 3:1 with margin */
   --verdict-crit: 253 233 230;
 
   --shadow-xs: 0 1px 2px rgb(15 26 45 / 0.05);
