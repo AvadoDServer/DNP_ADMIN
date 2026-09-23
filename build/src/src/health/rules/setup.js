@@ -74,3 +74,23 @@ export function monitoringMissing({ packages }) {
     dismissable: true,
   };
 }
+
+// Prometheus is installed but its container isn't running — distinct from
+// metricsUnavailable (Prometheus running but unreachable/timing out) and
+// monitoringMissing (no monitoring package at all). appStopped already
+// covers this generically for every non-core package, but a stopped
+// Prometheus specifically means missed attestations, peers and sync can't be
+// checked, so it gets its own, more specific finding and title on this topic.
+export function monitoringStopped({ packages }) {
+  const prometheus = (packages || []).find(p => p && p.name === PROMETHEUS_PACKAGE);
+  if (!prometheus || prometheus.running !== false) return null;
+  return {
+    id: "monitoring-stopped",
+    severity: "warning",
+    topic: "attestations",
+    appId: PROMETHEUS_PACKAGE,
+    title: "Monitoring has stopped",
+    why: "The monitoring package isn't running, so missed attestations, peers and sync can't be checked right now.",
+    fix: { kind: "action", action: "restartPackage", label: "Restart monitoring" },
+  };
+}
