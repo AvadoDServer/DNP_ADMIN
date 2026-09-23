@@ -71,7 +71,10 @@ const Modal = ({
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative w-full animate-rise rounded-xl border border-border bg-surface text-fg shadow-xl focus:outline-none",
+          // Appliance panels floating on the backdrop: radius 20, no border
+          // in light (the elevation shadow carries it), a hairline border
+          // in dark.
+          "relative w-full animate-rise rounded-xl bg-surface-raised text-fg shadow-xl focus:outline-none dark:border dark:border-border",
           SIZES[size] || SIZES.md,
           className
         )}

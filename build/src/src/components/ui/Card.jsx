@@ -30,10 +30,12 @@ const Card = forwardRef(function Card(
     <Tag
       ref={ref}
       className={cn(
-        "relative rounded-lg border border-border bg-surface text-fg shadow-sm transition-all duration-200",
+        // Appliance panels: radius 20, no border in light (a 1px bottom
+        // "shelf" shadow stands in for it), a hairline border in dark.
+        "relative rounded-xl bg-surface text-fg shadow-[0_1px_0_rgb(var(--border))] transition-all duration-200 dark:border dark:border-border dark:shadow-none",
         PADDING[padding] ?? PADDING.md,
         interactive &&
-          "cursor-pointer hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg focus-visible:shadow-focus focus:outline-none",
+          "cursor-pointer hover:-translate-y-0.5 hover:shadow-md dark:hover:border-accent/60 focus-visible:shadow-focus focus:outline-none",
         className
       )}
       {...props}

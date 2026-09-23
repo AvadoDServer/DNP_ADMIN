@@ -19,6 +19,10 @@
   --radius-xl: 20px;
   --radius-2xl: 28px;
   --radius-full: 9999px;
+  /* Appliance system: app "bay" tiles (18px) and control chrome — inputs,
+     icon tiles, non-pill buttons (12px). See design spec §3 shape scale. */
+  --radius-tile: 18px;
+  --radius-control: 12px;
 
   /* ---- Spacing scale ---------------------------------------------- */
   --space-xs: 0.25rem;

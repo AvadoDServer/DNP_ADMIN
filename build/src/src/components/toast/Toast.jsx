@@ -1,16 +1,15 @@
 import React from "react";
 import { toast } from "react-toastify";
 import { NavLink } from "react-router-dom";
+import Button from "components/ui/Button";
 import "./toastStyle.css";
 
 const errorElement = message => (
-  <div>
+  <div className="flex flex-col items-start gap-2">
     {message}
-    <NavLink to={"/system/history"}>
-      <button className="btn btn-danger ml-2 mr-2" type="button">
-        Show details
-      </button>
-    </NavLink>
+    <Button as={NavLink} to="/system/history" variant="secondary" size="sm">
+      Show details
+    </Button>
   </div>
 );
 

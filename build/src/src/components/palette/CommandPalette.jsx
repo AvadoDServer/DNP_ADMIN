@@ -219,7 +219,7 @@ export default function CommandPalette() {
   return createPortal(
     <div className="fixed inset-0 z-[5000] flex justify-center px-4 pt-[12vh]" role="presentation">
       <div className="absolute inset-0 animate-fade-in bg-bg/70 backdrop-blur-sm" onClick={close} />
-      <div className="relative z-10 h-fit w-full max-w-xl animate-rise overflow-hidden rounded-xl border border-border bg-surface-raised text-fg shadow-xl">
+      <div className="relative z-10 h-fit w-full max-w-xl animate-rise overflow-hidden rounded-xl bg-surface-raised text-fg shadow-xl dark:border dark:border-border">
         <div className="flex items-center gap-2.5 border-b border-border px-4">
           <FiSearch className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden="true" />
           <input

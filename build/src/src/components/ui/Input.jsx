@@ -2,11 +2,11 @@ import React, { forwardRef, useId } from "react";
 import { cn } from "./cn";
 
 const baseField =
-  "w-full rounded-md border bg-surface text-fg placeholder:text-fg-subtle transition-colors duration-150 focus:outline-none focus-visible:border-accent focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-55";
+  "w-full rounded-control border bg-surface text-fg placeholder:text-fg-subtle transition-colors duration-150 focus:outline-none focus-visible:border-accent focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-55";
 
 const SIZES = {
   sm: "h-8 px-2.5 text-[0.8125rem]",
-  md: "h-10 px-3 text-sm",
+  md: "h-11 px-3.5 text-sm",
   lg: "h-12 px-4 text-base",
 };
 

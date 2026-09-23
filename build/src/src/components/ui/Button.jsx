@@ -6,9 +6,10 @@ import Spinner from "./Spinner";
  * Button — token-driven, accessible.
  *
  * variant: primary | secondary | outline | ghost | danger | success
- * size:    sm | md | lg
+ * size:    sm | md | lg (md is the 44px touch target default)
  * loading: shows a spinner and disables interaction
- * pill:    fully rounded
+ * pill:    force the fully-rounded "Appliance" pill shape on any variant
+ *          (primary/secondary already default to it — see PILL_VARIANTS)
  */
 const VARIANTS = {
   primary:
@@ -20,14 +21,19 @@ const VARIANTS = {
   ghost:
     "bg-transparent text-fg-muted hover:bg-fg/[0.06] hover:text-fg focus-visible:shadow-focus",
   danger:
-    "bg-danger text-white shadow-sm hover:brightness-110 active:brightness-95 focus-visible:outline-danger",
+    "bg-danger text-white shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
   success:
-    "bg-success text-white shadow-sm hover:brightness-110 active:brightness-95",
+    "bg-success text-white shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
 };
 
+// Appliance visual system: primary and secondary buttons are pills; every
+// other variant keeps the control radius unless the caller opts in with
+// the `pill` prop (used e.g. by the confirm dialogs to match a pill Cancel).
+const PILL_VARIANTS = new Set(["primary", "secondary"]);
+
 const SIZES = {
-  sm: "h-8 px-3 text-[0.8125rem] gap-1.5",
-  md: "h-10 px-4 text-sm gap-2",
+  sm: "h-8 px-3.5 text-[0.8125rem] gap-1.5",
+  md: "h-11 px-5 text-sm gap-2",
   lg: "h-12 px-6 text-base gap-2.5",
 };
 
@@ -51,6 +57,7 @@ const Button = forwardRef(function Button(
 ) {
   const isDisabled = disabled || loading;
   const isRealButton = Tag === "button";
+  const isPill = pill || PILL_VARIANTS.has(variant);
 
   // A native `disabled` attribute is a no-op on a non-button element (e.g.
   // `as={Link}` renders an <a>, which stays focusable and clickable even
@@ -77,7 +84,7 @@ const Button = forwardRef(function Button(
       onClick={handleClick}
       className={cn(
         "relative inline-flex select-none items-center justify-center whitespace-nowrap font-semibold transition-all duration-150 focus:outline-none",
-        pill ? "rounded-full" : "rounded-md",
+        isPill ? "rounded-full" : "rounded-control",
         SIZES[size] || SIZES.md,
         VARIANTS[variant] || VARIANTS.primary,
         isDisabled && "pointer-events-none opacity-55",

@@ -22,7 +22,7 @@ export function PageHeader({ title, subtitle, eyebrow, actions, children, classN
           <span className="text-xs font-semibold tracking-wide text-fg-subtle">{eyebrow}</span>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="mb-0 font-display text-3xl font-bold tracking-tight text-fg">{title}</h1>
+          <h1 className="mb-0 font-display text-4xl font-bold tracking-tight text-fg">{title}</h1>
           {children}
         </div>
         {subtitle && <p className="mb-0 max-w-2xl text-sm text-fg-muted">{subtitle}</p>}

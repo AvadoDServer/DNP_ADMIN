@@ -67,6 +67,8 @@ module.exports = {
         xl: 'var(--radius-xl)',
         '2xl': 'var(--radius-2xl)',
         full: 'var(--radius-full)',
+        tile: 'var(--radius-tile)',
+        control: 'var(--radius-control)',
       },
       boxShadow: {
         xs: 'var(--shadow-xs)',
