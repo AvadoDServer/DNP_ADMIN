@@ -47,8 +47,10 @@ export function Callout({ tone = "warning", children }) {
 export function Dialog({ heading, text, children }) {
   return (
     <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[rgb(var(--bg-inset)/0.72)] backdrop-blur-sm" />
-      <div className="relative w-full max-w-md animate-rise rounded-xl border border-border bg-surface text-fg shadow-xl">
+      <div className="absolute inset-0 animate-fade-in bg-[rgb(var(--bg-inset)/0.72)] backdrop-blur-sm" />
+      {/* Appliance panel: radius 20, no border in light (the elevation
+          shadow carries it), a hairline border in dark. */}
+      <div className="relative w-full max-w-md animate-rise rounded-xl bg-surface-raised text-fg shadow-xl dark:border dark:border-border">
         <div className="px-6 py-5">
           <h2 className="text-lg font-semibold text-fg">{heading}</h2>
           <p className="mt-2 text-sm text-fg-muted">{text}</p>
@@ -76,11 +78,12 @@ export function confirmSignedCmd(cmd, desc, runSignedCmd, label) {
   confirmAlert({
     customUI: ({ onClose }) => (
       <Dialog heading={desc.title} text={desc.text}>
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="secondary" pill onClick={onClose}>
           Cancel
         </Button>
         <Button
           variant="danger"
+          pill
           onClick={() => {
             runSignedCmd(cmd, label);
             onClose();

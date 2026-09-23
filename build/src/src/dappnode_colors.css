@@ -6,9 +6,14 @@
   --dappnode-strong-main-color: #a7dcde;
   --dappnode-light-main-color: #f0fffe;
   --dappnode-gray-main-color: #e7f7f7;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
-  --success-color: #10b981;
+  /* --danger-color / --warning-color / --success-color are NOT redeclared
+     here: they must stay the token-driven values theme.css sets (legacy
+     aliases for --danger / --warning / --success), which loads first.
+     Re-declaring them here on :root would win the cascade (same
+     specificity, later source) and silently pin every consumer — the
+     toast colours (.Toastify__toast--*) and legacy .btn-outline-danger /
+     .btn-dappnode.attention — back to fixed hex, out of sync with the
+     light/dark Appliance tokens. */
   /* Shortcuts */
   --dappnode-color: var(--dappnode-strong-main-color);
 }

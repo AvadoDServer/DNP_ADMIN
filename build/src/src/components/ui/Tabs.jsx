@@ -29,7 +29,7 @@ export default function Tabs({ tabs, active, onChange, className }) {
   };
 
   return (
-    <div role="tablist" className={cn("flex gap-1 overflow-x-auto border-b border-border", className)}>
+    <div role="tablist" className={cn("flex flex-wrap gap-1 overflow-x-auto", className)}>
       {tabs.map((t, i) => {
         const selected = t.id === active;
         return (
@@ -43,8 +43,8 @@ export default function Tabs({ tabs, active, onChange, className }) {
             onClick={() => onChange(t.id)}
             onKeyDown={e => onKeyDown(e, i)}
             className={cn(
-              "-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus-visible:shadow-focus",
-              selected ? "border-brand text-fg" : "border-transparent text-fg-muted hover:text-fg"
+              "inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:shadow-focus",
+              selected ? "bg-accent/10 text-fg" : "text-fg-muted hover:bg-fg/[0.05] hover:text-fg"
             )}
           >
             {t.label}

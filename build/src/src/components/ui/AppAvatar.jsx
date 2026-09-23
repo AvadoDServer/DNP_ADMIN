@@ -36,7 +36,7 @@ export default function AppAvatar({ pkg, size = 40, className }) {
         alt=""
         style={style}
         onError={() => setFailed(true)}
-        className={cn("flex-shrink-0 rounded-[10px] border border-border bg-white object-cover", className)}
+        className={cn("flex-shrink-0 rounded-control border border-border bg-white object-cover", className)}
       />
     );
   const client = getClient(pkg && pkg.name);
@@ -45,7 +45,7 @@ export default function AppAvatar({ pkg, size = 40, className }) {
       aria-hidden="true"
       style={style}
       className={cn(
-        "flex flex-shrink-0 items-center justify-center rounded-[10px] font-display text-sm font-bold",
+        "flex flex-shrink-0 items-center justify-center rounded-control font-display text-sm font-bold",
         ROLE_TINT[client && client.role] || "bg-fg/10 text-fg",
         className
       )}
