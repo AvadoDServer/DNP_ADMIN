@@ -27,10 +27,6 @@ describe("fetchMetrics", () => {
     expect(m.attesterMiss).toEqual([]);
   });
 
-  it("includes headSlotRaw (same PromQL as headSlot) among the queried metrics", () => {
-    expect(QUERIES.headSlotRaw).toBe(QUERIES.headSlot);
-  });
-
   it("falls back to querying Prometheus directly when the proxy is unreachable", async () => {
     const fetchImpl = vi.fn(async url => {
       if (isProxyUrl(url)) return httpError(); // e.g. nginx 502

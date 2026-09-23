@@ -11,11 +11,6 @@ export const PROMETHEUS_BASES = ["/metrics-api", "http://prometheus.my.ava.do:90
 
 export const QUERIES = {
   headSlot: "max by (client, network) (beacon_head_slot)",
-  // Same PromQL as headSlot, kept under its own key: callers that only need
-  // "the chain's current head slot per network" (e.g. the chain-progress
-  // strip) read metrics.headSlotRaw without coupling to headSlot's other use
-  // (matching a specific installed client's sample in health/rules/chain.js).
-  headSlotRaw: "max by (client, network) (beacon_head_slot)",
   peers: 'max by (client, network) (libp2p_peers or p2p_peer_count{state="Connected"})',
   attesterMiss:
     "sum by (client, network) (increase(validator_monitor_prev_epoch_on_chain_attester_miss_total[1h]))",
@@ -34,7 +29,10 @@ const PROMETHEUS_TIMEOUT_MS = 10000;
 // Once one base is confirmed reachable it is tried first on every later
 // query (within this page load), so a box that only reaches Prometheus one
 // way (e.g. same-origin proxy but not the direct hostname) doesn't pay for a
-// doomed attempt on every 60s poll.
+// doomed attempt on every 60s poll. The four queries in fetchMetrics run
+// concurrently, so this can be written by more than one in-flight query;
+// that's fine — it just picks whichever base most recently won, and a wrong
+// guess self-corrects on the next fallback.
 let workingBaseIndex = 0;
 
 export function resetPrometheusBase() {

@@ -29,6 +29,10 @@ describe("appStopped", () => {
     const s = snapshot({ packages: [pkg("rotki.avado.dnp.dappnode.eth", { state: "created", running: false })] });
     expect(appStopped(s)).toEqual([]);
   });
+  it("skips a stopped Prometheus package — monitoringStopped covers it instead", () => {
+    const s = snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] });
+    expect(appStopped(s)).toEqual([]);
+  });
 });
 
 describe("appRestarting", () => {
@@ -103,6 +107,15 @@ describe("monitoringStopped", () => {
   it("is quiet when Prometheus is not installed, or is installed and running", () => {
     expect(monitoringStopped(snapshot({ packages: [] }))).toBeNull();
     expect(monitoringStopped(snapshot({ packages: [pkg(PROMETHEUS_PACKAGE)] }))).toBeNull();
+  });
+
+  it("produces exactly one finding for a stopped Prometheus — no duplicate app-stopped finding", () => {
+    const s = snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] });
+    const monitoring = monitoringStopped(s);
+    const all = [...appStopped(s), ...(monitoring ? [monitoring] : [])];
+    expect(all).toHaveLength(1);
+    expect(all[0].id).toBe("monitoring-stopped");
+    expect(all.some(f => f.id === `app-stopped:${PROMETHEUS_PACKAGE}`)).toBe(false);
   });
 });
 

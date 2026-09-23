@@ -34,6 +34,16 @@ describe("epochProgress", () => {
     expect(p.cells).toEqual(["seen", "missing", "now", ...seenN(13, "future")]);
   });
 
+  it("clamps behind to 0 and reports ahead when the head is ahead of wall-clock now, with nothing seen past now", () => {
+    const now = (NETWORKS.mainnet.genesis + 100 * 12) * 1000; // wallSlot 100
+    const p = epochProgress({ network: "mainnet", headSlot: 103, now }); // 3 ahead
+    expect(p).toMatchObject({ epoch: 3, slotInEpoch: 4, wallSlot: 100, behind: 0, ahead: 3 });
+    // Slots 96-99 (before now) are seen, slot 100 is "now", and slots
+    // 101-103 — even though <= headSlot — are still "future", not "seen":
+    // "now" is a hard boundary.
+    expect(p.cells).toEqual([...seenN(4, "seen"), "now", ...seenN(27, "future")]);
+  });
+
   it("is null for an unknown network", () => {
     expect(epochProgress({ network: "not-a-network", headSlot: 100, now: Date.now() })).toBeNull();
     expect(epochProgress({ network: undefined, headSlot: 100, now: Date.now() })).toBeNull();

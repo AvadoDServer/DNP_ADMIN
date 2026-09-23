@@ -17,15 +17,22 @@ export function epochProgress({ network, headSlot, now }) {
   const epoch = Math.floor(wallSlot / slotsPerEpoch);
   const slotInEpoch = wallSlot - epoch * slotsPerEpoch;
   const epochStart = epoch * slotsPerEpoch;
-  const behind = wallSlot - headSlot;
+  // A client's reported head can be ahead of this tab's wall-clock estimate
+  // (clock drift, a slightly-stale `now`, etc.) — clamp so "behind" never
+  // reads negative; `ahead` surfaces that case instead, for callers that
+  // want it.
+  const behind = Math.max(0, wallSlot - headSlot);
+  const ahead = Math.max(0, headSlot - wallSlot);
 
   const cells = Array.from({ length: slotsPerEpoch }, (_, i) => {
     const slot = epochStart + i;
+    // "now" is a hard boundary: even when the head is ahead of wall-clock
+    // (headSlot >= wallSlot), nothing after "now" is ever "seen" — a strip
+    // that shows the future as already-attested would be misleading.
     if (slot === wallSlot) return "now";
-    if (slot <= headSlot) return "seen";
-    if (slot < wallSlot) return "missing";
+    if (slot < wallSlot) return slot <= headSlot ? "seen" : "missing";
     return "future";
   });
 
-  return { epoch, slotInEpoch, wallSlot, behind, cells };
+  return { epoch, slotInEpoch, wallSlot, behind, ahead, cells };
 }
