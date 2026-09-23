@@ -1,10 +1,6 @@
 // DropdownMenu components
-import ChainData from "./dropdownMenus/ChainData";
-import DappnodeIdentity from "./dropdownMenus/DappnodeIdentity/index.jsx";
 import Notifications from "./dropdownMenus/Notifications";
-import Report from "./dropdownMenus/Report";
 // Components
-import ThemeToggle from "../ThemeToggle";
 import { toggleSideNav } from "./SideBar";
 // Icons
 import MenuBurger from "Icons/MenuBurger";
@@ -32,10 +28,10 @@ function SearchButton() {
       onClick={openPalette}
       aria-label="Search"
       title="Search"
-      className="group relative inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-fg-muted transition-colors duration-200 hover:border-border-strong hover:text-fg focus:outline-none focus-visible:shadow-focus"
+      className="group relative inline-flex h-[42px] w-[42px] items-center justify-center gap-2.5 rounded-[12px] border border-border bg-surface px-0 text-fg-muted transition-colors duration-200 hover:border-border-strong hover:text-fg focus:outline-none focus-visible:shadow-focus lg:w-auto lg:min-w-[280px] lg:justify-start lg:px-3.5"
     >
-      <FiSearch size="1.05em" aria-hidden="true" />
-      <span className="topbar-label">Search</span>
+      <FiSearch size="1.05em" aria-hidden="true" className="shrink-0" />
+      <span className="topbar-label flex-grow text-left">Search or jump to…</span>
       <span className="topbar-label rounded border border-border px-1 font-mono text-[0.7rem] text-fg-subtle">
         {hint}
       </span>
@@ -43,6 +39,9 @@ function SearchButton() {
   );
 }
 
+// Slimmed top bar (spec §4): only the palette opener and notifications stay
+// here — theme, mode, identity and chain status moved into the sidebar
+// footer / chain strip.
 const TopBar = () => (
   <div id="topbar">
     {/* Left justified items */}
@@ -54,15 +53,7 @@ const TopBar = () => (
     {/* Right justified items */}
     <div className="avado right">
       <SearchButton />
-      <div className="topnav-icon-separator" />
-      <DappnodeIdentity />
-      <div className="topnav-icon-separator" />
-      <ThemeToggle />
-      <div className="topnav-icon-separator" />
-      <ChainData />
       <Notifications />
-      <div className="topnav-icon-separator" />
-      <Report />
     </div>
   </div>
 );

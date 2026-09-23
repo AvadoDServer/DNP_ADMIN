@@ -8,9 +8,9 @@
   /* Below this width the sidebar is an off-canvas drawer (see #sidebar.collapsed
      and .sidebar-overlay below); it stays docked open at/above it. */
   --sidebar-breakpoint: 64rem;
-  --sidenav-width: 14rem;
+  --sidenav-width: 15.5rem; /* 248px */
   --transition-time: 0.25s;
-  --topbar-height: 4rem;
+  --topbar-height: 4.25rem; /* 68px */
   --container-padding: 2rem;
   --content-max-width: 72rem;
   --border-size: 1px;
@@ -87,59 +87,29 @@ body,
   /* While the sidenav is collapsing, make sure the content stays straight */
   white-space: nowrap;
   /* Colors */
-  background-color: var(--bg-sidebar);
-  border-right: var(--border-size) solid var(--border-color);
-  box-shadow: var(--shadow-md);
+  background-color: rgb(var(--surface));
+  border-right: var(--border-size) solid rgb(var(--border));
   /* place sidebar on top of the header and content */
   z-index: var(--z-index-sidebar);
 }
 
-.sidebar-logo {
-  width: calc(0.7 * var(--sidenav-width));
-}
-/* SIDEBAR > NAV */
-#sidebar > .nav {
-  padding: 0.8rem 0;
-  flex: none;
-}
+/* SIDEBAR > NAV ITEMS */
 .sidenav-item {
   display: grid;
-  grid-template-columns: 1.5rem auto;
+  grid-template-columns: 1.25rem auto;
   grid-gap: 0.75rem;
   place-items: center start;
   padding: 0 0.875rem;
   width: 100%;
-}
-.sidenav-item:not(.top) {
-  height: 2.6rem;
-}
-.sidenav-item .icon,
-.sidenav-item svg {
-  grid-column: 1/2;
-  opacity: 0.55;
-}
-.sidenav-item .header,
-.sidenav-item .subheader {
-  grid-column: 1/3;
-}
-/* Make this section dissapear small heights */
-#sidebar > .funded-by {
-  width: 100%;
-  flex: 0 1 auto;
-  overflow: hidden;
-}
-
-/* SIDEBAR > TOP */
-.sidenav-item.top {
-  display: flex;
-  align-items: center;
-  height: var(--topbar-height);
-  border-bottom: var(--border-size) solid var(--border-color);
-  /* Prevent the item from shrinking */
+  height: 2.875rem; /* 46px, per the mockups */
   flex-shrink: 0;
 }
-.sidenav-item.top:hover {
-  background: transparent;
+.sidenav-item svg {
+  grid-column: 1/2;
+  opacity: 0.85;
+}
+.sidenav-item.active svg {
+  opacity: 1;
 }
 
 /* Styles below apply when screen width big */
@@ -193,11 +163,9 @@ body,
   display: grid;
   grid-template-columns: auto auto;
   grid-gap: 1em;
-  /* Colors — translucent glass */
-  background-color: var(--bg-topbar);
-  -webkit-backdrop-filter: saturate(160%) blur(12px);
-  backdrop-filter: saturate(160%) blur(12px);
-  border-bottom: var(--border-size) solid var(--border-color);
+  /* Colors — slimmed top bar: solid --chrome, no blur (spec §4) */
+  background-color: rgb(var(--chrome));
+  border-bottom: var(--border-size) solid rgb(var(--border));
   padding: 0 var(--container-padding);
   /* place topbar between the sidebar (2) and the main (0) */
   z-index: var(--z-index-topbar);
@@ -209,23 +177,12 @@ body,
   align-items: center;
 }
 
-/* Align right to the right so the position does not change when the left div is not there */
+/* Only search and notifications remain on the right (spec §4) — a plain
+   flex row is enough, no need for the old fixed-column icon grid. */
 #topbar .right {
-  --icon-size: 1.5rem;
   flex: auto;
-  display: grid;
-  /* Create as much columns as necessary aligned center vertically and justified to the right */
-  grid-template-columns:
-    minmax(var(--icon-size), min-content)
-    min-content
-    minmax(var(--icon-size), min-content)
-    minmax(var(--icon-size), min-content)
-    min-content
-    minmax(var(--icon-size), min-content);
-  grid-auto-flow: column;
-  place-content: center end;
-  /* Auto-space the items only in-between, hard to achieve with flex */
-  grid-gap: 1rem;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 /*****
@@ -258,10 +215,7 @@ body,
     padding: 0 0.75rem;
   }
   #topbar .right {
-    grid-gap: 0.5rem;
-  }
-  .topnav-icon-separator {
-    display: none;
+    gap: 0.5rem;
   }
 }
 

@@ -12,12 +12,12 @@ const Notifications = ({ notifications, viewedNotifications }) => {
   return (
     <BaseDropdown
       name="Notifications"
-      label="Notifications"
       messages={notifications}
       Icon={Bell}
       onClick={viewedNotifications}
       moreVisible={true}
       className={"notifications"}
+      size="lg"
       placeholder="No notifications yet"
     />
   );

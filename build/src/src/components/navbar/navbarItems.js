@@ -36,7 +36,11 @@ export const sidenavItems = [
     icon: Devices,
     package: "vpn.dnp.dappnode.eth",
     hideif: ["remoteconnect.avado.dnp.dappnode.eth"],
-    advanced: true
+    advanced: true,
+    // Owners on VPN-only boxes (no Remote Connect installed) still need a
+    // way to reach their AVADO from away in Simple mode — same rule as
+    // Remote Connect below.
+    simpleIfInstalled: true
   },
   {
     name: "Remote Connect",

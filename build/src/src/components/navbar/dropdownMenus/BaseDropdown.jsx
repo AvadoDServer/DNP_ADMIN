@@ -22,6 +22,13 @@ function areMessagesUnread(messages) {
   return Boolean(unreadMessages.length);
 }
 
+// Trigger button size. "lg" (42px, 12px radius) matches the slimmed top
+// bar's search button so both right-aligned controls line up (spec §4).
+const SIZE = {
+  md: "h-9 w-9 rounded-md",
+  lg: "h-[42px] w-[42px] rounded-[12px]"
+};
+
 // Bubble color per status, token-driven.
 const BUBBLE = {
   neutral: "",
@@ -45,7 +52,8 @@ function BaseDropdown({
   onClick,
   className,
   placeholder,
-  moreVisible
+  moreVisible,
+  size = "md"
 }) {
   const [collapsed, setCollapsed] = useState(true);
   const dropdownEl = useRef(null);
@@ -99,7 +107,8 @@ function BaseDropdown({
         title={label || name}
         aria-label={label || name}
         className={cn(
-          "relative flex h-9 w-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus",
+          "relative flex items-center justify-center border border-border bg-surface text-fg-muted transition-colors duration-200 hover:border-border-strong hover:text-fg focus:outline-none focus-visible:shadow-focus",
+          SIZE[size] || SIZE.md,
           label && "lg:w-auto lg:px-2.5",
           attentionGrab && "animate-pulse-soft text-fg"
         )}
@@ -171,7 +180,8 @@ BaseDropdown.propTypes = {
   Icon: PropTypes.func.isRequired,
   onClick: PropTypes.func,
   offset: PropTypes.string,
-  moreVisible: PropTypes.bool
+  moreVisible: PropTypes.bool,
+  size: PropTypes.oneOf(["md", "lg"])
 };
 
 export default BaseDropdown;
