@@ -101,4 +101,22 @@ describe("ManifestStore", () => {
       "/packages/geth.dnp.dappnode.eth"
     );
   });
+
+  it("does not show an Advanced badge by default", () => {
+    renderStore([notInstalled]);
+    expect(screen.queryByText("Advanced")).not.toBeInTheDocument();
+  });
+
+  it("shows a small Advanced badge for an entry whose name is in advancedNames", () => {
+    render(
+      <MemoryRouter initialEntries={["/installer"]}>
+        <ManifestStore
+          directory={[notInstalled]}
+          openDnp={vi.fn()}
+          advancedNames={new Set([notInstalled.manifest.name])}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Advanced")).toBeInTheDocument();
+  });
 });

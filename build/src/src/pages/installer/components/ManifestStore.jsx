@@ -13,8 +13,13 @@ import { rootPath as packagesRootPath } from "pages/packages/data";
 /**
  * DappStore category grid. Same redux/manifest data shape as before — only
  * presentation is modernized onto the design system.
+ *
+ * `advancedNames` (optional `Set<string>`): package names to flag with a
+ * small "Advanced" badge — used when search results include matches from a
+ * category normally hidden in simple mode (spec §5: "search still finds
+ * everything"), so the owner can still tell it's an advanced-only package.
  */
-function ManifestStore({ directory, openDnp }) {
+function ManifestStore({ directory, openDnp, advancedNames }) {
   const history = useHistory();
   const visible = directory.filter((item) => {
     if (!item || !item.manifest || !item.manifest.hidden === true) return true;
@@ -39,6 +44,7 @@ function ManifestStore({ directory, openDnp }) {
         // to — the card (and its button) should go straight to the app's
         // own page instead of the store's install/detail flow.
         const upToDate = installed && !hasUpdate;
+        const isAdvanced = Boolean(advancedNames && advancedNames.has(name));
         const packagePath = `${packagesRootPath}/${name}`;
         const open = () => {
           if (upToDate) history.push(packagePath);
@@ -71,11 +77,18 @@ function ManifestStore({ directory, openDnp }) {
                   >
                     {title || name}
                   </h5>
-                  {hasUpdate && (
-                    <Badge variant="accent" className="flex-shrink-0">
-                      Update
-                    </Badge>
-                  )}
+                  <div className="flex flex-shrink-0 items-center gap-1.5">
+                    {isAdvanced && (
+                      <Badge variant="neutral" className="flex-shrink-0">
+                        Advanced
+                      </Badge>
+                    )}
+                    {hasUpdate && (
+                      <Badge variant="accent" className="flex-shrink-0">
+                        Update
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <span className="font-mono text-xs text-fg-subtle">v{version}</span>
               </div>
@@ -130,6 +143,7 @@ function ManifestStore({ directory, openDnp }) {
 ManifestStore.propTypes = {
   directory: PropTypes.array.isRequired,
   openDnp: PropTypes.func.isRequired,
+  advancedNames: PropTypes.instanceOf(Set),
 };
 
 export default ManifestStore;

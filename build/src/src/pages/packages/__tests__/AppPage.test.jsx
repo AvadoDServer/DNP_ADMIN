@@ -22,6 +22,16 @@ vi.mock("health/HealthProvider", () => ({
 }));
 vi.mock("theme/ThemeProvider", () => ({ useTheme: () => ({ theme: "dark" }) }));
 
+// Mode (Simple/Advanced) — mutable per test, mirroring the ThemeProvider
+// mock above. Defaults to "simple", same as the real ModeProvider's default
+// context value, so the existing header-action tests (which never touch
+// mode) keep behaving exactly as before.
+let mockMode = "simple";
+const mockSetMode = vi.fn();
+vi.mock("settings/ModeProvider", () => ({
+  useMode: () => ({ mode: mockMode, isAdvanced: mockMode === "advanced", setMode: mockSetMode }),
+}));
+
 const mockDispatch = vi.fn();
 vi.mock("react-redux", async () => {
   const actual = await vi.importActual("react-redux");
@@ -62,6 +72,8 @@ describe("app page header actions", () => {
     mockConfirmRestart.mockClear();
     mockConfirmReset.mockClear();
     mockConfirmStop.mockClear();
+    mockSetMode.mockClear();
+    mockMode = "simple";
   });
 
   it("shows Restart in the header, wired to the existing confirm flow", () => {
@@ -136,5 +148,86 @@ describe("app page header actions", () => {
       consensus: false,
       title: "rotki",
     });
+  });
+});
+
+describe("app page modes", () => {
+  const dnpWithSetup = {
+    name: "nimbus.avado.dnp.dappnode.eth",
+    state: "running",
+    version: "1.2.3",
+    manifest: { links: { OnboardingWizard: "http://nimbus.my.ava.do" } },
+  };
+  const baseProps = {
+    id: dnpWithSetup.name,
+    loading: false,
+    history: { replace: vi.fn(), push: vi.fn() },
+  };
+
+  it("simple mode: the tab bar only offers Setup and Overview", () => {
+    mockMode = "simple";
+    render(
+      <AppPage dnp={dnpWithSetup} {...baseProps} location={{ pathname: "/packages/x", search: "" }} isCore={false} />
+    );
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["Setup", "Overview"]);
+  });
+
+  it("advanced mode: the tab bar offers every tab", () => {
+    mockMode = "advanced";
+    render(
+      <AppPage dnp={dnpWithSetup} {...baseProps} location={{ pathname: "/packages/x", search: "" }} isCore={false} />
+    );
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual([
+      "Setup",
+      "Overview",
+      "Logs",
+      "Settings",
+      "Files",
+    ]);
+  });
+
+  it("simple mode + a deep link to an advanced tab (?tab=logs) still opens it, with an Advanced-page note offering a switch", () => {
+    mockMode = "simple";
+    render(
+      <AppPage
+        dnp={dnpWithSetup}
+        {...baseProps}
+        location={{ pathname: "/packages/x", search: "?tab=logs" }}
+        isCore={false}
+      />
+    );
+    // The tab bar itself still only shows Setup/Overview — no Logs pill.
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["Setup", "Overview"]);
+    // The Logs content is there anyway (never a 404), with a note and a way out.
+    expect(screen.getByRole("heading", { name: "Logs" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to advanced mode" }));
+    expect(mockSetMode).toHaveBeenCalledWith("advanced");
+  });
+
+  it("advanced mode + ?tab=logs: no Advanced-page note (Logs is already a first-class tab there)", () => {
+    mockMode = "advanced";
+    render(
+      <AppPage
+        dnp={dnpWithSetup}
+        {...baseProps}
+        location={{ pathname: "/packages/x", search: "?tab=logs" }}
+        isCore={false}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Switch to advanced mode" })).not.toBeInTheDocument();
+  });
+
+  it("shows the version only in advanced mode", () => {
+    mockMode = "simple";
+    const { rerender } = render(
+      <AppPage dnp={dnpWithSetup} {...baseProps} location={{ pathname: "/packages/x", search: "" }} isCore={false} />
+    );
+    expect(screen.queryByText("v1.2.3")).not.toBeInTheDocument();
+
+    mockMode = "advanced";
+    rerender(
+      <AppPage dnp={dnpWithSetup} {...baseProps} location={{ pathname: "/packages/x", search: "" }} isCore={false} />
+    );
+    expect(screen.getByText("v1.2.3")).toBeInTheDocument();
   });
 });

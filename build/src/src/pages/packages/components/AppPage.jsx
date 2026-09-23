@@ -6,6 +6,8 @@ import * as a from "../actions";
 import { rootPath } from "../data";
 import { useTheme } from "theme/ThemeProvider";
 import { useHealth } from "health/HealthProvider";
+import { useMode } from "settings/ModeProvider";
+import { tabsForMode, ADVANCED_TABS } from "settings/visibility";
 import { appStatus, appDescription } from "components/appStatus";
 import { appTitle } from "health/rules/apps";
 import { getClient, ROLES } from "health/clients";
@@ -15,6 +17,7 @@ import StatusPill from "components/ui/StatusPill";
 import Tabs from "components/ui/Tabs";
 import Button from "components/ui/Button";
 import { cn } from "components/ui/cn";
+import AdvancedNote from "components/AdvancedNote";
 import AppOverview from "./AppOverview";
 import SetupFrame from "./SetupFrame";
 import Envs from "./PackageViews/Envs";
@@ -130,6 +133,7 @@ function OverflowMenu({ label, items }) {
 export function AppPage({ dnp, id, loading, history, location, isCore: isCoreProp = false }) {
   const { theme } = useTheme();
   const { findings, updates } = useHealth();
+  const { mode, isAdvanced } = useMode();
   const dispatch = useDispatch();
   if (!dnp) return loading ? <LoadingState label="Loading app…" /> : <NoDnpInstalled id={id} moduleName="packages" />;
 
@@ -142,10 +146,17 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
 
   const url = wizardUrl(dnp, theme);
   const tabs = tabsFor(Boolean(url));
+  // The tab bar itself only ever offers what this mode allows (spec §5:
+  // "App page tabs | Overview, Setup | + Logs, Settings, Files"); a deep
+  // link such as `?tab=logs` still opens its content in Simple mode (never
+  // a 404), just with an "Advanced page" note instead of a selected pill —
+  // see `active` below, which is resolved against the full `tabs` list.
+  const visibleTabs = tabsForMode(tabs, mode);
   const requested = new URLSearchParams(location.search).get("tab");
-  const active = tabs.some(t => t.id === requested) ? requested : tabs[0].id;
+  const active = tabs.some(t => t.id === requested) ? requested : visibleTabs[0].id;
+  const showAdvancedNote = mode === "simple" && ADVANCED_TABS.includes(active);
   const ownFindings = findings.filter(f => f.appId === dnp.name && f.severity !== "info").length;
-  const shownTabs = tabs.map(t => (t.id === "overview" && ownFindings ? { ...t, badge: ownFindings } : t));
+  const shownTabs = visibleTabs.map(t => (t.id === "overview" && ownFindings ? { ...t, badge: ownFindings } : t));
   const setTab = tab => history.replace({ pathname: location.pathname, search: `?tab=${tab}` });
 
   // Header actions. Reuse the same confirm helpers / thunks as the Overview
@@ -189,14 +200,14 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
   return (
     <div className="animate-fade-in flex flex-col gap-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <AppAvatar pkg={dnp} size={56} />
+        <AppAvatar pkg={dnp} size={64} />
         <div className="min-w-0 flex-1">
           <h1 className="mb-0 break-words font-display text-2xl font-bold text-fg">{title}</h1>
           <p className="mb-0 text-sm text-fg-muted">{appDescription(dnp)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={appStatus(dnp, { findings, updates })} />
-          {dnp.version && <span className="font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
+          {isAdvanced && dnp.version && <span className="font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
           {showOpen &&
             (external ? (
               <Button as="a" href={external} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
@@ -214,6 +225,11 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
         </div>
       </header>
       <Tabs tabs={shownTabs} active={active} onChange={setTab} />
+      {showAdvancedNote && (
+        <AdvancedNote>
+          This tab is usually only shown in advanced mode. Switch to advanced to see it here next time.
+        </AdvancedNote>
+      )}
       {active === "setup" && url && <SetupFrame url={url} title={title} />}
       {active === "overview" && <AppOverview dnp={dnp} isCore={isCore} />}
       {active === "logs" && <Logs id={dnp.name} />}

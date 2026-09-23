@@ -12,7 +12,9 @@ import isDnpDomain from "utils/isDnpDomain";
 import { correctPackageName } from "../utils";
 import filterDirectory from "../helpers/filterDirectory";
 import orderCategoriesByFilter from "../helpers/orderCategoriesByFilter";
+import { visibleCategories, advancedMatchNames } from "../helpers/storeVisibility";
 import { rootPath } from "../data";
+import { useMode } from "settings/ModeProvider";
 import NoPackageFound from "./NoPackageFound";
 import TypeFilter from "./TypeFilter";
 import ManifestStore from "./ManifestStore";
@@ -57,6 +59,7 @@ function InstallerHome({
     const [selectedTypes, setSelectedTypes] = useState({});
     const [storeManifest, setStoreManifest] = useState();
     const [displayManifest, setDisplayManifest] = useState();
+    const { mode } = useMode();
 
     useEffect(() => {
         if (packages && storeManifest && packages.length > 0) {
@@ -179,15 +182,20 @@ function InstallerHome({
                         }
                         title={`No packages match “${query}”`}
                     >
-                        Try a different name, or paste an IPFS hash to install a
-                        custom package.
+                        {mode === "simple"
+                            ? "Try a different name."
+                            : "Try a different name, or paste an IPFS hash to install a custom package."}
                     </StoreEmpty>
                 );
 
+            // Search always looks across every category, including ones
+            // hidden from Simple mode's browse view (spec §5: "search still
+            // finds everything"); a match from a hidden category gets a
+            // small "Advanced" tag instead of being left out.
             return (
                 <>
                     <CategoryHeader title="Search results" count={matches.length} />
-                    <ManifestStore directory={matches} openDnp={openDnp} />
+                    <ManifestStore directory={matches} openDnp={openDnp} advancedNames={advancedMatchNames(matches, mode)} />
                 </>
             );
         }
@@ -197,11 +205,15 @@ function InstallerHome({
             categories,
             categoryTag
         );
+        // Simple mode hides curated-out categories (testnets, The Lab, ...)
+        // from the browse view, but a direct `?category=` deep link to one
+        // of them still works (never a 404 — spec §5).
+        const shownCategories = visibleCategories(ordered, { mode, categoryTag });
 
         return (
             <>
                 <CategoryFilterBanner category={highlighted} onShowAllTo={rootPath} />
-                {ordered.map((cat, i) => {
+                {shownCategories.map((cat, i) => {
                     const subdir = displayManifest.packages.filter((p) => {
                         return p.manifest.avadocategory === cat.tag;
                     });
@@ -228,12 +240,17 @@ function InstallerHome({
                     DappStore
                 </h1>
                 <p className="text-sm text-fg-muted">
-                    Browse and install AVADO packages, or paste an IPFS hash to add a
-                    custom one.
+                    {mode === "simple"
+                        ? "Browse and install AVADO packages."
+                        : "Browse and install AVADO packages, or paste an IPFS hash to add a custom one."}
                 </p>
             </div>
 
-            {/* Search */}
+            {/* Search — the same field also resolves a pasted IPFS hash or
+                ENS domain on submit (see runQuery below); simple mode just
+                doesn't advertise that, to keep the field looking like a
+                plain name search (spec §5: DappStore hides the custom IPFS
+                hash install affordance in simple mode). */}
             <form
                 className="mb-2"
                 onSubmit={(e) => {
@@ -246,7 +263,7 @@ function InstallerHome({
                     <Input
                         className="flex-1"
                         aria-label="Search packages"
-                        placeholder="Package name or IPFS hash"
+                        placeholder={mode === "simple" ? "Search packages" : "Package name or IPFS hash"}
                         value={query}
                         onChange={(e) =>
                             setQuery(correctPackageName(e.target.value))
