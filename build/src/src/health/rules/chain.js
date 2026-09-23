@@ -45,6 +45,36 @@ export function chainSyncing({ chainData }) {
     });
 }
 
+// DAPPMANAGER (watchers/chains) reports a client whose API it can't reach as
+// `{ name, error: true, message }` with no `syncing` field. Without this rule
+// that entry would read as "nothing wrong" everywhere; it covers execution
+// clients as well as consensus clients (any chainData entry).
+export function chainError({ chainData, packages }) {
+  return (chainData || [])
+    .filter(c => c && c.error)
+    .map(c => {
+      const pkg = (packages || []).find(p => p && chainEntryMatchesPkg(c.name, p.name)) || null;
+      const title = pkg ? appTitle(pkg) : c.name;
+      return {
+        id: `chain-error:${c.name}`,
+        severity: "warning",
+        topic: "sync",
+        ...(pkg ? { appId: pkg.name } : {}),
+        title: `${title} can't be reached`,
+        why: "Your AVADO couldn't ask this client how far it has synced. If it isn't answering, your validators may miss attestations.",
+        ...(c.message ? { detail: String(c.message) } : {}),
+        fix: pkg
+          ? { kind: "link", to: `/packages/${pkg.name}`, label: "Open the app" }
+          : { kind: "link", to: "/packages", label: "Open My DApps" },
+        steps: [
+          "Open the app and check that it is running.",
+          "If it was just started or updated, give it a few minutes to come up.",
+          "Still can't be reached? Restart it and look at the last lines of its logs.",
+        ],
+      };
+    });
+}
+
 export function headBehind({ packages, metrics, chainData, now }) {
   if (!metrics) return [];
   return matchSamples(packages, metrics.headSlot)

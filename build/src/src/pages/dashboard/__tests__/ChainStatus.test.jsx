@@ -196,3 +196,63 @@ describe("ChainStatus — behind/ahead copy rule", () => {
     expect(screen.queryByText(/-\d+ slots/)).not.toBeInTheDocument();
   });
 });
+
+describe("ChainStatus — wall clock is taken from when the metrics sample was fetched", () => {
+  const synced = {
+    chainData: [{ name: "Nimbus", syncing: false }],
+    // Head = wall slot at the fetch time `now`: a perfectly synced client.
+    metrics: { headSlot: [{ client: "nimbus", network: "mainnet", value: 100 }], peers: [] },
+    metricsFetchedAt: new Date(now),
+    // The 5 s stats poll re-ran the health memo 50 s after the fetch.
+    checkedAt: new Date(now + 50 * 1000),
+  };
+
+  it("a synced client stays in step when rendered 50 s after the sample was fetched (Simple)", () => {
+    useHealthMock.mockReturnValue(health(synced));
+    render(<ChainStatus />);
+    expect(screen.getByText("Nimbus is in step with the network.")).toBeInTheDocument();
+    expect(screen.queryByText(/behind/)).not.toBeInTheDocument();
+  });
+
+  it("a synced client stays in step when rendered 50 s after the sample was fetched (Advanced)", () => {
+    useModeMock.mockReturnValue({ isAdvanced: true });
+    useHealthMock.mockReturnValue(health(synced));
+    render(<ChainStatus />);
+    expect(screen.getByText("In step with the network")).toBeInTheDocument();
+    expect(screen.queryByText(/behind/)).not.toBeInTheDocument();
+  });
+
+  it("still reports a real gap measured at fetch time", () => {
+    useHealthMock.mockReturnValue(
+      health({ ...synced, metrics: { headSlot: [{ client: "nimbus", network: "mainnet", value: 90 }], peers: [] } })
+    );
+    render(<ChainStatus />);
+    expect(screen.getByText("Nimbus is 10 slots behind.")).toBeInTheDocument();
+  });
+});
+
+describe("ChainStatus — chain client reports an error", () => {
+  const errored = {
+    chainData: [{ name: "Nimbus", error: true, message: "Could not connect to RPC" }],
+  };
+
+  it("never shows synced or a green light; says the client can't be reached (Simple)", () => {
+    useHealthMock.mockReturnValue(health(errored));
+    const { container } = render(<ChainStatus />);
+    expect(screen.getByText("Nimbus can't be reached.")).toBeInTheDocument();
+    expect(screen.queryByText(/synced|in step/i)).not.toBeInTheDocument();
+    expect(container.querySelector('[data-tone="success"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-tone="danger"], [data-tone="warning"]')).toBeInTheDocument();
+  });
+
+  it("shows the client's message in Advanced, even when metrics are present", () => {
+    useModeMock.mockReturnValue({ isAdvanced: true });
+    useHealthMock.mockReturnValue(
+      health({ ...errored, metrics: { headSlot: [{ client: "nimbus", network: "mainnet", value: 100 }], peers: [] } })
+    );
+    render(<ChainStatus />);
+    expect(screen.getByText("Nimbus can't be reached.")).toBeInTheDocument();
+    expect(screen.getByText("Could not connect to RPC")).toBeInTheDocument();
+    expect(screen.queryByText(/In step/)).not.toBeInTheDocument();
+  });
+});

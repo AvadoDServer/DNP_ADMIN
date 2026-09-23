@@ -250,3 +250,30 @@ describe("HealthProvider dismissals", () => {
     expect(screen.getByTestId("ids").textContent).toContain("consensus-without-execution:mainnet");
   });
 });
+
+describe("HealthProvider metricsFetchedAt", () => {
+  function FetchedAtProbe() {
+    const { metricsFetchedAt } = useHealth();
+    return <span data-testid="fetchedAt">{metricsFetchedAt ? String(metricsFetchedAt.getTime()) : "null"}</span>;
+  }
+
+  it("is null without metrics and records when the Prometheus sample was fetched", async () => {
+    const withPrometheus = {
+      ...state,
+      packages: [...state.packages, { name: "prometheus.avado.dappnode.eth", version: "1.0.0", state: "running", running: true, manifest: { title: "Prometheus" } }],
+    };
+    const before = Date.now();
+    render(
+      <Provider store={createStore(() => withPrometheus)}>
+        <HealthProvider fetchStoreImpl={async () => ({ packages: [] })} fetchMetricsImpl={async () => ({ headSlot: [], peers: [] })}>
+          <FetchedAtProbe />
+        </HealthProvider>
+      </Provider>
+    );
+    expect(screen.getByTestId("fetchedAt").textContent).toBe("null");
+    await waitFor(() => expect(screen.getByTestId("fetchedAt").textContent).not.toBe("null"));
+    const at = Number(screen.getByTestId("fetchedAt").textContent);
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(Date.now());
+  });
+});

@@ -1,4 +1,5 @@
-import { chainSyncing, headBehind, lowPeers, missedAttestations } from "health/rules/chain";
+import { chainSyncing, chainError, headBehind, lowPeers, missedAttestations } from "health/rules/chain";
+import { ALL_RULES } from "health/rules";
 import { pkg, snapshot } from "./fixtures";
 
 const NIMBUS = pkg("nimbus.avado.dnp.dappnode.eth", { manifest: { title: "Nimbus Consensus Client" } });
@@ -89,5 +90,50 @@ describe("chain rules", () => {
     expect(headBehind.needs).toBe("metrics");
     expect(lowPeers.needs).toBe("metrics");
     expect(missedAttestations.needs).toBe("metrics");
+  });
+});
+
+describe("chainError rule", () => {
+  const GETH = pkg("ethchain-geth.public.dappnode.eth", { manifest: { title: "Geth" } });
+
+  it("turns a chainData error entry into a warning that links to the client's app page", () => {
+    const f = chainError(
+      snapshot({ packages: [NIMBUS], chainData: [{ name: "Nimbus", error: true, message: "Could not connect to RPC" }] })
+    );
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({
+      id: "chain-error:Nimbus",
+      severity: "warning",
+      topic: "sync",
+      appId: "nimbus.avado.dnp.dappnode.eth",
+      title: "Nimbus Consensus Client can't be reached",
+      detail: "Could not connect to RPC",
+      fix: { kind: "link", to: "/packages/nimbus.avado.dnp.dappnode.eth" },
+    });
+    expect(f[0].steps.length).toBeGreaterThan(0);
+  });
+
+  it("covers execution clients too, and entries with no matching package", () => {
+    const f = chainError(
+      snapshot({
+        packages: [GETH],
+        chainData: [
+          { name: "Ethchain-geth", error: true, message: "Could not connect" },
+          { name: "Other", error: true },
+        ],
+      })
+    );
+    expect(f.map(x => x.id)).toEqual(["chain-error:Ethchain-geth", "chain-error:Other"]);
+    expect(f[0].fix.to).toBe("/packages/ethchain-geth.public.dappnode.eth");
+    expect(f[1]).toMatchObject({ title: "Other can't be reached", fix: { kind: "link", to: "/packages" } });
+  });
+
+  it("finds nothing for healthy or syncing entries", () => {
+    expect(chainError(snapshot({ chainData: [{ name: "Nimbus", syncing: false }, { name: "Geth", syncing: true }] }))).toEqual([]);
+    expect(chainError(snapshot({ chainData: null }))).toEqual([]);
+  });
+
+  it("is part of ALL_RULES", () => {
+    expect(ALL_RULES).toContain(chainError);
   });
 });

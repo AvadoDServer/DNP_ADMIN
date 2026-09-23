@@ -4,7 +4,7 @@ import { updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable 
 import { portsClosed, noUpnp, noNatLoopback, remoteAccessMissing } from "./access";
 import { diskHigh } from "./storage";
 import { diagnoseFailed } from "./core";
-import { chainSyncing, headBehind, lowPeers, missedAttestations } from "./chain";
+import { chainSyncing, chainError, headBehind, lowPeers, missedAttestations } from "./chain";
 
 export const ALL_RULES = [
   appStopped, appRestarting, coreAppDown,
@@ -12,5 +12,5 @@ export const ALL_RULES = [
   updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable,
   portsClosed, noUpnp, noNatLoopback, remoteAccessMissing,
   diskHigh, diagnoseFailed,
-  chainSyncing, headBehind, lowPeers, missedAttestations,
+  chainSyncing, chainError, headBehind, lowPeers, missedAttestations,
 ];
