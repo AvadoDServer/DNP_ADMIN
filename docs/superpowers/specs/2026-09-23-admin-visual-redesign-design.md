@@ -1,6 +1,6 @@
 # AVADO Admin: visual redesign, Simple/Advanced modes and box readings — design
 
-Date: 2026-09-23 · Branch: `ux/visual` (from `ux/self-help`, released as 10.0.52) · Target release: 10.0.53 · Status: direction approved in conversation, spec awaiting review
+Date: 2026-09-23 · Branch: `ux/visual` (from `ux/self-help`, released as 10.0.52) · Target release: 10.0.53 · Status: approved 2026-09-23 with the change in §6.0 (box readings deferred)
 
 Approved mockups: `mockups/home-light-simple.dc.html`, `mockups/home-dark-advanced.dc.html` (also on the design canvas https://claude.ai/artifact/BWBDgYB5DE93LZdP2BVt7u).
 
@@ -69,7 +69,7 @@ A persistent preference (localStorage `avado.mode`, default `simple`), switched 
 |---|---|---|
 | Sidebar | Home, DappStore, My DApps, Staking setup, Help | + Remote Connect, Priority, System |
 | Chain status | One plain line | Epoch strip, slots behind, peers |
-| Box readings | 4 readings, no trends | All readings, 1-hour trends, "Open in Grafana" |
+| Box readings | Processor, memory, disk space | Same, plus "Open in Grafana" when monitoring is installed |
 | App page tabs | Overview, Setup | + Logs, Settings, Files |
 | Findings | Plain fix | + technical detail line (slot counts, peers, metric names) |
 | DappStore | Curated categories | All categories incl. testnets, "The Lab", custom IPFS hash box |
@@ -77,7 +77,17 @@ A persistent preference (localStorage `avado.mode`, default `simple`), switched 
 
 Rules: Simple never hides a **problem** — a finding that needs an Advanced page (e.g. System → Storage) links there and the link works in Simple mode too. Deep links to Advanced-only pages open them (with a small "Advanced page" note), they are never 404s. Remote Connect stays in Simple's sidebar if Remote Connect is installed (it's how people reach the box from away).
 
-## 6. Box readings that work on every AVADO
+## 6. Box readings
+
+### 6.0 Decision (2026-09-23)
+Temperature and extended readings on Home are **deferred**: there is no older (Intel i7 10th-gen) AVADO on staging to verify them on the hardware most owners have. This release ships **no sensor reader and no temperature, network, disk-activity or uptime readings**, and none of the `cpu-hot`, `disk-hot` or `sensor-reader-stale` checks. The design below the line is kept for the follow-up release.
+
+**In this release:**
+- Home shows the three readings every box already reports through DAPPMANAGER `getStats` — processor, memory, disk space — as gauges under the device drawing (as in the mockups), coloured by range (processor < 80 / 80–95 / ≥ 95 %, memory < 85 / 85–95 / ≥ 95 %, disk space < 80 / 80–90 / ≥ 90 %). Missing values show "—", never 0.
+- **Prometheus proxy** (6.1 tier 2) ships, because the chain strip and the existing sync/peers/attestation checks use it: nginx `location /metrics-api/` → `http://prometheus.my.ava.do:9090/api/v1/`, GET only, `query` and `query_range` only, Docker DNS resolver `127.0.0.11` with short validity. The UI tries the proxy first, then the direct URL, then treats metrics as unavailable (existing `metrics-unavailable` finding).
+- **`monitoring-stopped`** check (6.3) ships.
+
+### Deferred design (next release, needs an old box on staging)
 
 ### 6.1 Sources (layered; each reading uses the best available)
 
@@ -123,9 +133,9 @@ A reading that no source provides is **not shown** in Simple mode; in Advanced i
 
 ## 7. Compatibility and testing
 
-- **Hardware fixtures:** unit tests for sensor normalisation with real layouts: Intel coretemp (i7-10710U-style: Package id 0 + Core 0–5), AMD k10temp (Tctl, Tccd1), Ryzen 8000 on 5.10 (no CPU sensor), NVMe Composite, SATA with/without drivetemp, bogus ACPI zones, empty `/sys`.
+- **Hardware fixtures (deferred with §6):** unit tests for sensor normalisation with real layouts: Intel coretemp (i7-10710U-style: Package id 0 + Core 0–5), AMD k10temp (Tctl, Tccd1), Ryzen 8000 on 5.10 (no CPU sensor), NVMe Composite, SATA with/without drivetemp, bogus ACPI zones, empty `/sys`.
 - **Access paths:** proxy tested from my.ava.do, the box IP and a Remote Connect session on the test box.
-- **Old boxes:** the owner is asked for access to one Intel i7 10th-gen AVADO (staging-flagged) for a read-only check of the sensor file before production. If none is available, production release waits on fixtures + test box only, and the reading shows "Not reported" rather than guessing.
+- **Old boxes (deferred with §6):** the owner is asked for access to one Intel i7 10th-gen AVADO (staging-flagged) for a read-only check of the sensor file before production. If none is available, production release waits on fixtures + test box only, and the reading shows "Not reported" rather than guessing.
 - **Modes and themes:** every page checked in light/dark × simple/advanced at 360 / 768 / 1440 px on the test box.
 - Existing 224 tests stay green; new tests for sensors, proxy fallback logic, modes (sidebar items, tabs, deep links), themes (contrast), readings (ranges, stale data).
 
