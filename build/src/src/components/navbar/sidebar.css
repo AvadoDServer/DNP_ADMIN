@@ -145,7 +145,7 @@
   box-shadow: var(--shadow-xl);
 }
 
-/* Theme / mode switches — a small segmented control, radiogroup semantics.
+/* Theme / mode switches — a labelled group of toggle buttons (aria-pressed).
    The selected pill uses --surface in light (matches the mockups exactly:
    white on the footer's tinted background) and --border in dark (the
    mockups use the border tone there for enough contrast against the dark
@@ -169,13 +169,13 @@
 .sidebar-footer-segment:hover {
   color: rgb(var(--fg));
 }
-.sidebar-footer-segment[aria-checked="true"] {
+.sidebar-footer-segment[aria-pressed="true"] {
   background-color: rgb(var(--surface));
   color: rgb(var(--fg));
   font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
-[data-theme="dark"] .sidebar-footer-segment[aria-checked="true"] {
+[data-theme="dark"] .sidebar-footer-segment[aria-pressed="true"] {
   background-color: rgb(var(--border));
 }
 .sidebar-footer-segment:focus-visible {

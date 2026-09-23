@@ -86,7 +86,7 @@ describe("SideBar (Simple/Advanced items)", () => {
 
     expect(screen.queryByRole("link", { name: /^System$/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("radio", { name: "Advanced" }));
+    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
 
     expect(screen.getByRole("link", { name: /^System$/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Priority$/ })).toBeInTheDocument();

@@ -18,19 +18,22 @@ const MODE_OPTIONS = [
 ];
 
 /**
- * A small accessible single-select control (radiogroup semantics, see
- * https://www.w3.org/WAI/ARIA/apg/patterns/radio/) used for both the
- * Light/Dark/Match-computer and Simple/Advanced switches.
+ * A small accessible single-select control used for both the
+ * Light/Dark/Match-computer and Simple/Advanced switches — a labelled
+ * group (`role="group"`) of plain toggle buttons (`aria-pressed`), as in
+ * the mockups. Deliberately not `role="radiogroup"`/`"radio"`: that pattern
+ * requires arrow-key roving focus between options (WAI-ARIA APG), which
+ * these buttons don't implement — native Tab order between them is correct
+ * for a toggle-button group.
  */
 function SegmentedControl({ label, options, value, onChange }) {
   return (
-    <div role="radiogroup" aria-label={label} className="sidebar-footer-segmented">
+    <div role="group" aria-label={label} className="sidebar-footer-segmented">
       {options.map(opt => (
         <button
           key={opt.value}
           type="button"
-          role="radio"
-          aria-checked={opt.value === value}
+          aria-pressed={opt.value === value}
           onClick={() => onChange(opt.value)}
           className="sidebar-footer-segment"
         >
@@ -57,6 +60,8 @@ export default function SidebarFooter() {
   const { mode, setMode } = useMode();
   const [identityOpen, setIdentityOpen] = useState(false);
   const identityRef = useRef(null);
+  const identityTriggerRef = useRef(null);
+  const identityPopoverRef = useRef(null);
 
   const boxName = dappnodeParams.name || "My AVADO";
   // REACT_APP_VERSION is only set by getVersionData.sh during the Docker
@@ -64,13 +69,20 @@ export default function SidebarFooter() {
   // never sees it) — hide the line rather than show a bare "Version".
   const version = process.env.REACT_APP_VERSION;
 
+  // Close on outside click / Escape, returning focus to the trigger button
+  // in both cases (it isn't already there, unlike a close-by-clicking-the-
+  // trigger-again toggle, which keeps focus on the button naturally).
   useEffect(() => {
     if (!identityOpen) return; // Prevent unnecessary listeners
+    function closeAndRefocus() {
+      setIdentityOpen(false);
+      if (identityTriggerRef.current) identityTriggerRef.current.focus();
+    }
     function handleMouseDown(e) {
-      if (identityRef.current && !identityRef.current.contains(e.target)) setIdentityOpen(false);
+      if (identityRef.current && !identityRef.current.contains(e.target)) closeAndRefocus();
     }
     function handleKeyDown(e) {
-      if (e.key === "Escape") setIdentityOpen(false);
+      if (e.key === "Escape") closeAndRefocus();
     }
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("keydown", handleKeyDown);
@@ -80,10 +92,16 @@ export default function SidebarFooter() {
     };
   }, [identityOpen]);
 
+  // Move focus into the popover when it opens (WAI-ARIA dialog pattern).
+  useEffect(() => {
+    if (identityOpen && identityPopoverRef.current) identityPopoverRef.current.focus();
+  }, [identityOpen]);
+
   return (
     <div className="sidebar-footer">
       <div ref={identityRef} className="relative">
         <button
+          ref={identityTriggerRef}
           type="button"
           onClick={() => setIdentityOpen(open => !open)}
           aria-haspopup="dialog"
@@ -99,10 +117,12 @@ export default function SidebarFooter() {
         </button>
         {identityOpen && (
           <div
+            ref={identityPopoverRef}
             role="dialog"
             aria-label="AVADO identity"
+            tabIndex={-1}
             data-testid="sidebar-identity-popover"
-            className="sidebar-footer-popover"
+            className="sidebar-footer-popover focus:outline-none"
           >
             <DappnodeIdentity />
           </div>
