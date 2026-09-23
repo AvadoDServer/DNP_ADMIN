@@ -153,7 +153,7 @@ const PackagesList = ({
                             <div className="flex min-w-0 items-center gap-3.5">
                                 <AppAvatar pkg={dnp} size={44} />
                                 <div className="min-w-0">
-                                    <div className="break-words font-display text-base font-bold text-fg">{title}</div>
+                                    <div className="break-words font-display text-lg font-bold text-fg">{title}</div>
                                     {description && (
                                         <p className="mb-0 break-words text-sm text-fg-muted">{description}</p>
                                     )}

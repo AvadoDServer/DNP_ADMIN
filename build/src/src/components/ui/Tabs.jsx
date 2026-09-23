@@ -28,6 +28,12 @@ export default function Tabs({ tabs, active, onChange, className }) {
     }
   };
 
+  // If `active` isn't among the rendered tabs (e.g. deep-linked to an
+  // Advanced-only tab while in Simple mode), nothing is `selected` below, so
+  // no tab would get tabIndex=0 and the tablist would drop out of the tab
+  // order entirely. Fall back to making the first rendered tab reachable.
+  const hasSelected = tabs.some(t => t.id === active);
+
   return (
     <div role="tablist" className={cn("flex flex-wrap gap-1 overflow-x-auto", className)}>
       {tabs.map((t, i) => {
@@ -39,7 +45,7 @@ export default function Tabs({ tabs, active, onChange, className }) {
             role="tab"
             type="button"
             aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected || (!hasSelected && i === 0) ? 0 : -1}
             onClick={() => onChange(t.id)}
             onKeyDown={e => onKeyDown(e, i)}
             className={cn(

@@ -60,8 +60,18 @@ export default function AvadoDevice({ light, className }) {
       >
         AVADO
       </text>
-      {/* Status light: glow pulses once on mount (respects reduced motion via motion-safe:) */}
-      <circle cx="252" cy="134" r="70" fill={`url(#${glowId})`} className="motion-safe:animate-pulse-once" />
+      {/* Status light: glow pulses once on mount (respects reduced motion via
+          motion-safe:). `key={light}` forces a remount whenever the resolved
+          colour changes, so the pulse plays again for the new colour instead
+          of only ever playing once for the initial "checking" grey. */}
+      <circle
+        key={light}
+        cx="252"
+        cy="134"
+        r="70"
+        fill={`url(#${glowId})`}
+        className="motion-safe:animate-pulse-once"
+      />
       <circle cx="252" cy="134" r="30" fill="none" stroke={color} strokeWidth="6" />
       <circle cx="252" cy="134" r="16" fill="rgb(var(--device-center))" />
     </svg>

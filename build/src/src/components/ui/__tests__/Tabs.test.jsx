@@ -31,4 +31,17 @@ describe("Tabs", () => {
       expect(tab).toHaveClass("focus-visible:shadow-focus");
     }
   });
+
+  it("keeps the tablist keyboard-reachable when active isn't among the rendered tabs", () => {
+    render(
+      <Tabs
+        tabs={[{ id: "a", label: "A" }, { id: "b", label: "B" }]}
+        active="logs"
+        onChange={() => {}}
+      />
+    );
+    const tabList = screen.getAllByRole("tab");
+    expect(tabList[0]).toHaveAttribute("tabIndex", "0");
+    expect(tabList[1]).toHaveAttribute("tabIndex", "-1");
+  });
 });

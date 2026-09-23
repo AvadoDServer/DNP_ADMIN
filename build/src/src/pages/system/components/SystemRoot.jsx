@@ -34,9 +34,11 @@ const SystemRoot = ({ location }) => {
               explains why it isn't in their sidebar instead of just not
               being there. */}
           {!isAdvanced && (
-            <AdvancedNote>
-              This is an advanced page. Switch to advanced mode to find it in your sidebar next time.
-            </AdvancedNote>
+            <div className="mb-4">
+              <AdvancedNote>
+                This is an advanced page. Switch to advanced mode to find it in your sidebar next time.
+              </AdvancedNote>
+            </div>
           )}
           <PageHeader title={title} subtitle="Updates, disk space and maintenance for your AVADO." />
           <SystemTabs />
