@@ -1,5 +1,6 @@
-/* Fonts (Inter, Sen, JetBrains Mono) are bundled via @fontsource imports in
-   index.jsx, loaded ahead of this stylesheet — no @import needed here. */
+/* Fonts (Public Sans, Sen, JetBrains Mono) are bundled via @fontsource
+   imports in index.jsx, loaded ahead of this stylesheet — no @import
+   needed here. */
 
 @tailwind base;
 @tailwind components;
@@ -18,9 +19,11 @@
   }
 
   body {
-    background-color: rgb(var(--bg));
+    background: rgb(var(--bg));
     color: rgb(var(--fg));
     font-family: theme('fontFamily.sans');
+    font-size: 16px;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color var(--theme-transition), color var(--theme-transition);

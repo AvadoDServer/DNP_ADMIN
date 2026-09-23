@@ -42,6 +42,8 @@ describe.each(Object.entries(THEMES))("%s theme contrast", (_, selector) => {
     ["fg", "bg", 4.5],
     ["fg", "surface", 4.5],
     ["fg-muted", "surface", 4.5],
+    ["fg-muted", "bg", 4.5],
+    ["accent-fg", "accent", 4.5],
     ["accent", "surface", 3],
     ["success", "surface", 3],
     ["warning", "surface", 3],
