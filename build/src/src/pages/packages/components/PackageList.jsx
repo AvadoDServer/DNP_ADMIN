@@ -35,7 +35,7 @@ const xnor = (a, b) => Boolean(a) === Boolean(b);
 export const getAutoUpdateState = dnp => Boolean(dnp) && dnp.autoupdate !== false;
 
 const iconBtn =
-    "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning focus:outline-none focus-visible:shadow-focus";
+    "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning-text focus:outline-none focus-visible:shadow-focus";
 
 const linkCls = "text-sm font-medium text-accent transition-colors hover:underline";
 

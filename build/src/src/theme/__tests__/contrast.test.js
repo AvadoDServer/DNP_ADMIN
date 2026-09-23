@@ -61,6 +61,24 @@ describe.each(Object.entries(THEMES))("%s theme contrast", (_, selector) => {
     // Status words on the bare canvas (VerdictPanel "Action required") are text.
     ["danger-text", "bg", 4.5],
     ["warning-text", "bg", 4.5],
+    // Status words used as text anywhere (StatusPill, AppCard, Badge, Tabs
+    // count, Input error, HelpTopic, Priority, ...): AA on both canvases,
+    // the raised surface, and the *-subtle tint they sit on in Badge/Tabs.
+    ["success-text", "surface", 4.5],
+    ["success-text", "bg", 4.5],
+    ["success-text", "surface-raised", 4.5],
+    ["success-text", "success-subtle", 4.5],
+    ["warning-text", "surface", 4.5],
+    ["warning-text", "surface-raised", 4.5],
+    ["warning-text", "warning-subtle", 4.5],
+    ["danger-text", "surface", 4.5],
+    ["danger-text", "surface-raised", 4.5],
+    ["danger-text", "danger-subtle", 4.5],
+    // Filled status buttons (Button danger/success) and toasts: text on the
+    // solid fill.
+    ["danger-fg", "danger-solid", 4.5],
+    ["success-fg", "success-solid", 4.5],
+    ["warning-fg", "warning-solid", 4.5],
   ])("%s on %s ≥ %s", (fg, bg, min) => {
     expect(t[fg]).toBeDefined();
     expect(t[bg]).toBeDefined();

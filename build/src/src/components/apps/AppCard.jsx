@@ -16,8 +16,8 @@ export function openUrl(pkg) {
 // a healthy "Running" reads as quiet muted text, same as StatusPill.
 const STATE_TEXT_TONE = {
   success: "text-fg-muted",
-  warning: "text-warning",
-  danger: "text-danger",
+  warning: "text-warning-text",
+  danger: "text-danger-text",
   accent: "text-accent",
   neutral: "text-fg-muted",
 };

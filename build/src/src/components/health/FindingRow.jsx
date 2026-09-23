@@ -8,8 +8,8 @@ import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
 
 const ICON = {
-  critical: { glyph: "M18 6 6 18M6 6l12 12", cls: "bg-danger/15 text-danger", label: "Action required" },
-  warning: { glyph: "M12 8v5M12 16.5h.01", cls: "bg-warning/15 text-warning", label: "Needs attention" },
+  critical: { glyph: "M18 6 6 18M6 6l12 12", cls: "bg-danger/15 text-danger-text", label: "Action required" },
+  warning: { glyph: "M12 8v5M12 16.5h.01", cls: "bg-warning/15 text-warning-text", label: "Needs attention" },
   info: { glyph: "M12 11v5M12 7.5h.01", cls: "bg-accent/15 text-accent", label: "Tip" },
 };
 

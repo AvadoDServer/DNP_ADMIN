@@ -54,7 +54,7 @@ export default function Tabs({ tabs, active, onChange, className }) {
             )}
           >
             {t.label}
-            {t.badge ? <span className="rounded-full bg-warning/15 px-1.5 text-xs text-warning">{t.badge}</span> : null}
+            {t.badge ? <span className="rounded-full bg-warning-subtle px-1.5 text-xs text-warning-text">{t.badge}</span> : null}
           </button>
         );
       })}

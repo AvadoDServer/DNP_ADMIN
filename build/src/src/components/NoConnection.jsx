@@ -3,7 +3,7 @@ import WifiOff from "Icons/WifiOff";
 
 const NoConnection = () => (
   <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-4 py-20 text-center text-fg">
-    <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-danger/12 text-danger">
+    <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-danger/12 text-danger-text">
       <WifiOff scale={2} />
     </span>
     <h1 className="text-3xl font-bold tracking-tight text-fg">

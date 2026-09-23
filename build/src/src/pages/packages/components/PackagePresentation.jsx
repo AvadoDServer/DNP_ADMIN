@@ -25,7 +25,7 @@ export function LoadingState({ label = "Loading…" }) {
 export function EmptyState({ icon, title, children, action, tone = "accent" }) {
   const ring =
     tone === "danger"
-      ? "bg-danger/10 text-danger"
+      ? "bg-danger-subtle text-danger-text"
       : "bg-accent/10 text-accent";
   return (
     <Card padding="lg" className="text-center">

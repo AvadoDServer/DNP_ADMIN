@@ -15,8 +15,8 @@ const DOT_TONE = {
 // fine" green.
 const TEXT_TONE = {
   success: "text-fg-muted",
-  warning: "text-warning",
-  danger: "text-danger",
+  warning: "text-warning-text",
+  danger: "text-danger-text",
   accent: "text-accent",
   neutral: "text-fg-muted",
 };

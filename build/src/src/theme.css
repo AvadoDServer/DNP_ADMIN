@@ -94,8 +94,20 @@
   --warning-subtle: 56 43 14;
   --danger: 255 122 107;         /* crit #FF7A6B */
   --danger-subtle: 58 28 24;
-  --warning-text: 242 184 75;    /* status words on --bg (AA 4.5:1) */
+  /* Status colours used AS TEXT (AA 4.5:1 on --bg, --surface,
+     --surface-raised and their own *-subtle tint). */
+  --success-text: 92 195 188;    /* #5CC3BC */
+  --warning-text: 242 184 75;    /* #F2B84B */
   --danger-text: 255 138 122;    /* #FF8A7A */
+  /* Filled status controls (Button danger/success, toasts): the fill and
+     the text on it (AA 4.5:1). Dark: the light status fills keep their
+     look, with dark navy text on them (like --accent-fg). */
+  --success-solid: 92 195 188;
+  --warning-solid: 242 184 75;
+  --danger-solid: 255 122 107;
+  --success-fg: 10 21 48;
+  --warning-fg: 10 21 48;
+  --danger-fg: 10 21 48;
 
   /* Verdict surfaces (status-tinted backgrounds) */
   --verdict-ok: 17 38 48;
@@ -153,8 +165,19 @@
   --warning-subtle: 253 244 224;
   --danger: 229 72 63;          /* crit #E5483F */
   --danger-subtle: 253 232 230;
-  --warning-text: 138 83 0;     /* status words on --bg (AA 4.5:1) — #8A5300 */
+  /* Status colours used AS TEXT (AA 4.5:1 on --bg, --surface,
+     --surface-raised and their own *-subtle tint). */
+  --success-text: 20 110 104;   /* #146E68 */
+  --warning-text: 138 83 0;     /* #8A5300 */
   --danger-text: 179 38 30;     /* #B3261E */
+  /* Filled status controls (Button danger/success, toasts): a deeper fill
+     than the status colour so white text on it clears AA 4.5:1. */
+  --success-solid: 23 118 112;  /* #177670 */
+  --warning-solid: 158 92 0;    /* #9E5C00 */
+  --danger-solid: 196 46 38;    /* #C42E26 */
+  --success-fg: 255 255 255;
+  --warning-fg: 255 255 255;
+  --danger-fg: 255 255 255;
 
   --verdict-ok: 240 250 249;    /* lightened so the --brand/--success dot clears 3:1 */
   --verdict-warn: 255 247 228;  /* lightened so the --warning dot clears 3:1 with margin */
@@ -223,4 +246,11 @@
   --danger-color: rgb(var(--danger));
   --warning-color: rgb(var(--warning));
   --success-color: rgb(var(--success));
+  /* Filled status surfaces with text on them (toasts): fill + text colour. */
+  --success-solid-color: rgb(var(--success-solid));
+  --warning-solid-color: rgb(var(--warning-solid));
+  --danger-solid-color: rgb(var(--danger-solid));
+  --success-fg-color: rgb(var(--success-fg));
+  --warning-fg-color: rgb(var(--warning-fg));
+  --danger-fg-color: rgb(var(--danger-fg));
 }
