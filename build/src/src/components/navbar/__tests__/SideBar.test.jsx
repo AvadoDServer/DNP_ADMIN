@@ -64,7 +64,7 @@ describe("SideBar (off-canvas drawer)", () => {
 // settings/visibility.js#visibleNavItems; the mode switch itself lives in
 // the footer (SidebarFooter.jsx), rendered inside SideBar.
 describe("SideBar (Simple/Advanced items)", () => {
-  it("shows simple items by default (no System, Priority, Remote Connect or Connect (VPN))", () => {
+  it("shows simple items by default, including Priority (no System, Remote Connect or Connect (VPN))", () => {
     const history = createMemoryHistory({ initialEntries: ["/dashboard"] });
     renderSideBar(history);
 
@@ -75,7 +75,7 @@ describe("SideBar (Simple/Advanced items)", () => {
     expect(screen.getByRole("link", { name: /^Help$/ })).toBeInTheDocument();
 
     expect(screen.queryByRole("link", { name: /^System$/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^Priority$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Priority$/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^Remote Connect$/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^Connect \(VPN\)$/ })).not.toBeInTheDocument();
   });

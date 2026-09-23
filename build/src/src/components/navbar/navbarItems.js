@@ -53,8 +53,7 @@ export const sidenavItems = [
   {
     name: "Priority",
     href: "/priority",
-    icon: Priority,
-    advanced: true
+    icon: Priority
   },
   {
     name: "Help",
