@@ -5,14 +5,17 @@ import FindingRow from "components/health/FindingRow";
 import Spinner from "components/ui/Spinner";
 import { useHealth } from "health/HealthProvider";
 
-const BAND = {
-  critical: { bg: "bg-verdict-crit", dot: "bg-danger", ring: "ring-danger/30" },
-  warning: { bg: "bg-verdict-warn", dot: "bg-warning", ring: "ring-warning/30" },
-  ok: { bg: "bg-verdict-ok", dot: "bg-brand", ring: "ring-brand/30" },
+// Status-word line + device-light tone, per verdict level. `ok` uses
+// --success (the same token AvadoDevice's green light uses), so the dot
+// here and the box's status light always agree.
+const TONE = {
+  critical: { dot: "bg-danger", ring: "ring-danger/30", text: "text-danger-text" },
+  warning: { dot: "bg-warning", ring: "ring-warning/30", text: "text-warning-text" },
+  ok: { dot: "bg-success", ring: "ring-success/30", text: "text-fg" },
 };
 
 export function verdictSentence(verdict, findings) {
-  if (verdict.level === "ok") return "All good. Your AVADO is healthy.";
+  if (verdict.level === "ok") return "Your AVADO is healthy.";
   return findings[0] ? findings[0].title : verdict.label;
 }
 
@@ -21,24 +24,25 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
 
   // Until the installed-packages list has actually loaded, there is nothing
   // to have a verdict about yet — show a neutral "checking" state instead of
-  // a false "all good" (no findings computed over empty/partial data).
+  // a false "all good" (no findings computed over empty/partial data). The
+  // device drawing shows its grey ("checking") light for the same reason.
   if (!ready) {
     return (
-      <section aria-labelledby="verdict-title" className="rounded-lg border border-border bg-surface p-5 sm:p-6">
-        <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg-muted">
+      <div className="flex flex-col gap-3">
+        <p className="mb-0 flex items-center gap-2 text-sm font-semibold text-fg-muted">
           <Spinner size="sm" />
           Checking
         </p>
-        <h2 id="verdict-title" className="mb-0 break-words font-display text-2xl font-bold leading-tight text-fg sm:text-[2.5rem]">
+        <h1 className="mb-0 break-words font-display text-4xl font-bold leading-[1.06] tracking-tight text-fg sm:text-[3.375rem]">
           Checking your AVADO…
-        </h2>
-      </section>
+        </h1>
+      </div>
     );
   }
 
-  const band = BAND[verdict.level] || BAND.ok;
+  const tone = TONE[verdict.level] || TONE.ok;
   const healthy = verdict.level === "ok";
-  // The headline (h2) is already the worst finding's title — showing that
+  // The headline (h1) is already the worst finding's title — showing that
   // same finding again as the first row would just repeat it. Instead its
   // `why`/fix/secondary render right under the headline, uncollapsed, and
   // the row list below covers only the rest.
@@ -46,21 +50,22 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
   const rest = healthy ? findings : findings.slice(1);
   const shown = all ? rest : rest.slice(0, limit);
   const checkedAtButton = (
-    <button type="button" onClick={onRefresh} className="hover:text-fg">
+    <button type="button" onClick={onRefresh} className="font-medium hover:text-fg">
       Checked {checkedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · Check again
     </button>
   );
+
   return (
-    <section aria-labelledby="verdict-title" className={cn("rounded-lg border border-border p-5 sm:p-6", band.bg)}>
-      <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
-        <span aria-hidden="true" className={cn("h-2.5 w-2.5 rounded-full ring-4", band.dot, band.ring, verdict.level !== "ok" && "motion-safe:animate-pulse-once")} />
+    <div className="flex max-w-[700px] flex-col gap-5">
+      <p className={cn("mb-0 flex items-center gap-2.5 text-sm font-semibold", tone.text)}>
+        <span aria-hidden="true" className={cn("h-2.5 w-2.5 rounded-full ring-4", tone.dot, tone.ring, verdict.level !== "ok" && "motion-safe:animate-pulse-once")} />
         {verdict.label}
       </p>
-      <h2 id="verdict-title" className="mb-0 break-words font-display text-2xl font-bold leading-tight text-fg sm:text-[2.5rem]">
+      <h1 className="mb-0 break-words font-display text-4xl font-bold leading-[1.06] tracking-tight text-fg sm:text-[3.375rem]">
         {verdictSentence(verdict, findings)}
-      </h2>
+      </h1>
       {headline && (
-        <ul className="mt-2 pl-0">
+        <ul className="-mt-1 pl-0">
           {/* key={headline.id}: without it, a refresh that changes which
               finding is the headline reuses the same FindingRow instance —
               its internal "Starting…" (action-button) state would then
@@ -68,27 +73,22 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
           <FindingRow key={headline.id} finding={headline} hideTitle showWhy />
         </ul>
       )}
-      {shown.length > 0 && <ul className="mt-4 divide-y divide-border/70 pl-0">{shown.map(f => <FindingRow key={f.id} finding={f} />)}</ul>}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-fg-muted">
-        {healthy ? (
-          <span className="flex flex-wrap items-center gap-1">
-            <span>{checksPassed} checks passed ·</span>
-            {checkedAtButton}
-            <span>·</span>
-            <Link to="/help" className="font-medium text-accent hover:underline">See all</Link>
-          </span>
-        ) : (
+      {shown.length > 0 && <ul className="divide-y divide-border/70 pl-0">{shown.map(f => <FindingRow key={f.id} finding={f} />)}</ul>}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted">
+        <span>{checksPassed} other checks passed ·</span>
+        {checkedAtButton}
+        <span>·</span>
+        <Link to="/help" className="font-medium text-accent hover:underline">See all</Link>
+        {!healthy && rest.length > limit && (
           <>
-            {rest.length > limit ? (
-              <button type="button" className="font-medium text-accent hover:underline" onClick={() => setAll(a => !a)}>
-                {all ? "Show fewer" : `Show all ${rest.length}`}
-              </button>
-            ) : <span />}
-            {checkedAtButton}
+            <span>·</span>
+            <button type="button" className="font-medium text-accent hover:underline" onClick={() => setAll(a => !a)}>
+              {all ? "Show fewer" : `Show all ${rest.length}`}
+            </button>
           </>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 

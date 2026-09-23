@@ -35,6 +35,18 @@
   /* ---- Motion ------------------------------------------------------ */
   --theme-transition: 220ms cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* ---- AVADO device illustration ------------------------------------
+     Home's hero drawing (components/box/AvadoDevice.jsx): the physical
+     casing is rendered identically in both themes (per the approved
+     mockups — only the status light itself is theme/verdict driven, via
+     --success/--warning/--danger/--fg-subtle), so these live under :root
+     rather than being duplicated per [data-theme]. */
+  --device-body-start: 42 47 58;   /* #2A2F3A */
+  --device-body-end: 20 23 30;     /* #14171E */
+  --device-vent: 58 64 77;         /* #3A404D */
+  --device-label: 233 236 242;     /* #E9ECF2 */
+  --device-center: 26 29 36;       /* #1A1D24 */
+
   color-scheme: dark;
 }
 
@@ -82,6 +94,8 @@
   --warning-subtle: 56 43 14;
   --danger: 255 122 107;         /* crit #FF7A6B */
   --danger-subtle: 58 28 24;
+  --warning-text: 242 184 75;    /* status words on --bg (AA 4.5:1) */
+  --danger-text: 255 138 122;    /* #FF8A7A */
 
   /* Verdict surfaces (status-tinted backgrounds) */
   --verdict-ok: 17 38 48;
@@ -139,6 +153,8 @@
   --warning-subtle: 253 244 224;
   --danger: 229 72 63;          /* crit #E5483F */
   --danger-subtle: 253 232 230;
+  --warning-text: 138 83 0;     /* status words on --bg (AA 4.5:1) — #8A5300 */
+  --danger-text: 179 38 30;     /* #B3261E */
 
   --verdict-ok: 240 250 249;    /* lightened so the --brand/--success dot clears 3:1 */
   --verdict-warn: 255 247 228;  /* lightened so the --warning dot clears 3:1 with margin */

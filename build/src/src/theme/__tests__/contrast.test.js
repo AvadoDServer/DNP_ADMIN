@@ -58,6 +58,9 @@ describe.each(Object.entries(THEMES))("%s theme contrast", (_, selector) => {
     ["success", "verdict-ok", 3],
     ["warning", "verdict-warn", 3],
     ["danger", "verdict-crit", 3],
+    // Status words on the bare canvas (VerdictPanel "Action required") are text.
+    ["danger-text", "bg", 4.5],
+    ["warning-text", "bg", 4.5],
   ])("%s on %s ≥ %s", (fg, bg, min) => {
     expect(t[fg]).toBeDefined();
     expect(t[bg]).toBeDefined();

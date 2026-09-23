@@ -35,7 +35,7 @@ const f = (id, severity) => ({ id, severity, topic: "sync", title: `title ${id}`
 describe("verdictSentence", () => {
   it("uses the worst finding's title, or the healthy sentence", () => {
     expect(verdictSentence({ level: "critical" }, [f("a", "critical")])).toBe("title a");
-    expect(verdictSentence({ level: "ok" }, [])).toBe("All good. Your AVADO is healthy.");
+    expect(verdictSentence({ level: "ok" }, [])).toBe("Your AVADO is healthy.");
   });
 });
 
@@ -75,9 +75,26 @@ describe("VerdictView", () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getByText(/12 checks passed/)).toBeInTheDocument();
+    expect(screen.getByText(/12 other checks passed/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Check again/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute("href", "/help");
+  });
+
+  it("shows the checks-passed footer even when unhealthy (mockup: '20 other checks passed. Checked at 00:25.')", () => {
+    const findings = [f("a", "critical")];
+    render(
+      <MemoryRouter>
+        <VerdictView
+          verdict={{ level: "critical", label: "Action required" }}
+          findings={findings}
+          checkedAt={new Date(0)}
+          onRefresh={() => {}}
+          checksPassed={20}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/20 other checks passed/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Check again/ })).toBeInTheDocument();
   });
 
   it("shows a neutral checking state, with no verdict colour and no checks-passed footer, while not ready", () => {
