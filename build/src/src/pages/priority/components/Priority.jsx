@@ -347,9 +347,9 @@ function Priority({ dappnodeParams = {} }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xl font-bold text-fg">
-                    €100<span className="text-sm font-normal text-fg-muted">/year</span>
+                    €120<span className="text-sm font-normal text-fg-muted">/year</span>
                   </div>
-                  <div className="mt-0.5 text-sm text-fg-muted">Billed yearly, save €44</div>
+                  <div className="mt-0.5 text-sm text-fg-muted">Billed yearly, save €24</div>
                 </div>
                 <Badge variant="accent">Best value</Badge>
               </div>
