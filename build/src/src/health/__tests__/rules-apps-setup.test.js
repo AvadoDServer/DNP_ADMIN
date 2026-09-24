@@ -132,3 +132,18 @@ describe("robustness", () => {
     expect(appStopped(s)[0].title).toBe("weird is stopped");
   });
 });
+
+describe("Lighthouse", () => {
+  const LIGHTHOUSE = "lighthouse.avado.dnp.dappnode.eth";
+  it("a stopped Lighthouse is critical, like the other consensus clients", () => {
+    const [f] = appStopped(snapshot({ packages: [pkg(LIGHTHOUSE, { state: "exited", running: false })] }));
+    expect(f).toMatchObject({ id: `app-stopped:${LIGHTHOUSE}`, severity: "critical" });
+  });
+  it("pairs with an execution client, so Geth + Lighthouse is a complete setup", () => {
+    const s = snapshot({ packages: [pkg(GETH), pkg(LIGHTHOUSE)] });
+    expect(executionWithoutConsensus(s)).toEqual([]);
+    expect(consensusWithoutExecution(s)).toEqual([]);
+    const alone = consensusWithoutExecution(snapshot({ packages: [pkg(LIGHTHOUSE)] }));
+    expect(alone).toMatchObject([{ id: "consensus-without-execution:mainnet", severity: "critical", appId: LIGHTHOUSE }]);
+  });
+});

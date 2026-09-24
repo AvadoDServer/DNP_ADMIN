@@ -71,6 +71,14 @@ describe("chain rules", () => {
     expect(lowPeers(ok)).toEqual([]);
   });
 
+  it("uses the singular 'peer' for exactly 1 peer", () => {
+    const s = snapshot({ packages: [NIMBUS], metrics: metrics({ peers: [{ client: "nimbus", network: "mainnet", value: 1 }] }) });
+    expect(lowPeers(s)[0]).toMatchObject({
+      title: "Nimbus Consensus Client has only 1 peer",
+      detail: "1 peer (Prometheus libp2p_peers)",
+    });
+  });
+
   it("flags missed attestations, critical above half missed", () => {
     const some = snapshot({ packages: [NIMBUS], metrics: metrics({
       attesterMiss: [{ client: "nimbus", network: "mainnet", value: 2 }],

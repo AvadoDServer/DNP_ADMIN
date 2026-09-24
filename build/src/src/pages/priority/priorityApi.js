@@ -2,9 +2,9 @@ import axios from "axios";
 import api from "API/rpcMethods";
 
 /**
- * Client for the AVADO Priority Support backend (avado-priority-support-backend).
+ * Client for the AVADO Priority Care backend (avado-priority-support-backend).
  *
- *   GET  /subscription/status/:nodeId -> { hasSubscription, subscription, serverTime }
+ *   GET  /subscription/status/:nodeId -> { hasSubscription, subscription, serverTime, trialEligible? }
  *   POST /subscription/checkout       -> { url }  Stripe Checkout
  *   POST /subscription/portal         -> { url }  Stripe Customer Portal
  *
@@ -19,13 +19,39 @@ import api from "API/rpcMethods";
  *
  * In mock mode (`yarn dev`, REACT_APP_MOCK_DATA=true) every call is served locally so the page
  * is fully usable without a backend or a box.
+ *
+ * The Priority Care calls (alerts email, categories) live in ./careApi.
  */
 
-const MOCK = Boolean(import.meta.env.REACT_APP_MOCK_DATA);
+export const MOCK = Boolean(import.meta.env.REACT_APP_MOCK_DATA);
 const BASE_URL =
   import.meta.env.REACT_APP_PRIORITY_API_URL || "https://priorityapi.ava.do/api";
 
-const client = axios.create({ baseURL: BASE_URL, timeout: 15000 });
+export const client = axios.create({ baseURL: BASE_URL, timeout: 15000 });
+
+export const NEEDS_UPDATE_MESSAGE =
+  "Your AVADO needs a system update before it can do this. Go to System and install the available update, then try again.";
+
+/**
+ * True when the DAPPMANAGER is too old for the request: the signing call is
+ * missing altogether (before the Stripe release), or it only knows the
+ * billing actions (before Priority Care).
+ */
+export function isOldDappmanagerError(e, action) {
+  const message = (e && e.message) || "";
+  if (/no_such_procedure|no callee registered/i.test(message)) return true;
+  return Boolean(
+    action &&
+      /kwarg action must be one of/i.test(message) &&
+      !message.includes(action)
+  );
+}
+
+export function needsUpdateError() {
+  const error = new Error(NEEDS_UPDATE_MESSAGE);
+  error.code = "needs_update";
+  return error;
+}
 
 export const NODE_ID_REGEX = /^0x[0-9a-fA-F]{40}$/;
 
@@ -40,8 +66,13 @@ function toError(error, fallback) {
 
 /* ---------------- mock backend (dev only) ---------------- */
 let mockSubscription = null;
-const delay = (value, ms = 600) =>
+export const delay = (value, ms = 600) =>
   new Promise(resolve => setTimeout(() => resolve(value), ms));
+
+/** Mock mode only: the subscription the mock backend holds. */
+export function getMockSubscription() {
+  return mockSubscription;
+}
 
 function mockSubscribe(plan) {
   const start = new Date();
@@ -67,7 +98,8 @@ export async function getStatus(nodeId) {
     return delay({
       hasSubscription: Boolean(mockSubscription),
       subscription: mockSubscription,
-      serverTime: Math.floor(Date.now() / 1000)
+      serverTime: Math.floor(Date.now() / 1000),
+      trialEligible: !mockSubscription
     });
   try {
     const { data } = await client.get(
