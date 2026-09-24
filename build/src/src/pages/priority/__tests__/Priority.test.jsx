@@ -65,6 +65,12 @@ describe("Priority Care page", () => {
     expect(BENEFITS.length).toBeGreaterThan(3);
   });
 
+  it("names every kind of problem the alerts cover, in plain words", () => {
+    const alerts = BENEFITS.find(b => b.includes("checks itself every 10 minutes"));
+    for (const kind of ["a stopped app", "a full disk", "a missing fee recipient", "an update that can't install"])
+      expect(alerts).toContain(kind);
+  });
+
   it("does not promise remote access in the benefits", () => {
     expect(BENEFITS.join(" ")).not.toMatch(/remote|let avado in/i);
   });
