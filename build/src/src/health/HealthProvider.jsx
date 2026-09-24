@@ -11,8 +11,19 @@ import { computeUpdates } from "services/store/updates";
 import { fetchMetrics } from "./prometheus";
 import { fetchFeeRecipients, VALIDATOR_CLIENTS } from "./feeRecipients";
 import { trackUpdateAges } from "./updateAges";
+import { CARE_PACKAGE, careFindingsFromStatus, fetchCareStatus, mergeCareFindings } from "./careFindings";
 import { PROMETHEUS_PACKAGE } from "./clients";
-import { runChecksDetailed, verdictOf } from "./engine";
+import { runChecksDetailed, verdictOf, SEVERITIES, TOPICS } from "./engine";
+
+const rankOf = (list, v) => (list.indexOf(v) === -1 ? list.length : list.indexOf(v));
+// Same order as the engine's own list, for findings merged in from AVADO Care.
+const sortFindings = list =>
+  [...list].sort(
+    (a, b) =>
+      rankOf(SEVERITIES, a.severity) - rankOf(SEVERITIES, b.severity) ||
+      rankOf(TOPICS, a.topic) - rankOf(TOPICS, b.topic) ||
+      String(a.title).localeCompare(String(b.title))
+  );
 import { ALL_RULES } from "./rules";
 import { isDismissed, dismiss as persistDismiss } from "./dismissals";
 
@@ -20,6 +31,7 @@ const STORE_INTERVAL = 10 * 60 * 1000;
 const METRICS_INTERVAL = 60 * 1000;
 const NODEID_TIMEOUT_MS = 20 * 1000;
 const FEE_RECIPIENT_INTERVAL = 10 * 60 * 1000;
+const CARE_STATUS_INTERVAL = 10 * 60 * 1000;
 const UPDATE_AGES_KEY = "avado.updateAges";
 
 // When each pending update was first seen, kept in this browser so the
@@ -48,6 +60,7 @@ export function HealthProvider({
   fetchStoreImpl = fetchStore,
   fetchMetricsImpl = fetchMetrics,
   fetchFeeRecipientsImpl = fetchFeeRecipients,
+  fetchCareStatusImpl = fetchCareStatus,
 }) {
   const packages = useSelector(getDnpInstalled) || [];
   const stats = useSelector(getDappnodeStats) || {};
@@ -74,6 +87,7 @@ export function HealthProvider({
   const [tick, setTick] = useState(0);
   const [dismissVersion, setDismissVersion] = useState(0);
   const [feeRecipients, setFeeRecipients] = useState(null);
+  const [careFindings, setCareFindings] = useState([]);
 
   // A string derived from installed name@version pairs. Used as an effect
   // dependency instead of the `packages` array itself, whose identity changes
@@ -171,6 +185,30 @@ export function HealthProvider({
     };
   }, [validatorKey, tick]);
 
+  // AVADO Care's fee-recipient findings (it can read the validator clients,
+  // the browser can't). Only while the Care package runs; every 10 minutes,
+  // skipped while the tab is hidden. Unreadable → no Care findings.
+  const careRunning = packages.some(p => p.name === CARE_PACKAGE && p.running);
+  useEffect(() => {
+    if (!careRunning) {
+      setCareFindings([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const load = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      fetchCareStatusImpl()
+        .then(status => !cancelled && setCareFindings(careFindingsFromStatus(status)))
+        .catch(() => !cancelled && setCareFindings([]));
+    };
+    load();
+    const t = setInterval(load, CARE_STATUS_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [careRunning, tick]);
+
   const updates = useMemo(
     () => (store.packages ? computeUpdates(store.packages, packages) : null),
     [store.packages, packageKey]
@@ -205,9 +243,10 @@ export function HealthProvider({
     // Findings are not computed until `ready`: with an empty/partial
     // `packages` snapshot every rule would just find nothing wrong, which
     // would flash a false "all good" verdict before the real data arrives.
-    const { findings: allFindings, passed: checksPassed, total: checksTotal } = ready
+    const { findings: ownFindings, passed: checksPassed, total: checksTotal } = ready
       ? runChecksDetailed(snapshot, ALL_RULES)
       : { findings: [], passed: 0, total: 0 };
+    const allFindings = ready ? sortFindings(mergeCareFindings(ownFindings, careFindings)) : ownFindings;
     const findings = ready ? allFindings.filter(f => !(f.dismissable && isDismissed(f.id))) : [];
     return {
       ready,
@@ -237,7 +276,7 @@ export function HealthProvider({
         setDismissVersion(v => v + 1);
       },
     };
-  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, coreAvailable, metrics, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, coreAvailable, metrics, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }

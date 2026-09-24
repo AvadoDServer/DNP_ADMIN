@@ -46,7 +46,7 @@ function Probe({ dismissId }) {
 const renderWith = (props, probeProps, stateOverride) =>
   render(
     <Provider store={createStore(() => stateOverride || state)}>
-      <HealthProvider fetchFeeRecipientsImpl={async () => null} {...props}>
+      <HealthProvider fetchFeeRecipientsImpl={async () => null} fetchCareStatusImpl={async () => ({ findings: [] })} {...props}>
         <Probe {...probeProps} />
       </HealthProvider>
     </Provider>
@@ -57,6 +57,48 @@ beforeEach(() => {
 });
 
 describe("HealthProvider", () => {
+  const withCare = {
+    ...state,
+    packages: [...state.packages, { name: "care.avado.dnp.dappnode.eth", version: "0.1.0", state: "running", running: true, manifest: { title: "AVADO Care" } }],
+  };
+  const careStatus = {
+    findings: [
+      { id: "fee-recipient-missing:nimbus.avado.dnp.dappnode.eth", severity: "critical", topic: "setup", title: "Validators in Nimbus have no fee recipient", why: "Fees are lost." },
+      { id: "disk-high", severity: "critical", topic: "storage", title: "Your disk is 99% full", why: "" },
+    ],
+  };
+
+  it("shows AVADO Care's fee-recipient finding while Care runs (and nothing else from Care)", async () => {
+    let calls = 0;
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null, fetchCareStatusImpl: async () => (calls++, careStatus) },
+      {},
+      withCare
+    );
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("fee-recipient-missing:nimbus.avado.dnp.dappnode.eth"));
+    expect(screen.getByTestId("ids").textContent).not.toContain("disk-high");
+    expect(screen.getByTestId("verdict").textContent).toBe("Action required");
+    expect(calls).toBe(1);
+  });
+
+  it("without Care, or when its status can't be read, nothing changes", async () => {
+    let calls = 0;
+    renderWith({ fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null, fetchCareStatusImpl: async () => (calls++, careStatus) });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(calls).toBe(0);
+    expect(screen.getByTestId("ids").textContent).not.toContain("fee-recipient-missing");
+  });
+
+  it("an unreadable Care status adds nothing", async () => {
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null, fetchCareStatusImpl: async () => { throw Error("502"); } },
+      {},
+      withCare
+    );
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ids").textContent).not.toContain("fee-recipient-missing");
+  });
+
   it("feeds update ages into the rules and makes no keymanager request from the browser", async () => {
     localStorage.setItem("avado.updateAges", JSON.stringify({ "nimbus.avado.dnp.dappnode.eth": Date.now() - 3 * 24 * 3600 * 1000 }));
     const feeCalls = [];
