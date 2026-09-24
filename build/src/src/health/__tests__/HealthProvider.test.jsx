@@ -57,20 +57,21 @@ beforeEach(() => {
 });
 
 describe("HealthProvider", () => {
-  it("feeds fee recipients and update ages into the rules", async () => {
+  it("feeds update ages into the rules and makes no keymanager request from the browser", async () => {
     localStorage.setItem("avado.updateAges", JSON.stringify({ "nimbus.avado.dnp.dappnode.eth": Date.now() - 3 * 24 * 3600 * 1000 }));
-    const seen = [];
+    const feeCalls = [];
     renderWith({
       fetchStoreImpl: async () => ({ packages: [{ manifest: { name: "nimbus.avado.dnp.dappnode.eth", version: "0.0.49" } }] }),
       fetchMetricsImpl: async () => null,
-      fetchFeeRecipientsImpl: async packages => {
-        seen.push(packages.map(p => p.name));
+      fetchFeeRecipientsImpl: async (...args) => {
+        feeCalls.push(args);
         return { "nimbus.avado.dnp.dappnode.eth": { validators: 2, checked: 2, missing: 1 } };
       },
     });
-    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("fee-recipient-missing:nimbus.avado.dnp.dappnode.eth"));
     await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("update-blocked:nimbus.avado.dnp.dappnode.eth"));
-    expect(seen[0]).toEqual(["nimbus.avado.dnp.dappnode.eth"]);
+    // Nimbus runs, but no validator client is readable from http://my.ava.do (CORS): nothing is fetched
+    expect(feeCalls).toEqual([]);
+    expect(screen.getByTestId("allids").textContent).not.toContain("fee-recipient-missing");
     // the first-seen time is kept, not reset
     const ages = JSON.parse(localStorage.getItem("avado.updateAges"));
     expect(Date.now() - ages["nimbus.avado.dnp.dappnode.eth"]).toBeGreaterThan(2 * 24 * 3600 * 1000);

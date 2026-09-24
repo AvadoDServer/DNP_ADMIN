@@ -81,9 +81,12 @@ export function HealthProvider({
   // actually changed.
   const packageKey = packages.map(p => `${p.name}@${p.version}`).join("|");
   const prometheusRunning = packages.some(p => p.name === PROMETHEUS_PACKAGE && p.running);
-  // Which validator clients run, as a stable string (effect dependency).
+  // Which browser-readable validator clients run, as a stable string (effect
+  // dependency). None is readable from http://my.ava.do today (their CORS
+  // lists leave the Admin out, see health/feeRecipients.js), so no request
+  // is made and `feeRecipients` stays null (the rule is skipped).
   const validatorKey = packages
-    .filter(p => p.running && VALIDATOR_CLIENTS.some(c => c.name === p.name))
+    .filter(p => p.running && VALIDATOR_CLIENTS.some(c => c.name === p.name && c.browserReadable))
     .map(p => p.name)
     .sort()
     .join("|");
@@ -157,7 +160,7 @@ export function HealthProvider({
     }
     let cancelled = false;
     const load = () =>
-      fetchFeeRecipientsImpl(packages)
+      fetchFeeRecipientsImpl(packages, undefined, { browser: true })
         .then(r => !cancelled && setFeeRecipients(r))
         .catch(() => !cancelled && setFeeRecipients(null));
     load();
