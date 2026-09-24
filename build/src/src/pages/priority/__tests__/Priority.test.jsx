@@ -56,6 +56,15 @@ describe("Priority Care page", () => {
     expect(screen.queryByTestId("care-section")).not.toBeInTheDocument();
   });
 
+  it("keeps the original support benefits first, above the Priority Care ones", () => {
+    expect(BENEFITS.slice(0, 3)).toEqual([
+      "Priority email support with 24-hour response time",
+      "Access to private support channels",
+      "Personal 1-on-1 support sessions",
+    ]);
+    expect(BENEFITS.length).toBeGreaterThan(3);
+  });
+
   it("does not promise remote access in the benefits", () => {
     expect(BENEFITS.join(" ")).not.toMatch(/remote|let avado in/i);
   });

@@ -30,6 +30,9 @@ import Notice from "./Notice";
  */
 
 export const BENEFITS = [
+  "Priority email support with 24-hour response time",
+  "Access to private support channels",
+  "Personal 1-on-1 support sessions",
   "An email when your AVADO goes offline, and another when it is back",
   "Your AVADO checks itself every 10 minutes and emails you about serious problems, like a stopped app or a full disk",
   "A warning when a version you run has a known problem or a network upgrade deadline is close",
