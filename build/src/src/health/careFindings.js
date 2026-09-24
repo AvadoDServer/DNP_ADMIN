@@ -15,15 +15,19 @@ export const CARE_SOURCE_NOTE = "Checked by AVADO Care.";
 
 const ID = /^fee-recipient-missing:[a-z0-9.-]{1,120}$/;
 const SEVERITIES = new Set(["critical", "warning"]);
+// One finding per validator client at most; a bound keeps a garbled status from flooding the list
+export const MAX_CARE_FINDINGS = 10;
 
 /** Care's findings with an allowed prefix, as Admin findings; [] for anything unexpected. */
 export function careFindingsFromStatus(status) {
   const list = status && Array.isArray(status.findings) ? status.findings : [];
   const out = [];
   for (const f of list) {
+    if (out.length >= MAX_CARE_FINDINGS) break;
     if (!f || typeof f.id !== "string" || !ID.test(f.id)) continue;
     if (!CARE_FINDING_PREFIXES.some(p => f.id.startsWith(p))) continue;
     if (!SEVERITIES.has(f.severity) || typeof f.title !== "string" || !f.title) continue;
+    if (out.some(o => o.id === f.id)) continue;
     const appId = f.id.slice(f.id.indexOf(":") + 1);
     const why = typeof f.why === "string" && f.why ? `${f.why} ` : "";
     out.push({

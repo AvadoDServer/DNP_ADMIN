@@ -1,4 +1,4 @@
-import { careFindingsFromStatus, mergeCareFindings, CARE_SOURCE_NOTE } from "health/careFindings";
+import { careFindingsFromStatus, mergeCareFindings, CARE_SOURCE_NOTE, MAX_CARE_FINDINGS } from "health/careFindings";
 
 const NIMBUS = "nimbus.avado.dnp.dappnode.eth";
 const careFee = {
@@ -32,6 +32,14 @@ describe("careFindingsFromStatus", () => {
     expect(careFindingsFromStatus({ findings: [{ ...careFee, severity: "info" }] })).toEqual([]);
     expect(careFindingsFromStatus({ findings: [{ ...careFee, id: "fee-recipient-missing:<script>" }] })).toEqual([]);
     expect(careFindingsFromStatus({ findings: [{ ...careFee, title: "" }] })).toEqual([]);
+  });
+});
+
+describe("careFindingsFromStatus limits", () => {
+  it("keeps at most MAX_CARE_FINDINGS and drops repeated ids", () => {
+    const many = Array.from({ length: 500 }, (_, i) => ({ ...careFee, id: `fee-recipient-missing:pkg${i}.avado.dnp.dappnode.eth` }));
+    expect(careFindingsFromStatus({ findings: many })).toHaveLength(MAX_CARE_FINDINGS);
+    expect(careFindingsFromStatus({ findings: [careFee, careFee, careFee] })).toHaveLength(1);
   });
 });
 
