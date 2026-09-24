@@ -9,6 +9,8 @@ import { getIsLoaded, getLoadingError } from "services/loadingStatus/selectors";
 import { fetchStore } from "services/store/fetchStore";
 import { computeUpdates } from "services/store/updates";
 import { fetchMetrics } from "./prometheus";
+import { fetchFeeRecipients, VALIDATOR_CLIENTS } from "./feeRecipients";
+import { trackUpdateAges } from "./updateAges";
 import { PROMETHEUS_PACKAGE } from "./clients";
 import { runChecksDetailed, verdictOf } from "./engine";
 import { ALL_RULES } from "./rules";
@@ -17,10 +19,36 @@ import { isDismissed, dismiss as persistDismiss } from "./dismissals";
 const STORE_INTERVAL = 10 * 60 * 1000;
 const METRICS_INTERVAL = 60 * 1000;
 const NODEID_TIMEOUT_MS = 20 * 1000;
+const FEE_RECIPIENT_INTERVAL = 10 * 60 * 1000;
+const UPDATE_AGES_KEY = "avado.updateAges";
+
+// When each pending update was first seen, kept in this browser so the
+// "update blocked" check (48 h) survives reloads. Storage errors (private
+// mode, blocked storage) only mean the clock starts again on reload.
+function readUpdateAges() {
+  try {
+    const v = JSON.parse(localStorage.getItem(UPDATE_AGES_KEY) || "null");
+    return v && typeof v === "object" ? v : null;
+  } catch (e) {
+    return null;
+  }
+}
+function writeUpdateAges(ages) {
+  try {
+    localStorage.setItem(UPDATE_AGES_KEY, JSON.stringify(ages || {}));
+  } catch (e) {
+    // ignore
+  }
+}
 
 const HealthContext = createContext(null);
 
-export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMetricsImpl = fetchMetrics }) {
+export function HealthProvider({
+  children,
+  fetchStoreImpl = fetchStore,
+  fetchMetricsImpl = fetchMetrics,
+  fetchFeeRecipientsImpl = fetchFeeRecipients,
+}) {
   const packages = useSelector(getDnpInstalled) || [];
   const stats = useSelector(getDappnodeStats) || {};
   const params = useSelector(getDappnodeParams) || {};
@@ -45,6 +73,7 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
   const [metrics, setMetrics] = useState({ status: "not-installed", data: null });
   const [tick, setTick] = useState(0);
   const [dismissVersion, setDismissVersion] = useState(0);
+  const [feeRecipients, setFeeRecipients] = useState(null);
 
   // A string derived from installed name@version pairs. Used as an effect
   // dependency instead of the `packages` array itself, whose identity changes
@@ -52,6 +81,12 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
   // actually changed.
   const packageKey = packages.map(p => `${p.name}@${p.version}`).join("|");
   const prometheusRunning = packages.some(p => p.name === PROMETHEUS_PACKAGE && p.running);
+  // Which validator clients run, as a stable string (effect dependency).
+  const validatorKey = packages
+    .filter(p => p.running && VALIDATOR_CLIENTS.some(c => c.name === p.name))
+    .map(p => p.name)
+    .sort()
+    .join("|");
 
   // Store catalogue (updates). Depends on `packageKey`, not `packages`, so a
   // WAMP push that leaves installed versions unchanged does not refetch the
@@ -114,10 +149,36 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
     };
   }, [prometheusRunning, tick]);
 
+  // Fee recipients of the loaded validator keys, only while a validator client runs.
+  useEffect(() => {
+    if (!validatorKey) {
+      setFeeRecipients(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const load = () =>
+      fetchFeeRecipientsImpl(packages)
+        .then(r => !cancelled && setFeeRecipients(r))
+        .catch(() => !cancelled && setFeeRecipients(null));
+    load();
+    const t = setInterval(load, FEE_RECIPIENT_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [validatorKey, tick]);
+
   const updates = useMemo(
     () => (store.packages ? computeUpdates(store.packages, packages) : null),
     [store.packages, packageKey]
   );
+
+  // First-seen time of each pending update (for the 48 h "update blocked" check).
+  const updateAges = useMemo(() => {
+    const ages = trackUpdateAges(readUpdateAges(), updates, Date.now());
+    if (updates) writeUpdateAges(ages);
+    return ages;
+  }, [updates]);
 
   const value = useMemo(() => {
     const snapshot = {
@@ -129,6 +190,8 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
       updates,
       coreUpdate: { available: Boolean(coreAvailable) },
       metrics: metrics.data,
+      feeRecipients,
+      updateAges,
       sources: { updates: store.status, metrics: metrics.status },
       // Recomputed whenever this memo re-runs, which includes every metrics
       // poll (`metrics` is a dep below). head-behind is the only rule that
@@ -171,7 +234,7 @@ export function HealthProvider({ children, fetchStoreImpl = fetchStore, fetchMet
         setDismissVersion(v => v + 1);
       },
     };
-  }, [ready, packages, stats, params, diagnoses, chainData, updates, coreAvailable, metrics, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, coreAvailable, metrics, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }

@@ -46,7 +46,7 @@ function Probe({ dismissId }) {
 const renderWith = (props, probeProps, stateOverride) =>
   render(
     <Provider store={createStore(() => stateOverride || state)}>
-      <HealthProvider {...props}>
+      <HealthProvider fetchFeeRecipientsImpl={async () => null} {...props}>
         <Probe {...probeProps} />
       </HealthProvider>
     </Provider>
@@ -57,6 +57,25 @@ beforeEach(() => {
 });
 
 describe("HealthProvider", () => {
+  it("feeds fee recipients and update ages into the rules", async () => {
+    localStorage.setItem("avado.updateAges", JSON.stringify({ "nimbus.avado.dnp.dappnode.eth": Date.now() - 3 * 24 * 3600 * 1000 }));
+    const seen = [];
+    renderWith({
+      fetchStoreImpl: async () => ({ packages: [{ manifest: { name: "nimbus.avado.dnp.dappnode.eth", version: "0.0.49" } }] }),
+      fetchMetricsImpl: async () => null,
+      fetchFeeRecipientsImpl: async packages => {
+        seen.push(packages.map(p => p.name));
+        return { "nimbus.avado.dnp.dappnode.eth": { validators: 2, checked: 2, missing: 1 } };
+      },
+    });
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("fee-recipient-missing:nimbus.avado.dnp.dappnode.eth"));
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("update-blocked:nimbus.avado.dnp.dappnode.eth"));
+    expect(seen[0]).toEqual(["nimbus.avado.dnp.dappnode.eth"]);
+    // the first-seen time is kept, not reset
+    const ages = JSON.parse(localStorage.getItem("avado.updateAges"));
+    expect(Date.now() - ages["nimbus.avado.dnp.dappnode.eth"]).toBeGreaterThan(2 * 24 * 3600 * 1000);
+  });
+
   it("combines redux state, store updates and metrics into findings", async () => {
     renderWith({
       fetchStoreImpl: async () => ({ packages: [{ manifest: { name: "nimbus.avado.dnp.dappnode.eth", version: "0.0.49" } }] }),
