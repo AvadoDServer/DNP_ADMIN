@@ -4,6 +4,8 @@ describe("client table", () => {
   it("knows the AVADO mainnet clients from the store", () => {
     expect(getClient("nimbus.avado.dnp.dappnode.eth")).toMatchObject({ role: ROLES.CONSENSUS, network: "mainnet", promClient: "nimbus" });
     expect(getClient("teku.avado.dnp.dappnode.eth")).toMatchObject({ role: ROLES.CONSENSUS, network: "mainnet" });
+    // AVADO-DNP-Prometheus labels the Lighthouse target { client: lighthouse, network: mainnet }
+    expect(getClient("lighthouse.avado.dnp.dappnode.eth")).toMatchObject({ role: ROLES.CONSENSUS, network: "mainnet", promClient: "lighthouse" });
     expect(getClient("ethchain-geth.public.dappnode.eth")).toMatchObject({ role: ROLES.EXECUTION, network: "mainnet", canResetData: true });
     expect(getClient("avado-dnp-nethermind.public.dappnode.eth")).toMatchObject({ role: ROLES.EXECUTION, network: "mainnet" });
     expect(getClient("grafana.avado.dappnode.eth")).toMatchObject({ role: ROLES.MONITORING });
@@ -11,7 +13,7 @@ describe("client table", () => {
   });
 
   it("never offers a data reset for consensus clients (validator keys live there)", () => {
-    for (const name of ["nimbus.avado.dnp.dappnode.eth", "teku.avado.dnp.dappnode.eth", "eth2validator.avado.dnp.dappnode.eth"])
+    for (const name of ["nimbus.avado.dnp.dappnode.eth", "teku.avado.dnp.dappnode.eth", "lighthouse.avado.dnp.dappnode.eth", "eth2validator.avado.dnp.dappnode.eth"])
       expect(getClient(name).canResetData).toBe(false);
   });
 
