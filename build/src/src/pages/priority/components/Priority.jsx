@@ -18,21 +18,25 @@ import {
   createPortal,
   NODE_ID_REGEX
 } from "../priorityApi";
+import CareSection from "./CareSection";
+import Notice from "./Notice";
 
 /**
- * Priority Support page.
+ * Priority Care page.
  * Shows the box's subscription status, starts a Stripe Checkout to subscribe and
  * opens the Stripe Customer Portal to manage billing (see ../priorityApi). The
  * subscription belongs to the box, identified by its DAppNode node id.
+ * Subscribers also get the Priority Care alerts (see ./CareSection).
  */
 
-const BENEFITS = [
-  "Priority email support with 24-hour response time",
-  "Access to private support channels",
-  "Personal 1-on-1 support sessions",
-  "Advanced troubleshooting assistance",
-  "Configuration optimization support",
-  "Expert guidance for complex setups"
+export const BENEFITS = [
+  "An email when your AVADO goes offline, and another when it is back",
+  "Your AVADO checks itself every 10 minutes and emails you about serious problems, like a stopped app or a full disk",
+  "A warning when a version you run has a known problem or a network upgrade deadline is close",
+  "A monthly health report in plain language",
+  "A reply within 8 business hours when your AVADO is down",
+  "Two check-ups a year and one guided move to new hardware a year",
+  "10% off AVADO hardware"
 ];
 
 // After Stripe sends the browser back, the subscription arrives by webhook a
@@ -68,23 +72,6 @@ function BenefitList({ items }) {
   );
 }
 
-function Notice({ variant, children }) {
-  const styles = {
-    danger: "border-danger/40 bg-danger-subtle text-danger-text",
-    warning: "border-warning/50 bg-warning/10 text-fg",
-    success: "border-success/40 bg-success-subtle text-success-text",
-    neutral: "border-border bg-bg-subtle text-fg-muted"
-  };
-  return (
-    <div
-      role={variant === "danger" ? "alert" : "status"}
-      className={`rounded-md border px-3 py-2 text-sm ${styles[variant] || styles.neutral}`}
-    >
-      {children}
-    </div>
-  );
-}
-
 function formatDate(value) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
@@ -109,6 +96,7 @@ function Priority({ dappnodeParams = {} }) {
   const checkoutResult = new URLSearchParams(location.search).get("checkout");
 
   const [subscription, setSubscription] = useState(null);
+  const [trialEligible, setTrialEligible] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -126,7 +114,10 @@ function Priority({ dappnodeParams = {} }) {
   const loadStatus = useCallback(async () => {
     const res = await getStatus(nodeId);
     const current = res && res.hasSubscription ? res.subscription : null;
-    if (mounted.current) setSubscription(current);
+    if (mounted.current) {
+      setSubscription(current);
+      setTrialEligible(Boolean(res && res.trialEligible === true));
+    }
     return current;
   }, [nodeId]);
 
@@ -163,7 +154,7 @@ function Priority({ dappnodeParams = {} }) {
       if (!mounted.current) return;
       if (current) {
         setConfirming(false);
-        setNotice("Thank you! Your Priority Support subscription is active.");
+        setNotice("Thank you! Priority Care is now active on this AVADO.");
       } else if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
         setConfirming(false);
         setNotice(
@@ -208,13 +199,14 @@ function Priority({ dappnodeParams = {} }) {
   const manageBilling = () => goTo("portal", () => createPortal(nodeId));
 
   const pastDue = subscription && subscription.status === "past_due";
+  const trialing = subscription && subscription.status === "trialing";
   const cancelling = subscription && subscription.cancelAtPeriodEnd;
 
   return (
     <div className="animate-fade-in">
       <PageHeader
-        title="Priority Support"
-        subtitle="Faster, dedicated help from the AVADO team for your node."
+        title="Priority Care"
+        subtitle="AVADO keeps an eye on your box and helps you first when something goes wrong."
       />
       <div className="flex w-full flex-col gap-6">
 
@@ -238,6 +230,10 @@ function Priority({ dappnodeParams = {} }) {
               </Badge>
             ) : cancelling ? (
               <Badge variant="neutral">Cancelled</Badge>
+            ) : trialing ? (
+              <Badge variant="accent" dot>
+                Free trial
+              </Badge>
             ) : (
               <Badge variant="success" dot>
                 Active
@@ -247,7 +243,7 @@ function Priority({ dappnodeParams = {} }) {
 
           {pastDue && (
             <Notice variant="warning">
-              Your last payment failed. Priority Support stays active while we retry.
+              Your last payment failed. Priority Care stays active while we retry.
               Please update your payment method under Manage billing.
             </Notice>
           )}
@@ -264,7 +260,7 @@ function Priority({ dappnodeParams = {} }) {
             {subscription.endDate && (
               <div className="rounded-md border border-border bg-bg-subtle p-3">
                 <dt className="text-xs text-fg-subtle">
-                  {cancelling ? "Ends on" : "Renews on"}
+                  {cancelling ? "Ends on" : trialing ? "Trial ends on" : "Renews on"}
                 </dt>
                 <dd className="mt-0.5 text-sm font-medium text-fg">
                   {formatDate(subscription.endDate)}
@@ -292,10 +288,10 @@ function Priority({ dappnodeParams = {} }) {
 
           <div className="flex flex-col gap-3 border-t border-border pt-4">
             <h3 className="text-sm font-semibold text-fg">Your benefits</h3>
-            <BenefitList items={BENEFITS.slice(0, 5)} />
+            <BenefitList items={BENEFITS} />
           </div>
           <p className="text-sm text-fg-muted">
-            Need help? Contact our priority support team at{" "}
+            Need help? Contact the AVADO Priority Care team at{" "}
             <a className="font-medium text-accent hover:underline" href="mailto:ziga@ava.do">
               ziga@ava.do
             </a>
@@ -305,12 +301,26 @@ function Priority({ dappnodeParams = {} }) {
       ) : (
         <Card padding="lg" className="flex flex-col gap-5">
           <div className="flex flex-col gap-1">
-            <CardTitle className="text-lg">Upgrade to Priority Support</CardTitle>
+            <CardTitle className="text-lg">
+              {trialEligible ? "Try Priority Care free for 14 days" : "Get Priority Care"}
+            </CardTitle>
             <CardDescription>
-              Everything you need to keep your node running smoothly, backed by the AVADO team.
+              AVADO watches your box for you, tells you when something needs attention and
+              helps you first.
             </CardDescription>
           </div>
           <BenefitList items={BENEFITS} />
+          <p className="text-xs text-fg-subtle">
+            Always free for everyone: the health checks and fix buttons in this Admin, security
+            and network upgrade updates, and basic support.
+          </p>
+
+          {trialEligible && (
+            <Notice variant="success">
+              Your first 14 days are free. Pick a plan below; you are only charged when the trial
+              ends, and you can cancel any time before that.
+            </Notice>
+          )}
 
           {statusError && (
             <Notice variant="warning">
@@ -331,7 +341,9 @@ function Priority({ dappnodeParams = {} }) {
                 <div className="text-xl font-bold text-fg">
                   €12<span className="text-sm font-normal text-fg-muted">/month</span>
                 </div>
-                <div className="mt-0.5 text-sm text-fg-muted">Billed monthly</div>
+                <div className="mt-0.5 text-sm text-fg-muted">
+                  {trialEligible ? "Billed monthly after the free trial" : "Billed monthly"}
+                </div>
               </div>
               <Button
                 variant="outline"
@@ -340,7 +352,7 @@ function Priority({ dappnodeParams = {} }) {
                 loading={busy === "monthly"}
                 disabled={Boolean(busy) || !identityReady}
               >
-                Subscribe monthly
+                {trialEligible ? "Start free trial, monthly" : "Subscribe monthly"}
               </Button>
             </div>
             <div className="flex flex-col gap-3 rounded-lg border border-accent/60 bg-accent/[0.06] p-4">
@@ -349,7 +361,9 @@ function Priority({ dappnodeParams = {} }) {
                   <div className="text-xl font-bold text-fg">
                     €120<span className="text-sm font-normal text-fg-muted">/year</span>
                   </div>
-                  <div className="mt-0.5 text-sm text-fg-muted">Billed yearly, save €24</div>
+                  <div className="mt-0.5 text-sm text-fg-muted">
+                    {trialEligible ? "Billed yearly after the free trial, save €24" : "Billed yearly, save €24"}
+                  </div>
                 </div>
                 <Badge variant="accent">Best value</Badge>
               </div>
@@ -359,7 +373,7 @@ function Priority({ dappnodeParams = {} }) {
                 loading={busy === "yearly"}
                 disabled={Boolean(busy) || !identityReady}
               >
-                Subscribe yearly
+                {trialEligible ? "Start free trial, yearly" : "Subscribe yearly"}
               </Button>
             </div>
           </div>
@@ -369,6 +383,10 @@ function Priority({ dappnodeParams = {} }) {
             automatically. Cancel any time from this page.
           </p>
         </Card>
+      )}
+
+      {subscription && !statusLoading && !confirming && identityReady && (
+        <CareSection nodeId={nodeId} />
       )}
       </div>
     </div>

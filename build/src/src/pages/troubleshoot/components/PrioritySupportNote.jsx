@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 export default function PrioritySupportNote() {
   return (
     <p className="mt-4 text-sm text-fg-muted">
-      Priority support subscribers get faster answers — manage it in{" "}
+      Priority Care subscribers get faster answers — manage it in{" "}
       <Link to="/priority" className="font-medium text-accent hover:underline">
         Priority
       </Link>

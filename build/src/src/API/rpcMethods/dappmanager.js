@@ -504,11 +504,15 @@ export default {
 
   /**
    * [signPrioritySupportRequest]
-   * Signs a Priority Support billing request with the box identity key, so the
-   * billing backend knows it comes from the box that owns the nodeid.
+   * Signs a Priority Care request with the box identity key, so the
+   * backend knows it comes from the box that owns the nodeid.
    *
-   * @param {string} action "checkout" | "portal"
+   * @param {string} action "checkout" | "portal", or (newer DAPPMANAGER) the
+   * Priority Care actions "care-heartbeat" | "care-settings" |
+   * "remote-help-start" | "remote-help-end"
    * @param {string} plan "monthly" | "yearly", only for "checkout"
+   * @param {string} payloadHash only for the Priority Care actions: sha256 hex
+   * of the exact payload string sent to the backend
    * @param {number} timestamp unix seconds, the billing backend's serverTime
    * @returns {object} result: {
    *   nodeid: "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
