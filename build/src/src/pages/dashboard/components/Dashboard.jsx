@@ -12,6 +12,7 @@ import { useHealth } from "health/HealthProvider";
 import VerdictPanel from "./VerdictPanel";
 import ResourcesStrip from "./ResourcesStrip";
 import ChainStatus from "./ChainStatus";
+import EthPrice from "./EthPrice";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
@@ -19,7 +20,6 @@ import Badge from "components/ui/Badge";
 import Skeleton from "components/ui/Skeleton";
 import { PageHeader, SectionHeader } from "components/ui/PageHeader";
 import AppCard from "components/apps/AppCard";
-import AvadoDevice from "components/box/AvadoDevice";
 import * as s from "../../packages/selectors.js";
 
 /** Shimmer placeholder for an app "bay" (AppCard's shape), shown while packages are still loading. */
@@ -52,11 +52,7 @@ function Dashboard({
   installedpackages,
   history,
 }) {
-  const { ready, verdict } = useHealth();
-  // The device's status light always agrees with VerdictPanel: grey while
-  // health isn't ready yet, otherwise the verdict's own level (its values —
-  // ok/warning/critical — line up 1:1 with AvadoDevice's `light` prop).
-  const deviceLight = ready ? verdict.level : "checking";
+  const { ready } = useHealth();
 
   useEffect(() => {
     const interval = setInterval(fetchDappnodeStats, 5 * 1000);
@@ -87,13 +83,17 @@ function Dashboard({
       <div className="flex flex-col gap-7">
         <ChainStatus />
 
-        <section className="grid grid-cols-1 items-center gap-8 py-2 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-14">
-          <div className="flex flex-col items-center gap-6">
-            <AvadoDevice light={deviceLight} />
+        {/* Compact hero: health verdict on the left, ETH price and box
+            readings on the right. (User feedback 2026-09-25: the device
+            drawing added no information and the headline took too much
+            room.) */}
+        <Card as="section" aria-label="Your AVADO" padding="lg" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_330px] lg:gap-10">
+          <VerdictPanel />
+          <div className="flex flex-col gap-4">
+            <EthPrice />
             <ResourcesStrip stats={dappnodeStats} />
           </div>
-          <VerdictPanel />
-        </section>
+        </Card>
 
         <section aria-labelledby="apps-title">
           <SectionHeader

@@ -28,12 +28,12 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
   // device drawing shows its grey ("checking") light for the same reason.
   if (!ready) {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <p className="mb-0 flex items-center gap-2 text-sm font-semibold text-fg-muted">
           <Spinner size="sm" />
           Checking
         </p>
-        <h1 className="mb-0 break-words font-display text-4xl font-bold leading-[1.06] tracking-tight text-fg sm:text-[3.375rem]">
+        <h1 className="mb-0 break-words font-display text-2xl font-bold leading-tight tracking-tight text-fg sm:text-[1.75rem]">
           Checking your AVADO…
         </h1>
       </div>
@@ -56,12 +56,12 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
   );
 
   return (
-    <div className="flex max-w-[700px] flex-col gap-5">
+    <div className="flex max-w-[700px] flex-col gap-3">
       <p className={cn("mb-0 flex items-center gap-2.5 text-sm font-semibold", tone.text)}>
         <span aria-hidden="true" className={cn("h-2.5 w-2.5 rounded-full ring-4", tone.dot, tone.ring, verdict.level !== "ok" && "motion-safe:animate-pulse-once")} />
         {verdict.label}
       </p>
-      <h1 className="mb-0 break-words font-display text-4xl font-bold leading-[1.06] tracking-tight text-fg sm:text-[3.375rem]">
+      <h1 className="mb-0 break-words font-display text-2xl font-bold leading-tight tracking-tight text-fg sm:text-[1.75rem]">
         {verdictSentence(verdict, findings)}
       </h1>
       {headline && (

@@ -5,6 +5,8 @@ import { Dashboard } from "pages/dashboard/components/Dashboard";
 
 const { useHealthMock } = vi.hoisted(() => ({ useHealthMock: vi.fn() }));
 vi.mock("health/HealthProvider", () => ({ useHealth: useHealthMock }));
+// EthPrice fetches from CoinGecko — stub it so these tests never touch the network.
+vi.mock("pages/dashboard/components/EthPrice", () => ({ default: () => <div data-testid="eth-price" /> }));
 
 const baseProps = {
   dappnodeStats: {},
@@ -115,28 +117,13 @@ describe("Dashboard hero", () => {
     ready: true,
   });
 
-  it("shows a grey (checking) device light while health isn't ready yet", () => {
-    useHealthMock.mockReturnValue({
-      verdict: { level: "ok", label: "All good" },
-      findings: [],
-      checkedAt: new Date(0),
-      refresh: () => {},
-      checksPassed: 0,
-      ready: false,
-    });
-    renderDashboard();
-    expect(screen.getByRole("img", { name: "Your AVADO box, status light grey" })).toBeInTheDocument();
-  });
-
-  it("matches the device light to the verdict once ready (critical -> red)", () => {
-    useHealthMock.mockReturnValue(ready("critical", "Action required"));
-    renderDashboard();
-    expect(screen.getByRole("img", { name: "Your AVADO box, status light red" })).toBeInTheDocument();
-  });
-
-  it("matches the device light to the verdict once ready (ok -> green)", () => {
+  it("no longer draws the AVADO device; verdict, ETH price and box readings share one card", () => {
     useHealthMock.mockReturnValue(ready("ok", "All good"));
     renderDashboard();
-    expect(screen.getByRole("img", { name: "Your AVADO box, status light green" })).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /Your AVADO box/ })).not.toBeInTheDocument();
+    const hero = screen.getByRole("region", { name: "Your AVADO" });
+    expect(hero).toContainElement(screen.getByRole("heading", { name: "Your AVADO is healthy." }));
+    expect(hero).toContainElement(screen.getByRole("region", { name: "Box readings" }));
+    expect(hero).toContainElement(screen.getByTestId("eth-price"));
   });
 });
