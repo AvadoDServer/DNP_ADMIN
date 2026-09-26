@@ -3,7 +3,8 @@ import { parseDiskTotalTb, kitFits, showKitOffer, kitFindingLink, KIT_PATH, KIT_
 // getStats on core 10.0.47+ (cpuName from os.cpus(), diskTotal from `df /`).
 const I7 = "Intel(R) Core(TM) i7-10710U CPU @ 1.10GHz";
 const i7_2tb = (overrides = {}) => ({ cpuName: I7, diskTotal: "1.82 TB", disk: "50%", ...overrides });
-const filling = days => ({ state: "filling", days, free: 400e9 });
+// A forecast with a week of data unless `hours` says otherwise.
+const filling = (days, hours = 168) => ({ state: "filling", days, free: 400e9, hours });
 
 describe("parseDiskTotalTb", () => {
   it("reads getStats' TB label", () => {
@@ -53,6 +54,15 @@ describe("showKitOffer", () => {
     expect(showKitOffer(i7_2tb(), { state: "unsettled", free: 1e11 })).toBe(false);
     expect(showKitOffer(i7_2tb(), undefined)).toBe(false);
   });
+  it("the forecast only counts with a week of data behind it (not a burst in the first days)", () => {
+    expect(showKitOffer(i7_2tb({ disk: "60%" }), filling(45, 50))).toBe(false);
+    expect(showKitOffer(i7_2tb({ disk: "60%" }), filling(45, 155))).toBe(false);
+    expect(showKitOffer(i7_2tb({ disk: "60%" }), filling(45, 156))).toBe(true);
+    expect(showKitOffer(i7_2tb({ disk: "60%" }), filling(45, 168))).toBe(true);
+    expect(showKitOffer(i7_2tb({ disk: "60%" }), { state: "filling", days: 45, free: 400e9 })).toBe(false);
+    // The 75 % path doesn't need a forecast.
+    expect(showKitOffer(i7_2tb({ disk: "80%" }), filling(45, 50))).toBe(true);
+  });
   it("never where the kit doesn't fit, however full", () => {
     expect(showKitOffer(i7_2tb({ diskTotal: "3.64 TB", disk: "95%" }), filling(5))).toBe(false);
     expect(showKitOffer(i7_2tb({ cpuName: undefined, disk: "95%" }), filling(5))).toBe(false);
@@ -65,6 +75,8 @@ describe("kitFindingLink", () => {
     expect(link).toEqual({ kind: "link", to: KIT_PATH, label: "Get more space" });
     expect(link.to).not.toContain(KIT_URL);
     expect(kitFindingLink({ id: "disk-filling-up" }, i7_2tb({ disk: "60%" }), filling(20))).toMatchObject({ to: KIT_PATH });
+    // Under a week of data: no "Get more space".
+    expect(kitFindingLink({ id: "disk-filling-up" }, i7_2tb({ disk: "60%" }), filling(20, 50))).toBeNull();
   });
   it("nothing for other findings or other boxes", () => {
     expect(kitFindingLink({ id: "updates-available" }, i7_2tb({ disk: "85%" }), { state: "none" })).toBeNull();

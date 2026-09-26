@@ -63,8 +63,9 @@ function biggestApps(packages, count = 2) {
 }
 
 // Apps for a test network (Holesky, the retired Goerli/Prater) that use disk
-// space: the quickest space to win back, with no real money at stake.
-function testNetworkHint(packages) {
+// space: the quickest space to win back, with no real money at stake. Also
+// on System > Storage's 4 TB kit card, as the free thing to try first.
+export function testNetworkHint(packages) {
   const apps = (packages || [])
     .map(p => ({ p, client: getClient(p && p.name), size: appDiskUse(p) }))
     .filter(({ client, size }) => client && NETWORKS[client.network] && NETWORKS[client.network].testnet && size > 0);
@@ -92,20 +93,35 @@ function spaceHints(packages) {
 
 /*
  * Disk-full forecast, from the Prometheus disk trend (fetchDiskTrend in
- * health/prometheus.js: bytes free, the 7-day, 2-day and median hourly
- * slopes, and how many hours of data there are). A forecast that cries wolf
- * is worse than none, so it only gives a number when the data can back it:
- *  - at least 2 days of data;
- *  - no client syncing (a sync fills hundreds of GB in a day or two);
+ * health/prometheus.js: bytes free, the 7-day, 2-day, median hourly and
+ * recent slopes, and how many hours of data there are). A forecast that
+ * cries wolf is worse than none, so it only gives a number when the data can
+ * back it:
+ *  - at least 2 days of data for "more than a year" or "at least N months",
+ *    and a week for a date ("filling"). With less than about 4 days the 2-day
+ *    and 7-day windows hold the same samples, and a sync that fills more than
+ *    half the hours moves the hourly median too, so all three agree on the
+ *    sync's pace (a false "full in 2 days" the day after a first sync). A
+ *    date that would be under 60 days waits for the week ("collecting");
+ *  - no client syncing (a sync fills hundreds of GB in a day or two). The
+ *    core only flags execution clients, and only until 60 blocks behind;
  *  - the 7-day, 2-day and median hourly slopes agree within 3x. A client
  *    that synced again, a big image pull or a clean-up shows as a burst that
  *    moves the 7-day trend but not the median; pruning (slow fill, sudden
  *    drop) does the opposite; a new pace shows in the 2-day slope first;
+ *  - the recent pace (the median of the last 12 hourly slopes) is not more
+ *    than 3x gentler: a long fill that has stopped still fills every longer
+ *    window. It only counts when it is the gentlest: a faster recent pace
+ *    would only make the date later, never earlier, so it can't cry wolf;
  *  - bytes, not the core's whole-number "disk" percentage, whose 1 % steps
  *    (about 20 GB on a 2 TB disk) would make a trend jump.
  * When every slope says the disk lasts more than a year, the numbers don't
- * need to agree: that is "stable". When they disagree but even the fastest
- * leaves 60 days or more, that lower bound is "roomy" (nothing to act on).
+ * need to agree: that is "stable". When they disagree (or there is under a
+ * week of data) but even the fastest leaves 60 days or more, that lower
+ * bound is "roomy" (nothing to act on).
+ *
+ * Only "filling" makes a finding (diskFillingUp, disk-high's "At this rate")
+ * or offers the 4 TB kit, so all of those have a week of data behind them.
  *
  * "Full" is 5 GB left, when the core (watchers/diskUsage) stops the apps.
  */
@@ -127,9 +143,11 @@ const finite = v => (typeof v === "number" && Number.isFinite(v) ? v : null);
 /**
  * @returns {{ state: "none"|"collecting"|"syncing"|"unsettled"|"roomy"|"stable"|"filling"|"full",
  *   free?: number, hours?: number, days?: number, bytesPerDay?: number }}
- *   "filling": `days` until 5 GB are left at the 7-day pace, and
- *   `bytesPerDay`. "roomy": `days` at the fastest pace, 60 or more.
- *   "stable": more than a year at every pace.
+ *   "filling" (a week of data or more): `days` until 5 GB are left at the
+ *   7-day pace, and `bytesPerDay`. "roomy": `days` at the fastest pace, 60
+ *   or more. "stable": more than a year at every pace. "collecting": under
+ *   2 days of data, or under a week for a date under 60 days (`hours` says
+ *   which).
  */
 export function diskForecast(trend, chainData) {
   const t = trend || {};
@@ -140,15 +158,22 @@ export function diskForecast(trend, chainData) {
   if (hours < FORECAST_MIN_HOURS) return { state: "collecting", free, hours };
   if ((chainData || []).some(c => c && c.syncing)) return { state: "syncing", free, hours };
   const slopes = [t.slope7d, t.slope2d, t.slopeHourly].map(finite);
-  if (slopes.some(s => s === null)) return { state: "none", free };
+  const recent = finite(t.slopeRecent);
+  if (slopes.some(s => s === null) || recent === null) return { state: "none", free };
   const room = free - DISK_STOP_BYTES;
   const daysAt = slope => (slope < 0 ? room / -slope / DAY_SECONDS : Infinity);
   const soonest = Math.min(...slopes.map(daysAt));
   if (soonest > FORECAST_YEAR_DAYS) return { state: "stable", free, hours };
-  // All filling, the steepest at most 3x the gentlest.
-  const agree = slopes.every(s => s < 0) && Math.min(...slopes) / Math.max(...slopes) <= SLOPES_AGREE_WITHIN;
-  if (agree) return { state: "filling", free, hours, days: daysAt(slopes[0]), bytesPerDay: -slopes[0] * DAY_SECONDS };
+  // All filling, the steepest at most 3x the gentlest; the recent pace
+  // counts only as the gentlest (a fill that has stopped).
+  const gentlest = Math.max(...slopes, recent);
+  const agree = gentlest < 0 && Math.min(...slopes) / gentlest <= SLOPES_AGREE_WITHIN;
+  if (agree && hours >= FORECAST_WEEK_HOURS) {
+    return { state: "filling", free, hours, days: daysAt(slopes[0]), bytesPerDay: -slopes[0] * DAY_SECONDS };
+  }
   if (soonest >= FORECAST_ROOMY_DAYS) return { state: "roomy", free, hours, days: soonest };
+  // The paces agree on a date under 60 days, but under a week of data can't back it.
+  if (agree) return { state: "collecting", free, hours };
   return { state: "unsettled", free, hours };
 }
 
@@ -187,7 +212,8 @@ export function formatDiskSize(bytes) {
   return gb >= 10 ? `${Math.round(gb)} GB` : `${gb.toFixed(1)} GB`;
 }
 
-// Critical only when it is close AND little is left, after a week of data.
+// Critical only when it is close AND little is left, after a week of data
+// (which "filling" already needs; checked again here for the reader).
 const forecastIsCritical = f =>
   f.state === "filling" &&
   f.days < FORECAST_CRITICAL_DAYS &&
@@ -205,6 +231,10 @@ export function diskHigh({ stats, packages, diskTrend, chainData }) {
   const f = diskForecast(diskTrend, chainData);
   const forecast = f.state === "filling" && f.days <= FORECAST_YEAR_DAYS ? f : null;
   const critical = pct >= 90 || Boolean(forecast && forecastIsCritical(forecast));
+  // Full within 30 days is already urgent in words, even while the severity
+  // stays a warning (critical needs under 7 days AND under 50 GB): the same
+  // words diskFillingUp uses for that forecast under 80 %.
+  const urgent = critical || Boolean(forecast && forecast.days < FORECAST_WARN_DAYS);
   const hints = spaceHints(packages);
   return {
     id: "disk-high",
@@ -212,7 +242,7 @@ export function diskHigh({ stats, packages, diskTrend, chainData }) {
     topic: "storage",
     title: `Your disk is ${Math.round(pct)}% full`,
     why:
-      (critical
+      (urgent
         ? "When the disk is full your clients stop and your validators go offline. "
         : "Clients keep growing; plan some space now before it becomes urgent. ") +
       (forecast ? `At this rate it is full ${inAbout(forecast.days)}. ` : "") +

@@ -131,8 +131,15 @@ describe("fetchDiskTrend", () => {
   const scalar = value => ok([{ metric: {}, value: [1790432127.69, String(value)] }]);
   const DISK_COUNT = Object.keys(DISK_QUERIES).length;
   const isDiskQuery = url => url.includes("node_filesystem_avail_bytes");
-  // Test box numbers, 2026-09-26 (node-exporter 0.0.3, 3 days of data).
-  const BOX = { free: 3670755098624, slope7d: -116708.24767425397, slope2d: -27224.815493410486, slopeHourly: -23428.052247141637, hoursOfData: 75 };
+  // Test box numbers, 2026-09-26 14:15 UTC (node-exporter 0.0.3, 3 days of data).
+  const BOX = {
+    free: 3670755098624,
+    slope7d: -116708.24767425397,
+    slope2d: -27224.815493410486,
+    slopeHourly: -23428.052247141637,
+    slopeRecent: -55.868391116237945,
+    hoursOfData: 75,
+  };
   const answerFor = url => {
     const key = Object.keys(DISK_QUERIES).find(k => url.includes(encodeURIComponent(DISK_QUERIES[k])));
     return key ? scalar(BOX[key]) : ok([]);
@@ -163,12 +170,30 @@ describe("fetchDiskTrend", () => {
     const fetchImpl = vi.fn(async url =>
       url.includes(encodeURIComponent(DISK_QUERIES.free)) ? scalar("NaN") : url.includes(encodeURIComponent(DISK_QUERIES.slope2d)) ? scalar("+Inf") : ok([])
     );
-    expect(await fetchDiskTrend(fetchImpl)).toEqual({ free: null, slope7d: null, slope2d: null, slopeHourly: null, hoursOfData: null });
+    expect(await fetchDiskTrend(fetchImpl)).toEqual({
+      free: null,
+      slope7d: null,
+      slope2d: null,
+      slopeHourly: null,
+      slopeRecent: null,
+      hoursOfData: null,
+    });
   });
 
-  it("one failing disk query only nulls its own key", async () => {
-    const fetchImpl = vi.fn(async url => (url.includes(encodeURIComponent(DISK_QUERIES.slopeHourly)) ? httpError() : answerFor(url)));
-    expect(await fetchDiskTrend(fetchImpl)).toEqual({ ...BOX, slopeHourly: null });
+  it("the recent pace is the median of the last 12 hourly slopes (one clean-up doesn't move it)", () => {
+    expect(DISK_QUERIES.slopeRecent).toBe(`min(quantile_over_time(0.5, deriv(${DISK_SERIES}[1h])[12h:1h]))`);
+  });
+
+  it("one failing disk query makes the whole read fail, so the caller keeps its last complete one", async () => {
+    // The forecast needs every number together: a lost slope would read as
+    // "no forecast", a lost hour count as "still collecting".
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (const key of Object.keys(DISK_QUERIES)) {
+      const fetchImpl = vi.fn(async url => (url.includes(encodeURIComponent(DISK_QUERIES[key])) ? httpError() : answerFor(url)));
+      expect(await fetchDiskTrend(fetchImpl)).toBeNull();
+      expect(warn).toHaveBeenLastCalledWith(expect.stringContaining(`(${key})`));
+    }
+    warn.mockRestore();
   });
 
   it("is null when Prometheus can't be reached at all", async () => {

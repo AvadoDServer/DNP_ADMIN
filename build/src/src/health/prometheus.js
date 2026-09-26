@@ -121,6 +121,12 @@ export const DISK_QUERIES = {
   // syncing again, a big image pull) moves the 7-day trend a lot but the
   // median hardly at all; pruning (slow fill, sudden drop) does the opposite.
   slopeHourly: `min(quantile_over_time(0.5, deriv(${DISK_SERIES}[1h])[7d:1h]))`,
+  // The median of the last 12 hourly trends: the pace now. When a long fill
+  // (a sync) has just stopped, every longer window still shows it; this one
+  // is back at the normal pace within about 7 hours. A median, so one
+  // clean-up or image pull doesn't move it (a 6-hour deriv jumps on those:
+  // +8.7 GB a day on the test box after 2.8 GB were freed).
+  slopeRecent: `min(quantile_over_time(0.5, deriv(${DISK_SERIES}[1h])[12h:1h]))`,
   // Hours with data in the last 7 days (gaps while Prometheus was off don't count).
   hoursOfData: `min(count_over_time(deriv(${DISK_SERIES}[1h])[7d:1h]))`,
 };
@@ -133,18 +139,26 @@ const firstValue = samples => {
 };
 
 /**
- * The disk forecast's inputs (DISK_QUERIES), one number or null each; null
- * overall only when every query failed. Fetched apart from fetchMetrics, so
- * a slow or failing disk query never holds up or blanks the chain metrics
- * (head slot, peers, attestations), and it can run less often.
+ * The disk forecast's inputs (DISK_QUERIES), one number each, or null for a
+ * query Prometheus answered without data (no node-exporter, not scraped yet).
+ * Fetched apart from fetchMetrics, so a slow or failing disk query never
+ * holds up or blanks the chain metrics (head slot, peers, attestations), and
+ * it can run less often.
+ *
+ * Unlike fetchMetrics, the whole result is null when ANY query failed: the
+ * forecast needs all of them together, and one lost slope would read as "no
+ * forecast" (or a lost hour count as "still collecting"). A null read lets
+ * the caller keep its last complete one (HealthProvider keeps it for an
+ * hour), so one lost request doesn't make a disk finding come and go.
  */
 export async function fetchDiskTrend(fetchImpl = fetch) {
   const keys = Object.keys(DISK_QUERIES);
   const settled = await Promise.allSettled(keys.map(key => query(DISK_QUERIES[key], fetchImpl)));
-  if (settled.every(r => r.status === "rejected")) {
-    const r = settled[0];
-    console.warn(`Prometheus disk queries unavailable: ${(r.reason && r.reason.message) || String(r.reason)}`);
+  const failed = keys.filter((key, i) => settled[i].status === "rejected");
+  if (failed.length) {
+    const r = settled[keys.indexOf(failed[0])];
+    console.warn(`Prometheus disk queries failed (${failed.join(", ")}): ${(r.reason && r.reason.message) || String(r.reason)}`);
     return null;
   }
-  return Object.fromEntries(keys.map((key, i) => [key, settled[i].status === "fulfilled" ? firstValue(settled[i].value) : null]));
+  return Object.fromEntries(keys.map((key, i) => [key, firstValue(settled[i].value)]));
 }

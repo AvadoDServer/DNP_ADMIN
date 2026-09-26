@@ -383,8 +383,8 @@ describe("FindingRow 'See the chart'", () => {
 describe("FindingRow 'Get more space' (4 TB kit)", () => {
   const I7 = "Intel(R) Core(TM) i7-10710U CPU @ 1.10GHz";
   const DAY = 86400;
-  const trend = { free: 300e9, slope7d: -15e9 / DAY, slope2d: -14e9 / DAY, slopeHourly: -16e9 / DAY, hoursOfData: 168 };
-  const forecast = { state: "filling", days: 19.7, free: 300e9 };
+  const trend = { free: 300e9, slope7d: -15e9 / DAY, slope2d: -14e9 / DAY, slopeHourly: -16e9 / DAY, slopeRecent: -15e9 / DAY, hoursOfData: 168 };
+  const forecast = { state: "filling", days: 19.7, free: 300e9, hours: 168 };
   const diskFull = () => diskHigh(snapshot({ stats: { disk: "85%" } }));
 
   it("a disk finding on an i7 with the 2 TB disk links to the kit card on System > Storage", () => {

@@ -5,14 +5,24 @@ import { createStructuredSelector } from "reselect";
 import * as a from "../actions";
 import { DISK_CLEANUP } from "../signedCommands";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
-import { getDappnodeStats } from "services/dappnodeStatus/selectors";
-import { appDiskUse, atLeast, formatDockerSize, formatDiskSize, inAbout, parsePercent, FORECAST_WARN_DAYS } from "health/rules/storage";
+import { getDappnodeParams, getDappnodeStats } from "services/dappnodeStatus/selectors";
+import {
+  appDiskUse,
+  atLeast,
+  formatDockerSize,
+  formatDiskSize,
+  inAbout,
+  parsePercent,
+  testNetworkHint,
+  FORECAST_MIN_HOURS,
+  FORECAST_WARN_DAYS,
+} from "health/rules/storage";
 import { appTitle } from "health/rules/apps";
-import { getClient, GRAFANA_PACKAGE, NODE_EXPORTER_PACKAGE, PROMETHEUS_PACKAGE } from "health/clients";
+import { getClient, GRAFANA_PACKAGE, NODE_EXPORTER_PACKAGE, PROMETHEUS_PACKAGE, ROCKET_POOL_PACKAGE } from "health/clients";
 import { KIT_PRICE, KIT_URL, showKitOffer } from "health/diskUpgrade";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
-import { rootPath as priorityPath } from "pages/priority/data";
+import { rootPath as priorityPath, PRIORITY_CARE_EMAIL } from "pages/priority/data";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
@@ -98,22 +108,47 @@ export function DiskForecast({ forecast, status, hasMonitoring, isAdvanced }) {
   if (f.state === "filling" || f.state === "stable") return line(`At this rate your disk has room for more than a year${free}`);
   if (f.state === "roomy") return line(`At this rate your disk has room for ${atLeast(f.days)}${free}`);
   if (f.state === "full") return line(`Your disk is full${free}`, "font-medium text-danger-text");
-  if (f.state === "collecting") return line("A forecast of when your disk is full shows after 2 days of monitoring.");
+  if (f.state === "collecting") {
+    // Under 2 days of data; or 2 days and more, but a date under 60 days needs a week.
+    const wait = f.hours >= FORECAST_MIN_HOURS ? "a week" : "2 days";
+    return line(`A forecast of when your disk is full shows after ${wait} of monitoring.`);
+  }
   if (f.state === "syncing") return line("No forecast while a client is syncing: syncing fills the disk much faster than usual.");
   if (f.state === "unsettled") return line("Your disk use changed a lot recently, so there is no forecast until it settles.");
   return line("No forecast right now: your monitoring isn't answering.");
 }
 
 /**
- * The 4 TB upgrade kit (health/diskUpgrade.js decides when it shows). It
- * says plainly what the move involves before linking to the shop.
+ * "Email us" on the kit card: the Priority Care discount and guided move go
+ * through the Priority Care team (the shop itself sells at the full price).
+ * The node id, when known, is what the team looks the membership up by.
  */
-export const DiskUpgradeCard = React.forwardRef(function DiskUpgradeCard(props, ref) {
+export function kitMemberMailto(nodeId) {
+  const subject = "4 TB upgrade kit (Priority Care)";
+  const body = [
+    "Hi AVADO team,",
+    "",
+    "I am a Priority Care member and would like the 4 TB upgrade kit, with the member discount and a guided move to the new disk.",
+    ...(typeof nodeId === "string" && nodeId ? ["", `Node ID: ${nodeId}`] : []),
+  ].join("\n");
+  return `mailto:${PRIORITY_CARE_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/**
+ * The 4 TB upgrade kit (health/diskUpgrade.js decides when it shows). It
+ * names the free space to win back first (test-network apps), says plainly
+ * what the move involves before linking to the shop, sends Rocket Pool
+ * owners to support first (their keys live in the Rocket Pool wallet, as in
+ * the double-signing guard's steps), and tells Priority Care members how to
+ * claim their discount and guided move.
+ */
+export const DiskUpgradeCard = React.forwardRef(function DiskUpgradeCard({ spaceHint = "", rocketPool = false, nodeId } = {}, ref) {
   return (
     <Card ref={ref} padding="lg" className="mt-4" aria-labelledby="disk-upgrade-title">
       <h2 id="disk-upgrade-title" className="mb-0 text-base font-semibold text-fg">
         Need more space? Upgrade to 4 TB
       </h2>
+      {spaceHint && <p className="mb-0 mt-2 text-sm text-fg">Before you buy, free what you can. {spaceHint}</p>}
       <p className="mb-0 mt-2 text-sm text-fg-muted">
         The 4 TB upgrade kit replaces your 2 TB disk with one twice the size. It costs {KIT_PRICE}.
       </p>
@@ -121,8 +156,18 @@ export const DiskUpgradeCard = React.forwardRef(function DiskUpgradeCard(props, 
         A new disk means setting up your AVADO again. Back up your validator keys first. Your clients then download
         the chain again, which can take a few days, and your validators are offline until that is done.
       </p>
+      {rocketPool && (
+        <p className="mb-0 mt-2 text-sm font-medium text-fg">
+          If you run Rocket Pool, contact AVADO support before you start: your Rocket Pool wallet has to move to the
+          new disk too.
+        </p>
+      )}
       <p className="mb-0 mt-2 text-sm text-fg-muted">
-        Priority Care members get 10% off and a guided move to the new disk.
+        Priority Care member?{" "}
+        <a href={kitMemberMailto(nodeId)} className="font-medium text-accent hover:underline">
+          Email us
+        </a>{" "}
+        before you order. You get 10% off, and we guide you through the move.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button as="a" href={KIT_URL} target="_blank" rel="noopener noreferrer" size="sm">
@@ -136,7 +181,7 @@ export const DiskUpgradeCard = React.forwardRef(function DiskUpgradeCard(props, 
   );
 });
 
-function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
+function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedCmd }) {
   const rows = storageRows(dnpInstalled);
   // Same parser and 80/90 thresholds as Home's Resources strip, so the two
   // pages never disagree about how full the disk is.
@@ -187,7 +232,14 @@ function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
         />
       </Card>
 
-      {showKit && <DiskUpgradeCard ref={kitRef} />}
+      {showKit && (
+        <DiskUpgradeCard
+          ref={kitRef}
+          spaceHint={testNetworkHint(dnpInstalled)}
+          rocketPool={(dnpInstalled || []).some(p => p && p.name === ROCKET_POOL_PACKAGE)}
+          nodeId={dappnodeParams && dappnodeParams.nodeid}
+        />
+      )}
 
       <SectionHeader
         title="Apps"
@@ -216,6 +268,7 @@ function SystemStorage({ dnpInstalled, dappnodeStats, runSignedCmd }) {
 const mapStateToProps = createStructuredSelector({
   dnpInstalled: getDnpInstalled,
   dappnodeStats: getDappnodeStats,
+  dappnodeParams: getDappnodeParams,
 });
 
 const mapDispatchToProps = {

@@ -8,9 +8,10 @@
 //  - an i7-10710U (getStats cpuName),
 //  - with a disk of 2.1 "TB" or less (getStats diskTotal is 1024-based but
 //    labelled "TB": a 2 TB disk shows "1.82 TB"),
-//  - and short of space: 75 % full, or full within 60 days by the forecast.
+//  - and short of space: 75 % full, or full within 60 days by a forecast
+//    with a week of data behind it (not a burst in the first days).
 // Both stats arrived with core 10.0.47; a box without them gets no offer.
-import { parsePercent } from "./rules/storage";
+import { parsePercent, FORECAST_WEEK_HOURS } from "./rules/storage";
 
 export const KIT_URL = "https://www.ava.do/shop/4tb-disk-upgrade/";
 export const KIT_PRICE = "€700";
@@ -36,11 +37,18 @@ export function kitFits(stats) {
   return KIT_CPU.test(cpu) && tb !== null && tb <= KIT_MAX_DISK_TB;
 }
 
-/** Offer the kit: it fits, and the disk is 75 % full or full within 60 days (see diskForecast). */
+/**
+ * Offer the kit: it fits, and the disk is 75 % full or full within 60 days
+ * by a forecast with a week of data (see diskForecast, which only says
+ * "filling" after a week; checked again here, so a hand-made or older
+ * forecast never sells a €700 part on two days of data).
+ */
 export function showKitOffer(stats, forecast) {
   if (!kitFits(stats)) return false;
   const pct = parsePercent(stats && stats.disk);
-  const soon = Boolean(forecast && forecast.state === "filling" && forecast.days < KIT_FORECAST_DAYS);
+  const soon = Boolean(
+    forecast && forecast.state === "filling" && forecast.days < KIT_FORECAST_DAYS && forecast.hours >= FORECAST_WEEK_HOURS
+  );
   return (pct !== null && pct >= KIT_DISK_PCT) || soon;
 }
 

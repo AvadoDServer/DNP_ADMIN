@@ -83,6 +83,8 @@ const byName = Object.fromEntries(
 export const PROMETHEUS_PACKAGE = "prometheus.avado.dappnode.eth";
 export const GRAFANA_PACKAGE = "grafana.avado.dappnode.eth";
 export const NODE_EXPORTER_PACKAGE = "node-exporter.avado.dappnode.eth";
+// Rocket Pool keeps its validator keys inside its own node wallet.
+export const ROCKET_POOL_PACKAGE = "rocketpool.avado.dnp.dappnode.eth";
 
 export function getClient(name) {
   return (name && byName[name]) || null;

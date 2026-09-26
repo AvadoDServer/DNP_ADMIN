@@ -8,6 +8,7 @@ import { coreUpdateAvailable } from "health/rules/updates";
 import { feeRecipientMissing } from "health/rules/validators";
 import { headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { diskFillingUp } from "health/rules/storage";
+import { fetchDiskTrend, DISK_QUERIES, resetPrometheusBase } from "health/prometheus";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
 vi.mock("services/dappnodeStatus/selectors", () => ({ getDappnodeStats: s => s.stats, getDappnodeParams: s => s.params }));
@@ -441,7 +442,7 @@ describe("HealthProvider disk forecast", () => {
   const withPrometheus = { ...state, packages: [...state.packages, prometheus] };
   const DAY = 86400;
   // 300 GB free, filling 15 GB a day by every measure: full in about 20 days.
-  const filling = { free: 300e9, slope7d: -15e9 / DAY, slope2d: -14e9 / DAY, slopeHourly: -16e9 / DAY, hoursOfData: 168 };
+  const filling = { free: 300e9, slope7d: -15e9 / DAY, slope2d: -14e9 / DAY, slopeHourly: -16e9 / DAY, slopeRecent: -15e9 / DAY, hoursOfData: 168 };
 
   function DiskProbe() {
     const { diskForecast, diskTrendStatus, metrics, findings, stats } = useHealth();
@@ -540,6 +541,47 @@ describe("HealthProvider disk forecast", () => {
       expect(screen.getByTestId("ids").textContent).not.toContain("disk-filling-up");
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it("one failed disk query (of six) keeps the last good trend too, instead of 'no forecast'", async () => {
+    // The real fetchDiskTrend over a fake Prometheus: the first read answers
+    // everything, later reads lose only the hourly-median query.
+    resetPrometheusBase();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.useFakeTimers();
+    try {
+      let reads = 0;
+      const answer = value => ({
+        ok: true,
+        json: async () => ({ status: "success", data: { resultType: "vector", result: [{ metric: {}, value: [0, String(value)] }] } }),
+      });
+      const fetchImpl = async url => {
+        const key = Object.keys(DISK_QUERIES).find(k => url.includes(encodeURIComponent(DISK_QUERIES[k])));
+        if (reads > 1 && key === "slopeHourly") return { ok: false, json: async () => ({}) };
+        return answer(filling[key]);
+      };
+      const fetchDiskTrendImpl = () => {
+        reads++;
+        return fetchDiskTrend(fetchImpl);
+      };
+      renderDisk({ fetchMetricsImpl: async () => null, fetchDiskTrendImpl });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId("state").textContent).toBe("filling");
+      expect(screen.getByTestId("status").textContent).toBe("ok");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+      });
+      expect(reads).toBe(2);
+      expect(screen.getByTestId("status").textContent).toBe("failed");
+      expect(screen.getByTestId("state").textContent).toBe("filling");
+      expect(screen.getByTestId("ids").textContent).toContain("disk-filling-up");
+    } finally {
+      vi.useRealTimers();
+      warn.mockRestore();
+      resetPrometheusBase();
     }
   });
 

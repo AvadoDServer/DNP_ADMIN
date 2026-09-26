@@ -183,9 +183,10 @@ export function HealthProvider({
 
   // The disk trend, apart from the chain metrics above: its own requests and
   // state, so a slow or failing disk query never holds up or blanks head
-  // slot, peers or attestations. Every 10 minutes (5 small queries). A
-  // failed read keeps the last good one for up to an hour (the trend spans
-  // days), so one lost request doesn't make a disk finding come and go.
+  // slot, peers or attestations. Every 10 minutes (6 small queries). A
+  // failed read (fetchDiskTrend is null when any one query failed) keeps the
+  // last good one for up to an hour (the trend spans days), so one lost
+  // request doesn't make a disk finding come and go.
   useEffect(() => {
     if (!prometheusRunning) {
       setDiskTrend({ status: "not-installed", data: null });
