@@ -1,5 +1,6 @@
 import { chainSyncing, chainError, headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { ALL_RULES } from "health/rules";
+import { runChecksDetailed } from "health/engine";
 import { pkg, snapshot } from "./fixtures";
 
 const NIMBUS = pkg("nimbus.avado.dnp.dappnode.eth", { manifest: { title: "Nimbus Consensus Client" } });
@@ -94,10 +95,35 @@ describe("chain rules", () => {
     expect(missedAttestations(none)).toEqual([]);
   });
 
-  it("declares rule.needs = 'metrics' so runChecksDetailed can skip them when metrics is null", () => {
-    expect(headBehind.needs).toBe("metrics");
-    expect(lowPeers.needs).toBe("metrics");
-    expect(missedAttestations.needs).toBe("metrics");
+  it("each needs samples from its own query: skipped when metrics is null, that query failed, or it has no samples", () => {
+    const rules = [headBehind, lowPeers, missedAttestations];
+    for (const rule of rules) expect(typeof rule.needs).toBe("function");
+
+    expect(rules.map(r => r.needs(snapshot({ metrics: null })))).toEqual([false, false, false]);
+    // A partial Prometheus answer: peers failed (null), no validator monitor (empty).
+    const partial = snapshot({ packages: [NIMBUS], metrics: metrics({
+      headSlot: [{ client: "nimbus", network: "mainnet", value: 15273292 }],
+      peers: null,
+      attesterMiss: [],
+    }) });
+    expect(rules.map(r => r.needs(partial))).toEqual([true, false, false]);
+    const full = snapshot({ packages: [NIMBUS], metrics: metrics({
+      headSlot: [{ client: "nimbus", network: "mainnet", value: 15273292 }],
+      peers: [{ client: "nimbus", network: "mainnet", value: 40 }],
+      attesterMiss: [{ client: "nimbus", network: "mainnet", value: 0 }],
+    }) });
+    expect(rules.map(r => r.needs(full))).toEqual([true, true, true]);
+  });
+
+  it("the engine counts only the chain checks that really ran", () => {
+    const partial = snapshot({ now, packages: [NIMBUS], metrics: metrics({
+      headSlot: [{ client: "nimbus", network: "mainnet", value: 15273292 }],
+      peers: null,
+      attesterMiss: [],
+    }) });
+    const { passed, total } = runChecksDetailed(partial, [headBehind, lowPeers, missedAttestations]);
+    expect(total).toBe(1);
+    expect(passed).toBe(1);
   });
 });
 

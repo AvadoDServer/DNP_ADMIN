@@ -74,14 +74,24 @@ async function query(q, fetchImpl) {
   throw lastError;
 }
 
+/**
+ * Every query in QUERIES, by key. One failing query must not take down the
+ * others: a key whose query failed is null (rules that need it are skipped,
+ * see health/rules/chain.js), and the whole result is null only when every
+ * query failed, i.e. Prometheus itself is unreachable.
+ */
 export async function fetchMetrics(fetchImpl = fetch) {
-  try {
-    const entries = await Promise.all(
-      Object.entries(QUERIES).map(async ([key, q]) => [key, await query(q, fetchImpl)])
-    );
-    return Object.fromEntries(entries);
-  } catch (e) {
-    console.warn(`Prometheus unavailable: ${e.message}`);
+  const keys = Object.keys(QUERIES);
+  const settled = await Promise.allSettled(keys.map(key => query(QUERIES[key], fetchImpl)));
+  const failed = settled.filter(r => r.status === "rejected");
+  const reason = r => (r.reason && r.reason.message) || String(r.reason);
+  if (failed.length === keys.length) {
+    console.warn(`Prometheus unavailable: ${reason(failed[0])}`);
     return null;
   }
+  if (failed.length) {
+    const failedKeys = keys.filter((key, i) => settled[i].status === "rejected");
+    console.warn(`Prometheus queries failed (${failedKeys.join(", ")}): ${reason(failed[0])}`);
+  }
+  return Object.fromEntries(keys.map((key, i) => [key, settled[i].status === "fulfilled" ? settled[i].value : null]));
 }

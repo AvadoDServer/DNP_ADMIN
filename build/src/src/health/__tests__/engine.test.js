@@ -67,6 +67,41 @@ describe("runChecksDetailed", () => {
     expect(total).toBe(1);
     expect(passed).toBe(0);
   });
+
+  it("accepts a predicate as rule.needs and skips the rule (not counted) while it returns false", () => {
+    const rule = vi.fn(() => []);
+    rule.needs = s => Boolean(s.metrics && s.metrics.peers);
+    const other = () => null;
+
+    const skipped = runChecksDetailed({ metrics: { peers: null, headSlot: [] } }, [rule, other]);
+    expect(rule).not.toHaveBeenCalled();
+    expect(skipped.total).toBe(1);
+    expect(skipped.passed).toBe(1);
+
+    const ran = runChecksDetailed({ metrics: { peers: [] } }, [rule, other]);
+    expect(rule).toHaveBeenCalledTimes(1);
+    expect(ran.total).toBe(2);
+    expect(ran.passed).toBe(2);
+  });
+
+  it("a predicate rule.needs that holds lets the rule report findings", () => {
+    const rule = () => f("low-peers:x", "warning");
+    rule.needs = () => true;
+    const { findings, total, passed } = runChecksDetailed({}, [rule]);
+    expect(findings.map(x => x.id)).toEqual(["low-peers:x"]);
+    expect(total).toBe(1);
+    expect(passed).toBe(0);
+  });
+
+  it("a predicate rule.needs that throws skips the rule instead of breaking the run", () => {
+    const rule = vi.fn(() => f("never", "critical"));
+    rule.needs = s => s.metrics.peers.length > 0; // metrics is null here
+    const { findings, total, passed } = runChecksDetailed({ metrics: null }, [rule, () => null]);
+    expect(rule).not.toHaveBeenCalled();
+    expect(findings).toEqual([]);
+    expect(total).toBe(1);
+    expect(passed).toBe(1);
+  });
 });
 
 describe("verdictOf", () => {

@@ -3,11 +3,15 @@ import { render, screen, waitFor, fireEvent, act } from "@testing-library/react"
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { HealthProvider, useHealth } from "health/HealthProvider";
+import { ALL_RULES } from "health/rules";
+import { coreUpdateAvailable } from "health/rules/updates";
+import { feeRecipientMissing } from "health/rules/validators";
+import { headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
 vi.mock("services/dappnodeStatus/selectors", () => ({ getDappnodeStats: s => s.stats, getDappnodeParams: s => s.params }));
 vi.mock("services/chainData/selectors", () => ({ getChainData: () => [] }));
-vi.mock("services/coreUpdate/selectors", () => ({ getCoreUpdateAvailable: () => false }));
+vi.mock("services/coreUpdate/selectors", () => ({ getCoreUpdateAvailable: s => Boolean(s.coreUpdateAvailable) }));
 vi.mock("pages/troubleshoot/selectors", () => ({ getDiagnoses: () => [] }));
 
 const state = {
@@ -133,6 +137,46 @@ describe("HealthProvider", () => {
     expect(Number.isFinite(passed)).toBe(true);
     expect(Number.isFinite(total)).toBe(true);
     expect(passed).toBeLessThanOrEqual(total);
+  });
+
+  it("counts only checks that really ran: no core-update check, no metrics, no fee recipients", async () => {
+    renderWith({ fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    // Nothing checked for a system update, Prometheus isn't installed, and no
+    // validator client is readable from the browser: these never count.
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations];
+    const total = Number(screen.getByTestId("checksTotal").textContent);
+    const passed = Number(screen.getByTestId("checksPassed").textContent);
+    expect(total).toBe(ALL_RULES.length - skipped.length);
+    expect(passed).toBeLessThan(total);
+  });
+
+  it("counts and runs the core-update check once an update is reported", async () => {
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null },
+      undefined,
+      { ...state, coreUpdateAvailable: true }
+    );
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(screen.getByTestId("ids").textContent).toContain("core-update-available");
+  });
+
+  it("a partial Prometheus answer is not 'metrics unavailable'; only the checks with data run", async () => {
+    const withPrometheus = {
+      ...state,
+      packages: [...state.packages, { name: "prometheus.avado.dappnode.eth", version: "1.0.0", state: "running", running: true, manifest: { title: "Prometheus" } }],
+    };
+    const partial = { headSlot: [{ client: "nimbus", network: "mainnet", value: 15273292 }], peers: null, attesterMiss: [], attesterHit: [] };
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => partial },
+      undefined,
+      withPrometheus
+    );
+    await waitFor(() => expect(screen.getByTestId("metrics").textContent).toContain("15273292"));
+    expect(screen.getByTestId("allids").textContent).not.toContain("metrics-unavailable");
+    // headBehind runs (it has samples); lowPeers (failed) and missedAttestations (no samples) don't.
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations];
+    expect(Number(screen.getByTestId("checksTotal").textContent)).toBe(ALL_RULES.length - skipped.length);
   });
 
   it("useHealth store failure: marks updates failed and still renders", async () => {

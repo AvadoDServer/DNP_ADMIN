@@ -44,6 +44,13 @@ describe("updateBlocked", () => {
     const s = snapshot({ packages: [pkg(NIMBUS, { manifest: { title: "Nimbus", autoupdate: false } })], updates, updateAges: { [NIMBUS]: NOW - UPDATE_BLOCKED_AFTER_MS - 1 }, now: NOW });
     expect(updateBlocked(s)[0]).toMatchObject({ severity: "warning" });
   });
+  it("the core's manifest.autoupdate wins over a stale top-level flag", () => {
+    const ages = { [NIMBUS]: NOW - UPDATE_BLOCKED_AFTER_MS };
+    const on = pkg(NIMBUS, { autoupdate: false, manifest: { title: "Nimbus", autoupdate: true } });
+    expect(updateBlocked(snapshot({ packages: [on], updates, updateAges: ages, now: NOW }))[0].severity).toBe("critical");
+    const off = pkg(NIMBUS, { autoupdate: true, manifest: { title: "Nimbus", autoupdate: false } });
+    expect(updateBlocked(snapshot({ packages: [off], updates, updateAges: ages, now: NOW }))[0].severity).toBe("warning");
+  });
   it("nothing before 48 h, nothing without a pending update, nothing without ages", () => {
     expect(updateBlocked(snapshot({ packages: [pkg(NIMBUS)], updates, updateAges: { [NIMBUS]: NOW - UPDATE_BLOCKED_AFTER_MS + 60000 }, now: NOW }))).toEqual([]);
     expect(updateBlocked(snapshot({ packages: [pkg(NIMBUS)], updates: {}, updateAges: { [NIMBUS]: 0 }, now: NOW }))).toEqual([]);

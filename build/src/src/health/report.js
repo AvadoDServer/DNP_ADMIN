@@ -19,7 +19,8 @@ export function buildReport({ verdict, findings, packages, stats, params, chainD
   lines.push("", "Versions");
   for (const [k, v] of Object.entries(versions || {})) lines.push(`- ${k} ${v || "?"}`);
   lines.push("", "Box");
-  lines.push(`- node id ${params.nodeid || "?"}`, `- internal IP ${params.internalIp || "?"}`);
+  // The core sends `internalip` (DAPPMANAGER getParams); `internalIp` is the old spelling.
+  lines.push(`- node id ${params.nodeid || "?"}`, `- internal IP ${params.internalip || params.internalIp || "?"}`);
   lines.push(`- CPU ${stats.cpu || "?"}, memory ${stats.memory || "?"}, disk ${stats.disk || "?"} of ${stats.diskTotal || "?"}`);
   lines.push("", "Apps");
   for (const p of packages || [])

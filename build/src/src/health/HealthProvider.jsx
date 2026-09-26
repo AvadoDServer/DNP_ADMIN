@@ -53,6 +53,13 @@ function writeUpdateAges(ages) {
   }
 }
 
+// "failed" when Prometheus didn't answer at all (fetchMetrics returned null),
+// "partial" when only some queries failed (their keys are null), else "ok".
+function metricsStatus(data) {
+  if (!data) return "failed";
+  return Object.values(data).some(v => v == null) ? "partial" : "ok";
+}
+
 const HealthContext = createContext(null);
 
 export function HealthProvider({
@@ -156,7 +163,7 @@ export function HealthProvider({
         // head slot against the wall clock *at the time it was fetched*, not
         // against `checkedAt`, which the 5 s stats poll keeps moving forward
         // while this sample is up to METRICS_INTERVAL old.
-        data => !cancelled && setMetrics({ status: data ? "ok" : "failed", data, fetchedAt: data ? Date.now() : null })
+        data => !cancelled && setMetrics({ status: metricsStatus(data), data, fetchedAt: data ? Date.now() : null })
       );
     load();
     const t = setInterval(load, METRICS_INTERVAL);
@@ -229,7 +236,10 @@ export function HealthProvider({
       diagnoses,
       chainData,
       updates,
-      coreUpdate: { available: Boolean(coreAvailable) },
+      // The Admin's own core-update check (services/coreUpdate checkCoreUpdate)
+      // is disabled, so "no update" can't be told apart from "never checked":
+      // null (coreUpdateAvailable is skipped) unless an update was reported.
+      coreUpdate: coreAvailable ? { available: true } : null,
       metrics: metrics.data,
       feeRecipients,
       updateAges,

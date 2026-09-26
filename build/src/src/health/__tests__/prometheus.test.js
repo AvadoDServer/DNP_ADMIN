@@ -78,6 +78,24 @@ describe("fetchMetrics", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(QUERY_COUNT);
   });
 
+  it("one failing query does not take down the others: its key is null", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchImpl = vi.fn(async url => {
+      if (url.includes(encodeURIComponent(QUERIES.peers))) return httpError(); // fails on both bases
+      if (url.includes(encodeURIComponent(QUERIES.headSlot))) return ok([sample("nimbus", "mainnet", 15273292)]);
+      return ok([]);
+    });
+    const m = await fetchMetrics(fetchImpl);
+    expect(m).not.toBeNull();
+    expect(m.peers).toBeNull();
+    expect(m.headSlot).toEqual([{ client: "nimbus", network: "mainnet", value: 15273292 }]);
+    expect(m.attesterMiss).toEqual([]);
+    expect(m.attesterHit).toEqual([]);
+    expect(Object.keys(m).sort()).toEqual(Object.keys(QUERIES).sort());
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("peers"));
+    warn.mockRestore();
+  });
+
   it("fetchMetrics returns null when every base fails", async () => {
     expect(await fetchMetrics(async () => { throw TypeError("Failed to fetch"); })).toBeNull();
     expect(await fetchMetrics(async () => httpError())).toBeNull();
