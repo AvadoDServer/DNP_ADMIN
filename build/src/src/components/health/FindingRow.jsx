@@ -5,6 +5,7 @@ import Button from "components/ui/Button";
 import { cn } from "components/ui/cn";
 import { runFixAction } from "health/fixActions";
 import { findingChartUrl } from "health/grafanaLinks";
+import { kitFindingLink } from "health/diskUpgrade";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
 
@@ -36,7 +37,7 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
   const [stepsOpen, setStepsOpen] = useState(false);
   const [starting, setStarting] = useState(false);
   const dispatch = useDispatch();
-  const { dismiss, packages } = useHealth();
+  const { dismiss, packages, stats, diskForecast } = useHealth();
   const { isAdvanced } = useMode();
   const icon = ICON[finding.severity] || ICON.info;
   const { fix } = finding;
@@ -49,6 +50,9 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
   // The client's Grafana dashboard, for findings that show on it (falling
   // behind, few peers, missed attestations). Null unless Grafana can open it.
   const chart = compact ? null : findingChartUrl(finding, packages);
+  // A disk finding on a box the 4 TB kit fits also gets "Get more space",
+  // which opens the kit card on System > Storage (health/diskUpgrade.js).
+  const secondary = finding.secondary || (compact ? null : kitFindingLink(finding, stats, diskForecast));
 
   useEffect(() => {
     if (!starting) return undefined;
@@ -137,8 +141,8 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
             {fixButton}
             {stepsToggle}
-            {finding.secondary && (
-              <Button as={Link} to={finding.secondary.to} size="sm" variant="ghost">{finding.secondary.label}</Button>
+            {secondary && (
+              <Button as={Link} to={secondary.to} size="sm" variant="ghost">{secondary.label}</Button>
             )}
             {canHide && finding.dismissable && (
               <Button size="sm" variant="ghost" onClick={() => dismiss(finding.id)}>Hide</Button>

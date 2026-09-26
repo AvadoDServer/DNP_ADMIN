@@ -7,6 +7,7 @@ import { ALL_RULES } from "health/rules";
 import { coreUpdateAvailable } from "health/rules/updates";
 import { feeRecipientMissing } from "health/rules/validators";
 import { headBehind, lowPeers, missedAttestations } from "health/rules/chain";
+import { diskFillingUp } from "health/rules/storage";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
 vi.mock("services/dappnodeStatus/selectors", () => ({ getDappnodeStats: s => s.stats, getDappnodeParams: s => s.params }));
@@ -55,7 +56,12 @@ function Probe({ dismissId, withUndismissAll }) {
 const renderWith = (props, probeProps, stateOverride) =>
   render(
     <Provider store={createStore(() => stateOverride || state)}>
-      <HealthProvider fetchFeeRecipientsImpl={async () => null} fetchCareStatusImpl={async () => ({ findings: [] })} {...props}>
+      <HealthProvider
+        fetchFeeRecipientsImpl={async () => null}
+        fetchCareStatusImpl={async () => ({ findings: [] })}
+        fetchDiskTrendImpl={async () => null}
+        {...props}
+      >
         <Probe {...probeProps} />
       </HealthProvider>
     </Provider>
@@ -147,9 +153,10 @@ describe("HealthProvider", () => {
   it("counts only checks that really ran: no core-update check, no metrics, no fee recipients", async () => {
     renderWith({ fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null });
     await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
-    // Nothing checked for a system update, Prometheus isn't installed, and no
-    // validator client is readable from the browser: these never count.
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations];
+    // Nothing checked for a system update, Prometheus isn't installed (no
+    // chain metrics, no disk forecast), and no validator client is readable
+    // from the browser: these never count.
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp];
     const total = Number(screen.getByTestId("checksTotal").textContent);
     const passed = Number(screen.getByTestId("checksPassed").textContent);
     expect(total).toBe(ALL_RULES.length - skipped.length);
@@ -179,8 +186,9 @@ describe("HealthProvider", () => {
     );
     await waitFor(() => expect(screen.getByTestId("metrics").textContent).toContain("15273292"));
     expect(screen.getByTestId("allids").textContent).not.toContain("metrics-unavailable");
-    // headBehind runs (it has samples); lowPeers (failed) and missedAttestations (no samples) don't.
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations];
+    // headBehind runs (it has samples); lowPeers (failed) and missedAttestations (no samples) don't,
+    // nor the disk forecast (no disk trend).
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp];
     expect(Number(screen.getByTestId("checksTotal").textContent)).toBe(ALL_RULES.length - skipped.length);
   });
 
@@ -411,7 +419,11 @@ describe("HealthProvider metricsFetchedAt", () => {
     const before = Date.now();
     render(
       <Provider store={createStore(() => withPrometheus)}>
-        <HealthProvider fetchStoreImpl={async () => ({ packages: [] })} fetchMetricsImpl={async () => ({ headSlot: [], peers: [] })}>
+        <HealthProvider
+          fetchStoreImpl={async () => ({ packages: [] })}
+          fetchMetricsImpl={async () => ({ headSlot: [], peers: [] })}
+          fetchDiskTrendImpl={async () => null}
+        >
           <FetchedAtProbe />
         </HealthProvider>
       </Provider>
@@ -421,5 +433,124 @@ describe("HealthProvider metricsFetchedAt", () => {
     const at = Number(screen.getByTestId("fetchedAt").textContent);
     expect(at).toBeGreaterThanOrEqual(before);
     expect(at).toBeLessThanOrEqual(Date.now());
+  });
+});
+
+describe("HealthProvider disk forecast", () => {
+  const prometheus = { name: "prometheus.avado.dappnode.eth", version: "1.0.0", state: "running", running: true, manifest: { title: "Prometheus" } };
+  const withPrometheus = { ...state, packages: [...state.packages, prometheus] };
+  const DAY = 86400;
+  // 300 GB free, filling 15 GB a day by every measure: full in about 20 days.
+  const filling = { free: 300e9, slope7d: -15e9 / DAY, slope2d: -14e9 / DAY, slopeHourly: -16e9 / DAY, hoursOfData: 168 };
+
+  function DiskProbe() {
+    const { diskForecast, diskTrendStatus, metrics, findings, stats } = useHealth();
+    return (
+      <div>
+        <span data-testid="state">{diskForecast.state}</span>
+        <span data-testid="status">{diskTrendStatus}</span>
+        <span data-testid="metrics">{metrics ? JSON.stringify(metrics) : "null"}</span>
+        <span data-testid="ids">{findings.map(f => f.id).join(",")}</span>
+        <span data-testid="disk">{stats.disk}</span>
+      </div>
+    );
+  }
+
+  const renderDisk = (props, stateOverride = withPrometheus) =>
+    render(
+      <Provider store={createStore(() => stateOverride)}>
+        <HealthProvider
+          fetchStoreImpl={async () => ({ packages: [] })}
+          fetchFeeRecipientsImpl={async () => null}
+          fetchCareStatusImpl={async () => ({ findings: [] })}
+          {...props}
+        >
+          <DiskProbe />
+        </HealthProvider>
+      </Provider>
+    );
+
+  it("fetches the disk trend while Prometheus runs and raises disk-filling-up from it", async () => {
+    const fetchDiskTrendImpl = vi.fn(async () => filling);
+    renderDisk({ fetchMetricsImpl: async () => null, fetchDiskTrendImpl });
+    await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("filling"));
+    expect(screen.getByTestId("status").textContent).toBe("ok");
+    expect(screen.getByTestId("ids").textContent).toContain("disk-filling-up");
+    expect(screen.getByTestId("disk").textContent).toBe("12%");
+    expect(fetchDiskTrendImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask for the disk trend while Prometheus isn't running", async () => {
+    const fetchDiskTrendImpl = vi.fn(async () => filling);
+    renderDisk({ fetchMetricsImpl: async () => null, fetchDiskTrendImpl }, state);
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("consensus-without-execution"));
+    expect(fetchDiskTrendImpl).not.toHaveBeenCalled();
+    expect(screen.getByTestId("state").textContent).toBe("none");
+    expect(screen.getByTestId("status").textContent).toBe("not-installed");
+  });
+
+  it("a failing disk query never blanks the chain metrics", async () => {
+    const headSlot = [{ client: "nimbus", network: "mainnet", value: 15273292 }];
+    renderDisk({
+      fetchMetricsImpl: async () => ({ headSlot, peers: [], attesterMiss: [], attesterHit: [] }),
+      fetchDiskTrendImpl: async () => {
+        throw Error("disk query timed out");
+      },
+    });
+    await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("failed"));
+    await waitFor(() => expect(screen.getByTestId("metrics").textContent).toContain("15273292"));
+    expect(screen.getByTestId("ids").textContent).not.toContain("metrics-unavailable");
+    expect(screen.getByTestId("state").textContent).toBe("none");
+  });
+
+  it("failed chain metrics don't take the disk forecast down either", async () => {
+    renderDisk({ fetchMetricsImpl: async () => null, fetchDiskTrendImpl: async () => filling });
+    await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("filling"));
+    expect(screen.getByTestId("ids").textContent).toContain("metrics-unavailable");
+    expect(screen.getByTestId("ids").textContent).toContain("disk-filling-up");
+  });
+
+  it("a failed read keeps the last good trend for up to an hour, so a disk finding doesn't come and go", async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const fetchDiskTrendImpl = async () => {
+        calls++;
+        if (calls === 1) return filling;
+        throw Error("timeout");
+      };
+      renderDisk({ fetchMetricsImpl: async () => null, fetchDiskTrendImpl });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId("state").textContent).toBe("filling");
+      // Reads at 10..50 minutes fail: the trend from minute 0 still counts.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50 * 60 * 1000);
+      });
+      expect(calls).toBe(6);
+      expect(screen.getByTestId("status").textContent).toBe("failed");
+      expect(screen.getByTestId("state").textContent).toBe("filling");
+      expect(screen.getByTestId("ids").textContent).toContain("disk-filling-up");
+      // At 60 minutes it is too old.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+      });
+      expect(screen.getByTestId("state").textContent).toBe("none");
+      expect(screen.getByTestId("ids").textContent).not.toContain("disk-filling-up");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the disk forecast folds into disk-high instead of a second disk finding", async () => {
+    renderDisk(
+      { fetchMetricsImpl: async () => null, fetchDiskTrendImpl: async () => filling },
+      { ...withPrometheus, stats: { disk: "85%" } }
+    );
+    await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("filling"));
+    const ids = screen.getByTestId("ids").textContent.split(",");
+    expect(ids).toContain("disk-high");
+    expect(ids).not.toContain("disk-filling-up");
   });
 });

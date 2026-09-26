@@ -12,11 +12,13 @@ export const ROLES = {
   REMOTE: "remote",
 };
 
+// testnet: no real money at stake, so its apps are the first ones an owner
+// short of disk space can remove (see health/rules/storage.js).
 export const NETWORKS = {
   mainnet: { label: "Ethereum mainnet", genesis: 1606824023, slotSeconds: 12, slotsPerEpoch: 32 },
-  holesky: { label: "Holesky testnet", genesis: 1695902400, slotSeconds: 12, slotsPerEpoch: 32 },
+  holesky: { label: "Holesky testnet", genesis: 1695902400, slotSeconds: 12, slotsPerEpoch: 32, testnet: true },
   // Retired: the chain no longer runs, so checks about live validators skip it.
-  goerli: { label: "Goerli testnet (retired)", genesis: 1616508000, slotSeconds: 12, slotsPerEpoch: 32, retired: true },
+  goerli: { label: "Goerli testnet (retired)", genesis: 1616508000, slotSeconds: 12, slotsPerEpoch: 32, retired: true, testnet: true },
   gnosis: { label: "Gnosis chain", genesis: 1638993340, slotSeconds: 5, slotsPerEpoch: 16 },
 };
 
@@ -80,6 +82,7 @@ const byName = Object.fromEntries(
 
 export const PROMETHEUS_PACKAGE = "prometheus.avado.dappnode.eth";
 export const GRAFANA_PACKAGE = "grafana.avado.dappnode.eth";
+export const NODE_EXPORTER_PACKAGE = "node-exporter.avado.dappnode.eth";
 
 export function getClient(name) {
   return (name && byName[name]) || null;

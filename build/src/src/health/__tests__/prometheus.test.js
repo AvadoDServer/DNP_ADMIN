@@ -1,4 +1,4 @@
-import { fetchMetrics, QUERIES, PROMETHEUS_BASES, resetPrometheusBase } from "health/prometheus";
+import { fetchMetrics, fetchDiskTrend, QUERIES, DISK_QUERIES, DISK_SERIES, PROMETHEUS_BASES, resetPrometheusBase } from "health/prometheus";
 
 const ok = result => ({ ok: true, json: async () => ({ status: "success", data: { resultType: "vector", result } }) });
 const httpError = () => ({ ok: false, json: async () => ({}) });
@@ -123,5 +123,58 @@ describe("fetchMetrics", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("fetchDiskTrend", () => {
+  // An aggregated answer: one sample with no labels.
+  const scalar = value => ok([{ metric: {}, value: [1790432127.69, String(value)] }]);
+  const DISK_COUNT = Object.keys(DISK_QUERIES).length;
+  const isDiskQuery = url => url.includes("node_filesystem_avail_bytes");
+  // Test box numbers, 2026-09-26 (node-exporter 0.0.3, 3 days of data).
+  const BOX = { free: 3670755098624, slope7d: -116708.24767425397, slope2d: -27224.815493410486, slopeHourly: -23428.052247141637, hoursOfData: 75 };
+  const answerFor = url => {
+    const key = Object.keys(DISK_QUERIES).find(k => url.includes(encodeURIComponent(DISK_QUERIES[k])));
+    return key ? scalar(BOX[key]) : ok([]);
+  };
+
+  it("reads each disk query as one number", async () => {
+    const fetchImpl = vi.fn(async url => answerFor(url));
+    expect(await fetchDiskTrend(fetchImpl)).toEqual(BOX);
+    expect(fetchImpl).toHaveBeenCalledTimes(DISK_COUNT);
+    for (const [url] of fetchImpl.mock.calls) expect(isDiskQuery(url)).toBe(true);
+  });
+
+  it("the disk queries are separate from the chain metrics: fetchMetrics never asks for them", async () => {
+    const fetchImpl = vi.fn(async () => ok([]));
+    await fetchMetrics(fetchImpl);
+    expect(fetchImpl).toHaveBeenCalledTimes(QUERY_COUNT);
+    for (const [url] of fetchImpl.mock.calls) expect(isDiskQuery(url)).toBe(false);
+    for (const q of Object.values(DISK_QUERIES)) expect(Object.values(QUERIES)).not.toContain(q);
+  });
+
+  it("reads the host root on new (mountpoint /) and old (/host) node-exporter, never tmpfs, overlay or the EFI partition", () => {
+    expect(DISK_SERIES).toContain('mountpoint=~"/|/host"');
+    expect(DISK_SERIES).toContain('fstype!~"tmpfs|overlay|vfat"');
+    for (const q of Object.values(DISK_QUERIES)) expect(q).toContain(DISK_SERIES);
+  });
+
+  it("an empty answer (no node-exporter yet) or a non-number is null", async () => {
+    const fetchImpl = vi.fn(async url =>
+      url.includes(encodeURIComponent(DISK_QUERIES.free)) ? scalar("NaN") : url.includes(encodeURIComponent(DISK_QUERIES.slope2d)) ? scalar("+Inf") : ok([])
+    );
+    expect(await fetchDiskTrend(fetchImpl)).toEqual({ free: null, slope7d: null, slope2d: null, slopeHourly: null, hoursOfData: null });
+  });
+
+  it("one failing disk query only nulls its own key", async () => {
+    const fetchImpl = vi.fn(async url => (url.includes(encodeURIComponent(DISK_QUERIES.slopeHourly)) ? httpError() : answerFor(url)));
+    expect(await fetchDiskTrend(fetchImpl)).toEqual({ ...BOX, slopeHourly: null });
+  });
+
+  it("is null when Prometheus can't be reached at all", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await fetchDiskTrend(async () => { throw TypeError("Failed to fetch"); })).toBeNull();
+    expect(await fetchDiskTrend(async () => httpError())).toBeNull();
+    warn.mockRestore();
   });
 });

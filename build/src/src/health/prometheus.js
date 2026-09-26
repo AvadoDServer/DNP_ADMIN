@@ -32,7 +32,7 @@ const PROMETHEUS_TIMEOUT_MS = 10000;
 // doomed attempt on every 60s poll. The four queries in fetchMetrics run
 // concurrently, so this can be written by more than one in-flight query;
 // that's fine — it just picks whichever base most recently won, and a wrong
-// guess self-corrects on the next fallback.
+// guess self-corrects on the next fallback. fetchDiskTrend shares it.
 let workingBaseIndex = 0;
 
 export function resetPrometheusBase() {
@@ -96,4 +96,55 @@ export async function fetchMetrics(fetchImpl = fetch) {
     console.warn(`Prometheus queries failed (${failedKeys.join(", ")}): ${reason(failed[0])}`);
   }
   return Object.fromEntries(keys.map((key, i) => [key, settled[i].status === "fulfilled" ? settled[i].value : null]));
+}
+
+// Free space on the host's root filesystem, which also holds /var/lib/docker
+// (every app's data). node-exporter 0.0.2+ runs with --path.rootfs=/host, so
+// the host root is mountpoint "/" (checked on the test box: node-exporter
+// 0.0.3, /dev/mapper/rootvg-root, ext4). The 2023 node-exporter 0.0.1 had no
+// rootfs flag: there the host root is "/host" and "/" is the container's own
+// overlay. The /etc/hostname, /etc/hosts and /etc/resolv.conf bind mounts
+// repeat the root device under other mountpoints and are left out.
+export const DISK_SERIES = 'node_filesystem_avail_bytes{mountpoint=~"/|/host",fstype!~"tmpfs|overlay|vfat"}';
+
+// The disk forecast's inputs, one number each (see diskForecast in
+// health/rules/storage.js). Slopes are in bytes per second, negative while
+// the disk fills up.
+export const DISK_QUERIES = {
+  // Bytes free now.
+  free: `max(${DISK_SERIES})`,
+  // Least-squares trend over the last 7 days (or all the data there is).
+  slope7d: `min(deriv(${DISK_SERIES}[7d]))`,
+  // The same over the last 2 days: a recent change of pace shows here first.
+  slope2d: `min(deriv(${DISK_SERIES}[2d]))`,
+  // The median of the hourly trends over 7 days. One burst (a client
+  // syncing again, a big image pull) moves the 7-day trend a lot but the
+  // median hardly at all; pruning (slow fill, sudden drop) does the opposite.
+  slopeHourly: `min(quantile_over_time(0.5, deriv(${DISK_SERIES}[1h])[7d:1h]))`,
+  // Hours with data in the last 7 days (gaps while Prometheus was off don't count).
+  hoursOfData: `min(count_over_time(deriv(${DISK_SERIES}[1h])[7d:1h]))`,
+};
+
+// A value or null: an empty answer (no node-exporter, not scraped yet) or a
+// value that isn't a finite number (NaN, +Inf) means "no data".
+const firstValue = samples => {
+  const v = samples && samples.length ? samples[0].value : null;
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+};
+
+/**
+ * The disk forecast's inputs (DISK_QUERIES), one number or null each; null
+ * overall only when every query failed. Fetched apart from fetchMetrics, so
+ * a slow or failing disk query never holds up or blanks the chain metrics
+ * (head slot, peers, attestations), and it can run less often.
+ */
+export async function fetchDiskTrend(fetchImpl = fetch) {
+  const keys = Object.keys(DISK_QUERIES);
+  const settled = await Promise.allSettled(keys.map(key => query(DISK_QUERIES[key], fetchImpl)));
+  if (settled.every(r => r.status === "rejected")) {
+    const r = settled[0];
+    console.warn(`Prometheus disk queries unavailable: ${(r.reason && r.reason.message) || String(r.reason)}`);
+    return null;
+  }
+  return Object.fromEntries(keys.map((key, i) => [key, settled[i].status === "fulfilled" ? firstValue(settled[i].value) : null]));
 }

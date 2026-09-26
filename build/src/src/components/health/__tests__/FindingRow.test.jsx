@@ -8,15 +8,20 @@ import { appRestarting } from "health/rules/apps";
 import { chainError, headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { updateBlocked, UPDATE_BLOCKED_AFTER_MS } from "health/rules/updates";
 import { careFindingsFromStatus } from "health/careFindings";
+import { diskHigh, diskFillingUp } from "health/rules/storage";
+import { appStopped } from "health/rules/apps";
 import { pkg, snapshot } from "health/__tests__/fixtures";
 
 const { dismissSpy, modeState, healthState } = vi.hoisted(() => ({
   dismissSpy: vi.fn(),
   modeState: { isAdvanced: false },
-  // Installed packages, for the "See the chart" link (Grafana must be installed).
-  healthState: { packages: [] },
+  // Installed packages, for the "See the chart" link (Grafana must be installed);
+  // machine stats and the disk forecast, for "Get more space".
+  healthState: { packages: [], stats: undefined, diskForecast: undefined },
 }));
-vi.mock("health/HealthProvider", () => ({ useHealth: () => ({ dismiss: dismissSpy, packages: healthState.packages }) }));
+vi.mock("health/HealthProvider", () => ({
+  useHealth: () => ({ dismiss: dismissSpy, packages: healthState.packages, stats: healthState.stats, diskForecast: healthState.diskForecast }),
+}));
 // The "action" fix kind dispatches a real redux-thunk action (see health/fixActions);
 // the test store below has no thunk middleware, so stub it out for these tests —
 // dispatch behaviour itself is covered by health/__tests__/fixActions.test.js.
@@ -30,6 +35,8 @@ beforeEach(() => {
   dismissSpy.mockClear();
   modeState.isAdvanced = false;
   healthState.packages = [];
+  healthState.stats = undefined;
+  healthState.diskForecast = undefined;
 });
 
 const renderRow = (finding, props = {}) =>
@@ -370,5 +377,52 @@ describe("FindingRow 'See the chart'", () => {
     second.unmount();
     renderRow(fewPeers, { compact: true });
     expect(screen.queryByRole("link", { name: "See the chart" })).not.toBeInTheDocument();
+  });
+});
+
+describe("FindingRow 'Get more space' (4 TB kit)", () => {
+  const I7 = "Intel(R) Core(TM) i7-10710U CPU @ 1.10GHz";
+  const DAY = 86400;
+  const trend = { free: 300e9, slope7d: -15e9 / DAY, slope2d: -14e9 / DAY, slopeHourly: -16e9 / DAY, hoursOfData: 168 };
+  const forecast = { state: "filling", days: 19.7, free: 300e9 };
+  const diskFull = () => diskHigh(snapshot({ stats: { disk: "85%" } }));
+
+  it("a disk finding on an i7 with the 2 TB disk links to the kit card on System > Storage", () => {
+    healthState.stats = { cpuName: I7, diskTotal: "1.82 TB", disk: "85%" };
+    renderRow(diskFull(), { hideTitle: true, showWhy: true });
+    const link = screen.getByRole("link", { name: "Get more space" });
+    expect(link).toHaveAttribute("href", "/system/storage?kit=1");
+    expect(link).not.toHaveAttribute("target");
+    // The fix stays "Free up space".
+    expect(screen.getByRole("link", { name: "Free up space" })).toHaveAttribute("href", "/system/storage");
+  });
+
+  it("also on the forecast's own finding", () => {
+    healthState.stats = { cpuName: I7, diskTotal: "1.82 TB", disk: "60%" };
+    healthState.diskForecast = forecast;
+    renderRow(diskFillingUp(snapshot({ stats: { disk: "60%" }, diskTrend: trend })));
+    expect(screen.getByRole("link", { name: "Get more space" })).toHaveAttribute("href", "/system/storage?kit=1");
+  });
+
+  it("not on other boxes, without the core's stats, on other findings, or in compact rows", () => {
+    const cases = [
+      { cpuName: I7, diskTotal: "3.64 TB", disk: "85%" },
+      { cpuName: "Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz", diskTotal: "0.91 TB", disk: "85%" },
+      { disk: "85%" },
+      undefined,
+    ];
+    for (const stats of cases) {
+      healthState.stats = stats;
+      const { unmount } = renderRow(diskFull());
+      expect(screen.queryByRole("link", { name: "Get more space" })).not.toBeInTheDocument();
+      unmount();
+    }
+    healthState.stats = { cpuName: I7, diskTotal: "1.82 TB", disk: "85%" };
+    const [stopped] = appStopped(snapshot({ packages: [pkg("rotki.avado.dnp.dappnode.eth", { state: "exited", running: false })] }));
+    const other = renderRow(stopped);
+    expect(screen.queryByRole("link", { name: "Get more space" })).not.toBeInTheDocument();
+    other.unmount();
+    renderRow(diskFull(), { compact: true });
+    expect(screen.queryByRole("link", { name: "Get more space" })).not.toBeInTheDocument();
   });
 });
