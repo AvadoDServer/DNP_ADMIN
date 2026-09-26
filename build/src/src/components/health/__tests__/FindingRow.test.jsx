@@ -5,13 +5,18 @@ import { Provider } from "react-redux";
 import { createStore } from "redux";
 import FindingRow from "components/health/FindingRow";
 import { appRestarting } from "health/rules/apps";
-import { chainError, headBehind } from "health/rules/chain";
+import { chainError, headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { updateBlocked, UPDATE_BLOCKED_AFTER_MS } from "health/rules/updates";
 import { careFindingsFromStatus } from "health/careFindings";
 import { pkg, snapshot } from "health/__tests__/fixtures";
 
-const { dismissSpy, modeState } = vi.hoisted(() => ({ dismissSpy: vi.fn(), modeState: { isAdvanced: false } }));
-vi.mock("health/HealthProvider", () => ({ useHealth: () => ({ dismiss: dismissSpy }) }));
+const { dismissSpy, modeState, healthState } = vi.hoisted(() => ({
+  dismissSpy: vi.fn(),
+  modeState: { isAdvanced: false },
+  // Installed packages, for the "See the chart" link (Grafana must be installed).
+  healthState: { packages: [] },
+}));
+vi.mock("health/HealthProvider", () => ({ useHealth: () => ({ dismiss: dismissSpy, packages: healthState.packages }) }));
 // The "action" fix kind dispatches a real redux-thunk action (see health/fixActions);
 // the test store below has no thunk middleware, so stub it out for these tests —
 // dispatch behaviour itself is covered by health/__tests__/fixActions.test.js.
@@ -24,6 +29,7 @@ vi.mock("settings/ModeProvider", () => ({ useMode: () => modeState }));
 beforeEach(() => {
   dismissSpy.mockClear();
   modeState.isAdvanced = false;
+  healthState.packages = [];
 });
 
 const renderRow = (finding, props = {}) =>
@@ -282,5 +288,81 @@ describe("FindingRow learnMore", () => {
     unmount();
     renderRow(noExecution({ learnMore: "javascript:alert(1)" }), { showWhy: true });
     expect(screen.queryByRole("link", { name: "Read more" })).not.toBeInTheDocument();
+  });
+});
+
+describe("FindingRow 'See the chart'", () => {
+  const NIMBUS = "nimbus.avado.dnp.dappnode.eth";
+  const NIMBUS_CHART = "http://grafana.my.ava.do:3000/d/avado-nimbus?var-instance=nimbus.my.ava.do:8008";
+  const now = 1790103551 * 1000;
+  const monitoring = (grafanaVersion = "0.0.5") => [
+    pkg("grafana.avado.dappnode.eth", { version: grafanaVersion }),
+    pkg("prometheus.avado.dappnode.eth", { version: "0.0.2" }),
+  ];
+  const packages = [pkg(NIMBUS)];
+  const [behind] = headBehind(snapshot({ packages, metrics: { headSlot: [{ client: "nimbus", network: "mainnet", value: 1 }] }, now }));
+  const [fewPeers] = lowPeers(snapshot({ packages, metrics: { peers: [{ client: "nimbus", network: "mainnet", value: 3 }] } }));
+  const [missed] = missedAttestations(
+    snapshot({ packages, metrics: { attesterMiss: [{ client: "nimbus", network: "mainnet", value: 4 }], attesterHit: [] } })
+  );
+
+  it("opens the app's Grafana dashboard in a new tab on the real falling-behind, few-peers and missed-attestations findings", () => {
+    healthState.packages = [...monitoring(), ...packages];
+    for (const finding of [behind, fewPeers, missed]) {
+      const { unmount } = renderRow(finding);
+      const link = screen.getByRole("link", { name: "See the chart" });
+      expect(link).toHaveAttribute("href", NIMBUS_CHART);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      unmount();
+    }
+  });
+
+  it("sits after the why text under a headline, not among the fix buttons", () => {
+    healthState.packages = [...monitoring(), ...packages];
+    renderRow(fewPeers, { hideTitle: true, showWhy: true });
+    const link = screen.getByRole("link", { name: "See the chart" });
+    expect(link.closest("p")).toHaveTextContent(`${fewPeers.why} See the chart`);
+    expect(screen.getByRole("link", { name: "Improve connectivity" }).parentElement).not.toContainElement(link);
+  });
+
+  it("shows next to 'Why this matters' in a list row, and after the why text (with 'Read more') once opened", () => {
+    healthState.packages = [...monitoring(), ...packages];
+    renderRow({ ...behind, learnMore: "https://docs.ava.do/" });
+    expect(screen.getByRole("link", { name: "See the chart" }).parentElement).toHaveTextContent("· See the chart");
+    expect(screen.getByRole("button", { name: "What to check" })).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Why this matters"));
+    expect(screen.getByText(behind.why)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See the chart" }).closest("p")).toHaveTextContent("Read more · See the chart");
+  });
+
+  it("is hidden until Grafana 0.0.3 or newer and Prometheus run", () => {
+    const cases = [
+      packages,
+      [...monitoring("0.0.2"), ...packages],
+      [pkg("grafana.avado.dappnode.eth", { version: "0.0.5", running: false, state: "exited" }), pkg("prometheus.avado.dappnode.eth"), ...packages],
+      [pkg("grafana.avado.dappnode.eth", { version: "0.0.5" }), pkg("prometheus.avado.dappnode.eth", { running: false, state: "exited" }), ...packages],
+    ];
+    for (const installed of cases) {
+      healthState.packages = installed;
+      const { unmount } = renderRow(fewPeers);
+      expect(screen.queryByRole("link", { name: "See the chart" })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("is not added to other findings, to Lighthouse (no dashboard), or to compact rows", () => {
+    healthState.packages = [...monitoring(), ...packages, pkg("lighthouse.avado.dnp.dappnode.eth")];
+    const { unmount } = renderRow(chainError(snapshot({ packages, chainData: [{ name: "Nimbus", error: true }] }))[0]);
+    expect(screen.queryByRole("link", { name: "See the chart" })).not.toBeInTheDocument();
+    unmount();
+    const [lighthouse] = lowPeers(
+      snapshot({ packages: [pkg("lighthouse.avado.dnp.dappnode.eth")], metrics: { peers: [{ client: "lighthouse", network: "mainnet", value: 3 }] } })
+    );
+    const second = renderRow(lighthouse);
+    expect(screen.queryByRole("link", { name: "See the chart" })).not.toBeInTheDocument();
+    second.unmount();
+    renderRow(fewPeers, { compact: true });
+    expect(screen.queryByRole("link", { name: "See the chart" })).not.toBeInTheDocument();
   });
 });

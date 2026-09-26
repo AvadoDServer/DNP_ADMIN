@@ -11,6 +11,7 @@ import { tabsForMode, ADVANCED_TABS } from "settings/visibility";
 import { appStatus, appDescription } from "components/appStatus";
 import { appTitle } from "health/rules/apps";
 import { getClient, ROLES } from "health/clients";
+import { chartUrl } from "health/grafanaLinks";
 import { openUrl } from "components/apps/AppCard";
 import AppAvatar from "components/ui/AppAvatar";
 import StatusPill from "components/ui/StatusPill";
@@ -132,7 +133,7 @@ function OverflowMenu({ label, items }) {
 
 export function AppPage({ dnp, id, loading, history, location, isCore: isCoreProp = false }) {
   const { theme } = useTheme();
-  const { findings, updates } = useHealth();
+  const { findings, updates, packages } = useHealth();
   const { mode, isAdvanced } = useMode();
   const dispatch = useDispatch();
   if (!dnp) return loading ? <LoadingState label="Loading app…" /> : <NoDnpInstalled id={id} moduleName="packages" />;
@@ -166,6 +167,8 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
   const external = openUrl(dnp);
   const showOpen = Boolean(external || url);
   const running = dnp.state === "running";
+  // This client's Grafana dashboard (Nimbus, Teku, Prysm), once Grafana can open it.
+  const charts = chartUrl(dnp.name, packages);
 
   const isConsensus = getClient(dnp.name)?.role === ROLES.CONSENSUS;
 
@@ -218,6 +221,11 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
                 Open
               </Button>
             ))}
+          {charts && (
+            <Button as="a" href={charts} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
+              Charts
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={restart}>
             Restart
           </Button>

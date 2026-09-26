@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import Button from "components/ui/Button";
 import { cn } from "components/ui/cn";
 import { runFixAction } from "health/fixActions";
+import { findingChartUrl } from "health/grafanaLinks";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
 
@@ -15,12 +16,24 @@ const ICON = {
 
 const ACTION_TIMEOUT_MS = 15000;
 
+// The links shown, " · " between them; null when there are none.
+function joinLinks(links) {
+  const shown = links.filter(Boolean);
+  if (!shown.length) return null;
+  return shown.map((link, i) => (
+    <React.Fragment key={i}>
+      {i > 0 && " · "}
+      {link}
+    </React.Fragment>
+  ));
+}
+
 export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false }) {
   const [whyOpen, setWhyOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [starting, setStarting] = useState(false);
   const dispatch = useDispatch();
-  const { dismiss } = useHealth();
+  const { dismiss, packages } = useHealth();
   const { isAdvanced } = useMode();
   const icon = ICON[finding.severity] || ICON.info;
   const { fix } = finding;
@@ -30,6 +43,9 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
   // `detail` is mostly technical (slot numbers, error text), so Simple mode
   // shows it only when the rule marks it as plain enough (detailInSimple).
   const showDetail = !compact && Boolean(finding.detail) && (isAdvanced || finding.detailInSimple === true);
+  // The client's Grafana dashboard, for findings that show on it (falling
+  // behind, few peers, missed attestations). Null unless Grafana can open it.
+  const chart = compact ? null : findingChartUrl(finding, packages);
 
   useEffect(() => {
     if (!starting) return undefined;
@@ -71,6 +87,16 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
       Read more
     </a>
   ) : null;
+  // "See the chart" is something to look at, not a fix, so it sits with the
+  // explanation too: next to "Why this matters" in a list row, after the why
+  // text under a headline. As one more button it would wrap onto an extra
+  // line on a phone (next to "Improve connectivity", for one).
+  const chartLink = chart ? (
+    <a href={chart} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+      See the chart
+    </a>
+  ) : null;
+  const aboutLinks = joinLinks([learnMoreLink, chartLink]);
 
   return (
     <li className="flex gap-3 py-3.5">
@@ -88,18 +114,19 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
               showWhy ? (
                 <p className="mt-0.5 text-sm text-fg-muted">
                   {finding.why}
-                  {learnMoreLink && <> {learnMoreLink}</>}
+                  {aboutLinks && <> {aboutLinks}</>}
                 </p>
               ) : (
                 <>
                   <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
                     {whyOpen ? finding.why : "Why this matters"}
                   </button>
-                  {whyOpen && learnMoreLink && <p className="mb-0 mt-0.5 text-sm">{learnMoreLink}</p>}
+                  {!whyOpen && chartLink && <span className="text-sm text-fg-muted"> · {chartLink}</span>}
+                  {whyOpen && aboutLinks && <p className="mb-0 mt-0.5 text-sm text-fg-muted">{aboutLinks}</p>}
                 </>
               )
             )}
-            {!compact && !finding.why && learnMoreLink && <p className="mb-0 mt-0.5 text-sm">{learnMoreLink}</p>}
+            {!compact && !finding.why && aboutLinks && <p className="mb-0 mt-0.5 text-sm text-fg-muted">{aboutLinks}</p>}
             {showDetail && (
               <p className="mt-0.5 break-words text-xs text-fg-subtle">{finding.detail}</p>
             )}

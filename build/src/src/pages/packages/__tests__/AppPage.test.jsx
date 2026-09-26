@@ -19,8 +19,11 @@ describe("app page helpers", () => {
 // Header actions (fix round 1). Rendered on the "logs" tab, which is the
 // only tab view with no redux/router dependency of its own, so these tests
 // can mount the plain (unconnected) AppPage without a Provider or Router.
+// Installed packages, mutable per test like mockMode below (the "Charts"
+// button needs Grafana and Prometheus installed).
+let mockPackages = [];
 vi.mock("health/HealthProvider", () => ({
-  useHealth: () => ({ findings: [], updates: {}, allFindings: [] }),
+  useHealth: () => ({ findings: [], updates: {}, allFindings: [], packages: mockPackages }),
 }));
 vi.mock("theme/ThemeProvider", () => ({ useTheme: () => ({ theme: "dark" }) }));
 
@@ -76,6 +79,7 @@ describe("app page header actions", () => {
     mockConfirmStop.mockClear();
     mockSetMode.mockClear();
     mockMode = "simple";
+    mockPackages = [];
   });
 
   it("shows Restart in the header, wired to the existing confirm flow", () => {
@@ -247,5 +251,59 @@ describe("app page modes", () => {
       <AppPage dnp={dnpWithSetup} {...baseProps} location={{ pathname: "/packages/x", search: "" }} isCore={false} />
     );
     expect(screen.getByText("v1.2.3")).toBeInTheDocument();
+  });
+});
+
+describe("app page Charts button", () => {
+  const baseProps = {
+    loading: false,
+    history: { replace: vi.fn(), push: vi.fn() },
+    location: { pathname: "/packages/x", search: "?tab=logs" },
+  };
+  const app = name => ({ name, state: "running", running: true, version: "1.0.0", manifest: {} });
+  const grafana = (version = "0.0.5", running = true) => ({ ...app("grafana.avado.dappnode.eth"), version, running, state: running ? "running" : "exited" });
+  const prometheus = (running = true) => ({ ...app("prometheus.avado.dappnode.eth"), version: "0.0.2", running, state: running ? "running" : "exited" });
+  const renderPage = dnp => render(<AppPage dnp={dnp} id={dnp.name} {...baseProps} isCore={false} />);
+
+  beforeEach(() => {
+    mockMode = "simple";
+    mockPackages = [];
+  });
+
+  it("opens the app's Grafana dashboard in a new tab once Grafana 0.0.3+ and Prometheus run", () => {
+    const teku = app("teku-holesky.avado.dnp.dappnode.eth");
+    mockPackages = [grafana(), prometheus(), teku];
+    renderPage(teku);
+    const link = screen.getByRole("link", { name: "Charts" });
+    expect(link).toHaveAttribute("href", "http://grafana.my.ava.do:3000/d/avado-teku?var-system=teku-holesky.my.ava.do:8008");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("is there for the Prysm validator app too", () => {
+    const validator = app("eth2validator.avado.dnp.dappnode.eth");
+    mockPackages = [grafana("0.0.3"), prometheus(), validator];
+    renderPage(validator);
+    expect(screen.getByRole("link", { name: "Charts" })).toHaveAttribute("href", "http://grafana.my.ava.do:3000/d/avado-prysm");
+  });
+
+  it("is hidden without Grafana, with Grafana 0.0.2 or stopped, or with Prometheus stopped", () => {
+    const nimbus = app("nimbus.avado.dnp.dappnode.eth");
+    for (const installed of [[nimbus], [grafana("0.0.2"), prometheus(), nimbus], [grafana("0.0.5", false), prometheus(), nimbus], [grafana(), prometheus(false), nimbus]]) {
+      mockPackages = installed;
+      const { unmount } = renderPage(nimbus);
+      expect(screen.queryByRole("link", { name: "Charts" })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("is hidden on apps without a dashboard (Lighthouse, Grafana itself)", () => {
+    const lighthouse = app("lighthouse.avado.dnp.dappnode.eth");
+    mockPackages = [grafana(), prometheus(), lighthouse];
+    const { unmount } = renderPage(lighthouse);
+    expect(screen.queryByRole("link", { name: "Charts" })).not.toBeInTheDocument();
+    unmount();
+    renderPage(grafana());
+    expect(screen.queryByRole("link", { name: "Charts" })).not.toBeInTheDocument();
   });
 });
