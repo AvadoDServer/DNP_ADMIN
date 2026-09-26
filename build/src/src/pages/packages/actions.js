@@ -1,6 +1,6 @@
 // INSTALLER
 import api from "API/rpcMethods";
-import { shortName as sn } from "utils/format";
+import { shortName as sn, shortNameCapitalized } from "utils/format";
 
 /* Notice: togglePackage, restartPackage, etc use redux-thunk
    Since there is no return value, and the state change
@@ -15,10 +15,12 @@ import { shortName as sn } from "utils/format";
 
 // Used in package interface / envs
 
+// The toast never shows the values: settings can hold RPC URLs or
+// passwords, and toasts end up in support screenshots.
 export const updatePackageEnv = (id, envs) => () =>
   api.updatePackageEnv(
     { id, envs, restart: true },
-    { toastMessage: `Updating ${id} envs: ${JSON.stringify(envs)}...` },
+    { toastMessage: `Saving settings for ${shortNameCapitalized(id)}…` },
   );
 
 // Used in package interface / controls
@@ -26,11 +28,13 @@ export const updatePackageEnv = (id, envs) => () =>
 export const togglePackage = (id) => () =>
   api.togglePackage({ id }, { toastMessage: `Toggling ${sn(id)}...` });
 
+// Rejects when the call fails (the toast still reports it), so the switch
+// can go back at once instead of waiting for a push that never comes.
 export const setAutoUpdate = (id, autoUpdate) => () => {
   console.log(`setting ${id} to ${autoUpdate}`);
-  api.setAutoUpdate(
+  return api.setAutoUpdate(
     { id, autoUpdate },
-    { toastMessage: `Changing Auto-update to ${autoUpdate}` },
+    { toastMessage: `Changing Auto-update to ${autoUpdate}`, throw: true },
   );
 };
 

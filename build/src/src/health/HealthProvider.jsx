@@ -8,12 +8,13 @@ import { getDiagnoses } from "pages/troubleshoot/selectors";
 import { getIsLoaded, getLoadingError } from "services/loadingStatus/selectors";
 import { fetchStore } from "services/store/fetchStore";
 import { computeUpdates } from "services/store/updates";
-import { fetchMetrics } from "./prometheus";
+import { fetchMetrics, fetchDiskTrend } from "./prometheus";
 import { fetchFeeRecipients, VALIDATOR_CLIENTS } from "./feeRecipients";
 import { trackUpdateAges } from "./updateAges";
 import { CARE_PACKAGE, careFindingsFromStatus, fetchCareStatus, mergeCareFindings } from "./careFindings";
 import { PROMETHEUS_PACKAGE } from "./clients";
 import { runChecksDetailed, verdictOf, SEVERITIES, TOPICS } from "./engine";
+import { diskForecast } from "./rules/storage";
 
 const rankOf = (list, v) => (list.indexOf(v) === -1 ? list.length : list.indexOf(v));
 // Same order as the engine's own list, for findings merged in from AVADO Care.
@@ -25,10 +26,13 @@ const sortFindings = list =>
       String(a.title).localeCompare(String(b.title))
   );
 import { ALL_RULES } from "./rules";
-import { isDismissed, dismiss as persistDismiss } from "./dismissals";
+import { isDismissed, dismiss as persistDismiss, undismissAll as persistUndismissAll } from "./dismissals";
 
 const STORE_INTERVAL = 10 * 60 * 1000;
 const METRICS_INTERVAL = 60 * 1000;
+// The disk trend moves over days; its 7-day queries are the heaviest ones.
+const DISK_TREND_INTERVAL = 10 * 60 * 1000;
+const DISK_TREND_KEEP_MS = 60 * 60 * 1000;
 const NODEID_TIMEOUT_MS = 20 * 1000;
 const FEE_RECIPIENT_INTERVAL = 10 * 60 * 1000;
 const CARE_STATUS_INTERVAL = 10 * 60 * 1000;
@@ -53,12 +57,20 @@ function writeUpdateAges(ages) {
   }
 }
 
+// "failed" when Prometheus didn't answer at all (fetchMetrics returned null),
+// "partial" when only some queries failed (their keys are null), else "ok".
+function metricsStatus(data) {
+  if (!data) return "failed";
+  return Object.values(data).some(v => v == null) ? "partial" : "ok";
+}
+
 const HealthContext = createContext(null);
 
 export function HealthProvider({
   children,
   fetchStoreImpl = fetchStore,
   fetchMetricsImpl = fetchMetrics,
+  fetchDiskTrendImpl = fetchDiskTrend,
   fetchFeeRecipientsImpl = fetchFeeRecipients,
   fetchCareStatusImpl = fetchCareStatus,
 }) {
@@ -84,6 +96,9 @@ export function HealthProvider({
 
   const [store, setStore] = useState({ status: "loading", packages: null });
   const [metrics, setMetrics] = useState({ status: "not-installed", data: null });
+  // Disk forecast inputs (fetchDiskTrend): "not-installed" while Prometheus
+  // doesn't run, "loading" until the first answer, then "ok" or "failed".
+  const [diskTrend, setDiskTrend] = useState({ status: "not-installed", data: null });
   const [tick, setTick] = useState(0);
   const [dismissVersion, setDismissVersion] = useState(0);
   const [feeRecipients, setFeeRecipients] = useState(null);
@@ -156,10 +171,43 @@ export function HealthProvider({
         // head slot against the wall clock *at the time it was fetched*, not
         // against `checkedAt`, which the 5 s stats poll keeps moving forward
         // while this sample is up to METRICS_INTERVAL old.
-        data => !cancelled && setMetrics({ status: data ? "ok" : "failed", data, fetchedAt: data ? Date.now() : null })
+        data => !cancelled && setMetrics({ status: metricsStatus(data), data, fetchedAt: data ? Date.now() : null })
       );
     load();
     const t = setInterval(load, METRICS_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [prometheusRunning, tick]);
+
+  // The disk trend, apart from the chain metrics above: its own requests and
+  // state, so a slow or failing disk query never holds up or blanks head
+  // slot, peers or attestations. Every 10 minutes (6 small queries). A
+  // failed read (fetchDiskTrend is null when any one query failed) keeps the
+  // last good one for up to an hour (the trend spans days), so one lost
+  // request doesn't make a disk finding come and go.
+  useEffect(() => {
+    if (!prometheusRunning) {
+      setDiskTrend({ status: "not-installed", data: null });
+      return undefined;
+    }
+    let cancelled = false;
+    setDiskTrend(prev => (prev.data ? prev : { status: "loading", data: null }));
+    const load = () =>
+      fetchDiskTrendImpl()
+        .catch(() => null)
+        .then(data => {
+          if (cancelled) return;
+          const now = Date.now();
+          setDiskTrend(prev =>
+            data
+              ? { status: "ok", data, fetchedAt: now }
+              : { status: "failed", data: prev.data && now - prev.fetchedAt < DISK_TREND_KEEP_MS ? prev.data : null, fetchedAt: prev.fetchedAt }
+          );
+        });
+    load();
+    const t = setInterval(load, DISK_TREND_INTERVAL);
     return () => {
       cancelled = true;
       clearInterval(t);
@@ -229,8 +277,12 @@ export function HealthProvider({
       diagnoses,
       chainData,
       updates,
-      coreUpdate: { available: Boolean(coreAvailable) },
+      // The Admin's own core-update check (services/coreUpdate checkCoreUpdate)
+      // is disabled, so "no update" can't be told apart from "never checked":
+      // null (coreUpdateAvailable is skipped) unless an update was reported.
+      coreUpdate: coreAvailable ? { available: true } : null,
       metrics: metrics.data,
+      diskTrend: diskTrend.data,
       feeRecipients,
       updateAges,
       sources: { updates: store.status, metrics: metrics.status },
@@ -266,6 +318,13 @@ export function HealthProvider({
       metrics: snapshot.metrics,
       // When `metrics` was fetched (a Date), null while there is no sample.
       metricsFetchedAt: metrics.data && metrics.fetchedAt ? new Date(metrics.fetchedAt) : null,
+      // Machine stats (getStats), for System > Storage and the disk findings'
+      // "Get more space" link (health/diskUpgrade.js reads cpuName/diskTotal).
+      stats,
+      // Disk-full forecast (health/rules/storage.js diskForecast) and whether
+      // its data could be read, for System > Storage.
+      diskForecast: diskForecast(diskTrend.data, chainData),
+      diskTrendStatus: diskTrend.status,
       updates: updates || {},
       storePackages: store.packages,
       checksPassed,
@@ -275,8 +334,14 @@ export function HealthProvider({
         persistDismiss(id);
         setDismissVersion(v => v + 1);
       },
+      // Brings every hidden tip back. Bumps dismissVersion like dismiss does:
+      // refresh() would only refetch, and `tick` does not re-run this memo.
+      undismissAll: () => {
+        persistUndismissAll();
+        setDismissVersion(v => v + 1);
+      },
     };
-  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, coreAvailable, metrics, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, coreAvailable, metrics, diskTrend, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }

@@ -5,12 +5,17 @@
 // Admin's /care-api/status proxy, pages/priority/careApi.js) lists its
 // findings as { id, severity, topic, title, why }.
 
+import { FEE_RECIPIENT_STEPS } from "./rules/validators";
+
 export const CARE_PACKAGE = "care.avado.dnp.dappnode.eth";
 // Same addresses as pages/priority/careApi.js CARE_STATUS_URLS (not imported:
 // that module pulls in the whole Priority page and its API client).
 export const CARE_STATUS_URLS = ["/care-api/status", "http://care.my.ava.do/api/status"];
 const TIMEOUT_MS = 8000;
 export const CARE_FINDING_PREFIXES = ["fee-recipient-missing:"];
+// The written "How to fix it" steps for each allowed prefix. Care's status has
+// none, so they come from the Admin's own rule for the same finding.
+const CARE_STEPS = { "fee-recipient-missing:": FEE_RECIPIENT_STEPS };
 export const CARE_SOURCE_NOTE = "Checked by AVADO Care.";
 
 const ID = /^fee-recipient-missing:[a-z0-9.-]{1,120}$/;
@@ -25,7 +30,8 @@ export function careFindingsFromStatus(status) {
   for (const f of list) {
     if (out.length >= MAX_CARE_FINDINGS) break;
     if (!f || typeof f.id !== "string" || !ID.test(f.id)) continue;
-    if (!CARE_FINDING_PREFIXES.some(p => f.id.startsWith(p))) continue;
+    const prefix = CARE_FINDING_PREFIXES.find(p => f.id.startsWith(p));
+    if (!prefix) continue;
     if (!SEVERITIES.has(f.severity) || typeof f.title !== "string" || !f.title) continue;
     if (out.some(o => o.id === f.id)) continue;
     const appId = f.id.slice(f.id.indexOf(":") + 1);
@@ -39,6 +45,7 @@ export function careFindingsFromStatus(status) {
       why: `${why}${CARE_SOURCE_NOTE}`.trim(),
       source: "care",
       fix: { kind: "link", to: `/packages/${appId}`, label: "Open the app" },
+      ...(CARE_STEPS[prefix] ? { steps: CARE_STEPS[prefix] } : {}),
     });
   }
   return out;

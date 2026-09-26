@@ -29,6 +29,31 @@ describe("appStopped", () => {
     const s = snapshot({ packages: [pkg("rotki.avado.dnp.dappnode.eth", { state: "created", running: false })] });
     expect(appStopped(s)).toEqual([]);
   });
+  it("no one-click start for a validator app while another one runs for the same network", () => {
+    const TEKU = "teku.avado.dnp.dappnode.eth";
+    const stoppedTeku = pkg(TEKU, { state: "exited", running: false, manifest: { title: "Teku" } });
+    const [f] = appStopped(snapshot({ packages: [pkg(NIMBUS, { manifest: { title: "Nimbus" } }), stoppedTeku] }));
+    // Its validators may have moved to Nimbus: starting Teku could sign twice.
+    // Still critical: Nimbus may hold none of Teku's keys (split keys, or an
+    // app with none left), and AVADO Care emails only critical findings.
+    expect(f).toMatchObject({ id: `app-stopped:${TEKU}`, severity: "critical", appId: TEKU, title: "Teku is stopped" });
+    expect(f.fix).toEqual({ kind: "link", to: `/packages/${TEKU}`, label: "Open the app" });
+    expect(f.why).toMatch(/Start it only if they were not moved to Nimbus/);
+    // Never tells the owner to remove it: it may be the app with the keys.
+    expect(f.why).not.toMatch(/remove/i);
+    const lighthouse = pkg("lighthouse.avado.dnp.dappnode.eth", { manifest: { title: "Lighthouse" } });
+    const [both] = appStopped(snapshot({ packages: [pkg(NIMBUS, { manifest: { title: "Nimbus" } }), lighthouse, stoppedTeku] }));
+    expect(both.why).toMatch(/not moved to Nimbus and Lighthouse:/);
+    // Prysm's beacon chain holds no keys, another network does not count, and
+    // with both validator apps stopped the usual start action stays.
+    for (const other of [pkg("prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth"), pkg("teku-holesky.avado.dnp.dappnode.eth"), pkg(NIMBUS, { state: "exited", running: false })]) {
+      const out = appStopped(snapshot({ packages: [other, stoppedTeku] })).find(x => x.appId === TEKU);
+      expect(out).toMatchObject({ severity: "critical", fix: { kind: "action", action: "restartPackage" } });
+    }
+    // An execution client keeps its start action next to a running Nimbus.
+    const [geth] = appStopped(snapshot({ packages: [pkg(NIMBUS), pkg(GETH, { state: "exited", running: false })] }));
+    expect(geth).toMatchObject({ severity: "critical", fix: { kind: "action" } });
+  });
   it("skips a stopped Prometheus package — monitoringStopped covers it instead", () => {
     const s = snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] });
     expect(appStopped(s)).toEqual([]);
@@ -59,6 +84,8 @@ describe("setup pairing", () => {
     const [f] = consensusWithoutExecution(snapshot({ packages: [pkg(NIMBUS)] }));
     expect(f).toMatchObject({ id: "consensus-without-execution:mainnet", severity: "critical", topic: "setup", appId: NIMBUS });
     expect(f.fix).toMatchObject({ kind: "link", to: "/installer?category=ethstaking" });
+    // The docs page that walks through installing one, not the docs home page.
+    expect(f.learnMore).toBe("https://docs.ava.do/staking-ethereum/setting-up-the-eth-clients");
   });
   it("is quiet when both halves are installed", () => {
     const s = snapshot({ packages: [pkg(NIMBUS), pkg(GETH)] });

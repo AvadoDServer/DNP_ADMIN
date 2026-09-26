@@ -20,6 +20,7 @@ import {
 } from "../priorityApi";
 import CareSection from "./CareSection";
 import Notice from "./Notice";
+import { PRIORITY_CARE_EMAIL } from "../data";
 
 /**
  * Priority Care page.
@@ -295,8 +296,8 @@ function Priority({ dappnodeParams = {} }) {
           </div>
           <p className="text-sm text-fg-muted">
             Need help? Contact the AVADO Priority Care team at{" "}
-            <a className="font-medium text-accent hover:underline" href="mailto:ziga@ava.do">
-              ziga@ava.do
+            <a className="font-medium text-accent hover:underline" href={`mailto:${PRIORITY_CARE_EMAIL}`}>
+              {PRIORITY_CARE_EMAIL}
             </a>
             .
           </p>

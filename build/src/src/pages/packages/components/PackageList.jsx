@@ -17,6 +17,7 @@ import { openUrl } from "components/apps/AppCard";
 import { useHealth } from "health/HealthProvider";
 import { appStatus, appDescription } from "components/appStatus";
 import { appTitle } from "health/rules/apps";
+import { isAutoUpdateOn } from "health/rules/updates";
 // Selectors
 import {
     getIsLoading,
@@ -29,29 +30,34 @@ import { MdRefresh } from "react-icons/md";
 
 const xnor = (a, b) => Boolean(a) === Boolean(b);
 
-// Reads the package's own autoupdate flag (not the manifest's). Packages
-// without the flag default to on, matching the rest of the app (e.g. the
-// autoupdateOff health rule only treats an explicit `false` as "off").
-export const getAutoUpdateState = dnp => Boolean(dnp) && dnp.autoupdate !== false;
+// The core reports the switch as `manifest.autoupdate`; the same reading as
+// the autoupdateOff health rule (health/rules/updates.js isAutoUpdateOn), so
+// the switch and the "Automatic updates are off" tip always agree.
+export const getAutoUpdateState = dnp => isAutoUpdateOn(dnp);
 
 const iconBtn =
     "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning-text focus:outline-none focus-visible:shadow-focus";
 
 const linkCls = "text-sm font-medium text-accent transition-colors hover:underline";
 
-const AUTOUPDATE_PENDING_TIMEOUT = 10000;
+// The confirming WAMP push re-lists every package, which runs `docker system
+// df` on the box. That walks every volume and can be slow on a box with a
+// big execution-client database; the switch must not snap back meanwhile.
+export const AUTOUPDATE_PENDING_TIMEOUT = 60000;
 
 /**
  * The auto-update switch gives immediate feedback: on click it shows the
  * requested value right away and disables itself, since the real change only
  * lands once the backend pushes the updated package back over WAMP (there is
  * no optimistic redux update). It waits for redux to agree with the
- * requested value, or reverts to whatever redux says after 10s.
+ * requested value, or reverts to whatever redux says after 60s. A call that
+ * fails reverts it at once: no push will come.
  */
 export function AutoUpdateSwitch({ dnp, title, setAutoUpdate }) {
     const actual = getAutoUpdateState(dnp);
     const [pending, setPending] = useState(null); // null | boolean (the requested value)
     const timeoutRef = useRef(null);
+    const requestRef = useRef(0); // which click a late failure belongs to
 
     // Redux caught up with the requested value (or moved on its own) — clear the pending state.
     useEffect(() => {
@@ -70,10 +76,15 @@ export function AutoUpdateSwitch({ dnp, title, setAutoUpdate }) {
 
     const onToggle = () => {
         const next = !actual;
+        const request = ++requestRef.current;
         setPending(next);
-        setAutoUpdate(dnp.name, next);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => setPending(null), AUTOUPDATE_PENDING_TIMEOUT);
+        Promise.resolve(setAutoUpdate(dnp.name, next)).catch(() => {
+            if (request !== requestRef.current) return;
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setPending(null);
+        });
     };
 
     return (

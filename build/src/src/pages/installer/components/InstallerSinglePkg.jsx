@@ -11,6 +11,8 @@ import { isEmpty } from "lodash";
 import * as s from "../selectors";
 import * as a from "../actions";
 import ProgressLogs from "./InstallCardComponents/ProgressLogs";
+import confirmSecondValidatorApp from "./confirmSecondValidatorApp";
+import { getClient, keyHolders } from "health/clients";
 // Selectors
 import { getProgressLogsByDnp } from "services/isInstallingLogs/selectors";
 import { rootPath as packagesRootPath } from "pages/packages/data";
@@ -146,6 +148,21 @@ function InstallerInterface({
     }
     const hasWizard = manifest && manifest.links && manifest.links.OnboardingWizard;
 
+    // A new app that can hold validator keys, next to one that already can on
+    // the same network: say first that each key may run in one app only.
+    // Updates install straight away.
+    const onInstall = () => {
+        const client = !installedPackage && getClient(name);
+        const others = client && client.holdsKeys
+            ? keyHolders(packages)
+                .filter(k => k.client.network === client.network && k.pkg.name !== name)
+                .map(k => k.pkg)
+            : [];
+        if (others.length > 0)
+            confirmSecondValidatorApp({ app: { name, manifest }, network: client.network, others }, () => install(id, options));
+        else install(id, options);
+    };
+
 
     /**
      * Filter options according to the current package
@@ -242,7 +259,7 @@ function InstallerInterface({
                     {/* Actions */}
                     <div className="mt-5 flex flex-wrap gap-3">
                         {actionButtonTxt && isEmpty(progressLogs) && (
-                            <Button variant="primary" onClick={() => install(id, options)}>
+                            <Button variant="primary" onClick={onInstall}>
                                 {actionButtonTxt}
                             </Button>
                         )}

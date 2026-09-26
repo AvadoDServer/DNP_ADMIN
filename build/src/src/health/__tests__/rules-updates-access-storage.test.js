@@ -1,7 +1,9 @@
-import { updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable } from "health/rules/updates";
+import { updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable, isAutoUpdateOn } from "health/rules/updates";
 import { portsClosed, noUpnp, noNatLoopback, remoteAccessMissing } from "health/rules/access";
 import { diskHigh, parsePercent, parseDockerSize, formatDockerSize, appDiskUse } from "health/rules/storage";
 import { diagnoseFailed } from "health/rules/core";
+import { ALL_RULES } from "health/rules";
+import { runChecksDetailed } from "health/engine";
 import { pkg, snapshot } from "./fixtures";
 
 describe("updates", () => {
@@ -16,11 +18,35 @@ describe("updates", () => {
     expect(coreUpdateAvailable(snapshot({ coreUpdate: { available: true } }))).toMatchObject({ severity: "warning", fix: { to: "/system/updates" } });
     expect(coreUpdateAvailable(snapshot())).toBeNull();
   });
+  it("skips the core-update check (not counted as passed) while nothing checked for one", () => {
+    expect(coreUpdateAvailable.needs).toBe("coreUpdate");
+    const unchecked = runChecksDetailed(snapshot({ coreUpdate: null }), [coreUpdateAvailable]);
+    expect(unchecked).toEqual({ findings: [], passed: 0, total: 0 });
+    const available = runChecksDetailed(snapshot({ coreUpdate: { available: true } }), [coreUpdateAvailable]);
+    expect(available.findings.map(f => f.id)).toEqual(["core-update-available"]);
+  });
   it("notes clients with auto-update off", () => {
     const s = snapshot({ packages: [pkg("nimbus.avado.dnp.dappnode.eth", { autoupdate: false }), pkg("rotki.avado.dnp.dappnode.eth", { autoupdate: false })] });
     const out = autoupdateOff(s);
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ severity: "info", appId: "nimbus.avado.dnp.dappnode.eth", dismissable: true });
+  });
+  it("reads auto-update from manifest.autoupdate, the only form the core sends", () => {
+    const off = pkg("nimbus.avado.dnp.dappnode.eth", { manifest: { title: "Nimbus", autoupdate: false } });
+    expect(autoupdateOff(snapshot({ packages: [off] })).map(f => f.id)).toEqual(["autoupdate-off:nimbus.avado.dnp.dappnode.eth"]);
+    // manifest.autoupdate wins over a stale top-level flag, both ways
+    const on = pkg("nimbus.avado.dnp.dappnode.eth", { autoupdate: false, manifest: { title: "Nimbus", autoupdate: true } });
+    expect(autoupdateOff(snapshot({ packages: [on] }))).toEqual([]);
+    const offDespiteTop = pkg("nimbus.avado.dnp.dappnode.eth", { autoupdate: true, manifest: { title: "Nimbus", autoupdate: false } });
+    expect(autoupdateOff(snapshot({ packages: [offDespiteTop] }))).toHaveLength(1);
+  });
+  it("isAutoUpdateOn: manifest first, then the top-level flag, else on", () => {
+    expect(isAutoUpdateOn({ manifest: { autoupdate: false } })).toBe(false);
+    expect(isAutoUpdateOn({ manifest: { autoupdate: true }, autoupdate: false })).toBe(true);
+    expect(isAutoUpdateOn({ manifest: {}, autoupdate: false })).toBe(false);
+    expect(isAutoUpdateOn({ manifest: {} })).toBe(true);
+    expect(isAutoUpdateOn({})).toBe(true);
+    expect(isAutoUpdateOn(null)).toBe(false);
   });
   it("updates-store-unreachable: explains a failed store fetch", () => {
     expect(storeUnreachable(snapshot({ sources: { updates: "failed" } }))).toMatchObject({ id: "store-unreachable", severity: "info" });
@@ -35,6 +61,16 @@ describe("access", () => {
     expect(noUpnp(snapshot({ params: { upnpAvailable: false } }))).toMatchObject({ severity: "info" });
     expect(noUpnp(snapshot({ params: {} }))).toBeNull();
     expect(noNatLoopback(snapshot({ params: { noNatLoopback: true, internalIp: "192.168.1.20" } })).why).toContain("192.168.1.20");
+  });
+  it("reads the internal IP as the core spells it (internalip)", () => {
+    expect(noNatLoopback(snapshot({ params: { noNatLoopback: true, internalip: "192.168.1.21" } })).why).toContain("192.168.1.21");
+    expect(noNatLoopback(snapshot({ params: { noNatLoopback: true } })).why).toContain("its internal IP");
+  });
+  it("leaves out the router checks whose params the core no longer sends", () => {
+    expect(ALL_RULES).not.toContain(portsClosed);
+    expect(ALL_RULES).not.toContain(noUpnp);
+    expect(ALL_RULES).not.toContain(noNatLoopback);
+    expect(ALL_RULES).toContain(remoteAccessMissing);
   });
   it("suggests remote access only when neither Remote Connect nor VPN is installed", () => {
     expect(remoteAccessMissing(snapshot())).toMatchObject({ severity: "info", dismissable: true });

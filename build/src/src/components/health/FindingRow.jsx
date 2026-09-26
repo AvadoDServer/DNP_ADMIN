@@ -4,6 +4,8 @@ import { useDispatch } from "react-redux";
 import Button from "components/ui/Button";
 import { cn } from "components/ui/cn";
 import { runFixAction } from "health/fixActions";
+import { findingChartUrl } from "health/grafanaLinks";
+import { kitFindingLink } from "health/diskUpgrade";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
 
@@ -15,15 +17,42 @@ const ICON = {
 
 const ACTION_TIMEOUT_MS = 15000;
 
-export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false }) {
+// The links shown, " · " between them; null when there are none.
+function joinLinks(links) {
+  const shown = links.filter(Boolean);
+  if (!shown.length) return null;
+  return shown.map((link, i) => (
+    <React.Fragment key={i}>
+      {i > 0 && " · "}
+      {link}
+    </React.Fragment>
+  ));
+}
+
+// canHide: only Home (VerdictPanel) offers "Hide" on a dismissable finding.
+// Hidden findings leave Home's list only; Help and the app pages list them
+// anyway, where "Hide" would seem to do nothing.
+export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false, canHide = false }) {
   const [whyOpen, setWhyOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [starting, setStarting] = useState(false);
   const dispatch = useDispatch();
-  const { dismiss } = useHealth();
+  const { dismiss, packages, stats, diskForecast } = useHealth();
   const { isAdvanced } = useMode();
   const icon = ICON[finding.severity] || ICON.info;
   const { fix } = finding;
+  const hasSteps = Array.isArray(finding.steps) && finding.steps.length > 0;
+  // Only https links: `learnMore` opens outside the Admin, in a new tab.
+  const learnMore = typeof finding.learnMore === "string" && /^https:\/\//.test(finding.learnMore) ? finding.learnMore : null;
+  // `detail` is mostly technical (slot numbers, error text), so Simple mode
+  // shows it only when the rule marks it as plain enough (detailInSimple).
+  const showDetail = !compact && Boolean(finding.detail) && (isAdvanced || finding.detailInSimple === true);
+  // The client's Grafana dashboard, for findings that show on it (falling
+  // behind, few peers, missed attestations). Null unless Grafana can open it.
+  const chart = compact ? null : findingChartUrl(finding, packages);
+  // A disk finding on a box the 4 TB kit fits also gets "Get more space",
+  // which opens the kit card on System > Storage (health/diskUpgrade.js).
+  const secondary = finding.secondary || (compact ? null : kitFindingLink(finding, stats, diskForecast));
 
   useEffect(() => {
     if (!starting) return undefined;
@@ -49,6 +78,33 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
       </Button>
     ) : null;
 
+  // Written steps behind a link or action fix get their own toggle (the same
+  // list and state). A "steps" fix already is that toggle: never a second one.
+  const stepsToggle =
+    hasSteps && !(fix && fix.kind === "steps") ? (
+      <Button size="sm" variant="ghost" onClick={() => setStepsOpen(o => !o)} aria-expanded={stepsOpen}>
+        How to fix it
+      </Button>
+    ) : null;
+
+  // "Read more" belongs to the explanation: it shows with the why text (inline
+  // when the why is always shown), so it adds no button to the row.
+  const learnMoreLink = learnMore ? (
+    <a href={learnMore} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+      Read more
+    </a>
+  ) : null;
+  // "See the chart" is something to look at, not a fix, so it sits with the
+  // explanation too: next to "Why this matters" in a list row, after the why
+  // text under a headline. As one more button it would wrap onto an extra
+  // line on a phone (next to "Improve connectivity", for one).
+  const chartLink = chart ? (
+    <a href={chart} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+      See the chart
+    </a>
+  ) : null;
+  const aboutLinks = joinLinks([learnMoreLink, chartLink]);
+
   return (
     <li className="flex gap-3 py-3.5">
       <span className={cn("mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full", icon.cls)}>
@@ -63,28 +119,37 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
             {!hideTitle && <p className="mb-0 break-words font-medium text-fg">{finding.title}</p>}
             {!compact && finding.why && (
               showWhy ? (
-                <p className="mt-0.5 text-sm text-fg-muted">{finding.why}</p>
+                <p className="mt-0.5 text-sm text-fg-muted">
+                  {finding.why}
+                  {aboutLinks && <> {aboutLinks}</>}
+                </p>
               ) : (
-                <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
-                  {whyOpen ? finding.why : "Why this matters"}
-                </button>
+                <>
+                  <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
+                    {whyOpen ? finding.why : "Why this matters"}
+                  </button>
+                  {!whyOpen && chartLink && <span className="text-sm text-fg-muted"> · {chartLink}</span>}
+                  {whyOpen && aboutLinks && <p className="mb-0 mt-0.5 text-sm text-fg-muted">{aboutLinks}</p>}
+                </>
               )
             )}
-            {!compact && isAdvanced && finding.detail && (
+            {!compact && !finding.why && aboutLinks && <p className="mb-0 mt-0.5 text-sm text-fg-muted">{aboutLinks}</p>}
+            {showDetail && (
               <p className="mt-0.5 break-words text-xs text-fg-subtle">{finding.detail}</p>
             )}
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
             {fixButton}
-            {finding.secondary && (
-              <Button as={Link} to={finding.secondary.to} size="sm" variant="ghost">{finding.secondary.label}</Button>
+            {stepsToggle}
+            {secondary && (
+              <Button as={Link} to={secondary.to} size="sm" variant="ghost">{secondary.label}</Button>
             )}
-            {finding.dismissable && (
+            {canHide && finding.dismissable && (
               <Button size="sm" variant="ghost" onClick={() => dismiss(finding.id)}>Hide</Button>
             )}
           </div>
         </div>
-        {stepsOpen && finding.steps && finding.steps.length > 0 && (
+        {stepsOpen && hasSteps && (
           <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-fg-muted">
             {finding.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>

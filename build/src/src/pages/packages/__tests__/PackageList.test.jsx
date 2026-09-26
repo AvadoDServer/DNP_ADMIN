@@ -1,11 +1,23 @@
 import React from "react";
 import { act, fireEvent, render } from "@testing-library/react";
-import { getAutoUpdateState, AutoUpdateSwitch } from "pages/packages/components/PackageList";
+import { getAutoUpdateState, AutoUpdateSwitch, AUTOUPDATE_PENDING_TIMEOUT } from "pages/packages/components/PackageList";
 
 describe("getAutoUpdateState", () => {
-  it("reads the package's own flag, not the manifest's", () => {
-    expect(getAutoUpdateState({ autoupdate: false, manifest: { autoupdate: true } })).toBe(false);
-    expect(getAutoUpdateState({ autoupdate: true, manifest: { autoupdate: false } })).toBe(true);
+  // The core only ever sends `manifest.autoupdate` (DAPPMANAGER listPackages),
+  // and the dnpInstalled schema has no top-level `autoupdate` key.
+  it("reads the core's manifest.autoupdate first", () => {
+    expect(getAutoUpdateState({ manifest: { autoupdate: false } })).toBe(false);
+    expect(getAutoUpdateState({ manifest: { autoupdate: true } })).toBe(true);
+    expect(getAutoUpdateState({ autoupdate: true, manifest: { autoupdate: false } })).toBe(false);
+    expect(getAutoUpdateState({ autoupdate: false, manifest: { autoupdate: true } })).toBe(true);
+  });
+
+  it("falls back to a top-level flag, and defaults to on", () => {
+    expect(getAutoUpdateState({ autoupdate: false, manifest: {} })).toBe(false);
+    expect(getAutoUpdateState({ autoupdate: false })).toBe(false);
+    expect(getAutoUpdateState({ manifest: {} })).toBe(true);
+    expect(getAutoUpdateState({})).toBe(true);
+    expect(getAutoUpdateState(null)).toBe(false);
   });
 });
 
@@ -19,7 +31,7 @@ describe("AutoUpdateSwitch", () => {
 
   it("shows the requested value immediately and disables until redux confirms it", () => {
     const setAutoUpdate = vi.fn();
-    const dnp = { name: "grafana.avado.dnp.dappnode.eth", autoupdate: true };
+    const dnp = { name: "grafana.avado.dnp.dappnode.eth", manifest: { autoupdate: true } };
     const { getByRole, rerender } = render(
       <AutoUpdateSwitch dnp={dnp} title="Grafana" setAutoUpdate={setAutoUpdate} />
     );
@@ -32,22 +44,23 @@ describe("AutoUpdateSwitch", () => {
     expect(input.checked).toBe(false);
     expect(input).toBeDisabled();
 
-    // Redux hasn't pushed the change back yet: stays pending well before the timeout.
+    // Redux hasn't pushed the change back yet (the push waits for docker df
+    // on the box): still pending well past the old 10 s timeout.
     act(() => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(30000);
     });
     expect(input.checked).toBe(false);
     expect(input).toBeDisabled();
 
     // The WAMP push lands: redux now agrees with the requested value.
-    rerender(<AutoUpdateSwitch dnp={{ ...dnp, autoupdate: false }} title="Grafana" setAutoUpdate={setAutoUpdate} />);
+    rerender(<AutoUpdateSwitch dnp={{ ...dnp, manifest: { autoupdate: false } }} title="Grafana" setAutoUpdate={setAutoUpdate} />);
     expect(input.checked).toBe(false);
     expect(input).not.toBeDisabled();
   });
 
-  it("reverts to the redux value after 10s if redux never confirms", () => {
+  it("reverts to the redux value after 60s if redux never confirms", () => {
     const setAutoUpdate = vi.fn();
-    const dnp = { name: "grafana.avado.dnp.dappnode.eth", autoupdate: true };
+    const dnp = { name: "grafana.avado.dnp.dappnode.eth", manifest: { autoupdate: true } };
     const { getByRole } = render(
       <AutoUpdateSwitch dnp={dnp} title="Grafana" setAutoUpdate={setAutoUpdate} />
     );
@@ -57,10 +70,66 @@ describe("AutoUpdateSwitch", () => {
     expect(input.checked).toBe(false);
     expect(input).toBeDisabled();
 
+    expect(AUTOUPDATE_PENDING_TIMEOUT).toBe(60000);
     act(() => {
-      vi.advanceTimersByTime(10000);
+      vi.advanceTimersByTime(AUTOUPDATE_PENDING_TIMEOUT - 1);
     });
-    expect(input.checked).toBe(true); // reverted; redux's dnp.autoupdate never changed
+    expect(input.checked).toBe(false);
+    expect(input).toBeDisabled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(input.checked).toBe(true); // reverted; redux's manifest.autoupdate never changed
     expect(input).not.toBeDisabled();
+  });
+
+  it("goes back at once when the call fails (no push will come), not after 60s", async () => {
+    const setAutoUpdate = vi.fn(() => Promise.reject(new Error("no such procedure")));
+    const dnp = { name: "grafana.avado.dnp.dappnode.eth", manifest: { autoupdate: true } };
+    const { getByRole } = render(
+      <AutoUpdateSwitch dnp={dnp} title="Grafana" setAutoUpdate={setAutoUpdate} />
+    );
+    const input = getByRole("checkbox", { name: "Auto-update for Grafana" });
+
+    fireEvent.click(input);
+    expect(input.checked).toBe(false);
+    expect(input).toBeDisabled();
+
+    await act(async () => {}); // the rejection lands; no timer has run
+    expect(input.checked).toBe(true);
+    expect(input).not.toBeDisabled();
+
+    // The 60 s fallback was cleared with it: nothing flips later.
+    act(() => {
+      vi.advanceTimersByTime(AUTOUPDATE_PENDING_TIMEOUT);
+    });
+    expect(input.checked).toBe(true);
+    expect(input).not.toBeDisabled();
+  });
+
+  it("a late failure of an earlier click does not cancel a newer one", async () => {
+    let rejectFirst;
+    const setAutoUpdate = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise((resolve, reject) => { rejectFirst = reject; }))
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const dnp = { name: "grafana.avado.dnp.dappnode.eth", manifest: { autoupdate: true } };
+    const { getByRole } = render(
+      <AutoUpdateSwitch dnp={dnp} title="Grafana" setAutoUpdate={setAutoUpdate} />
+    );
+    const input = getByRole("checkbox", { name: "Auto-update for Grafana" });
+
+    fireEvent.click(input); // first call never answers
+    act(() => {
+      vi.advanceTimersByTime(AUTOUPDATE_PENDING_TIMEOUT);
+    });
+    expect(input).not.toBeDisabled();
+    fireEvent.click(input); // second click, pending again
+    expect(input).toBeDisabled();
+
+    await act(async () => rejectFirst(new Error("late")));
+    expect(input.checked).toBe(false);
+    expect(input).toBeDisabled();
   });
 });

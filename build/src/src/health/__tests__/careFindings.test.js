@@ -1,4 +1,5 @@
 import { careFindingsFromStatus, mergeCareFindings, CARE_SOURCE_NOTE, MAX_CARE_FINDINGS } from "health/careFindings";
+import { FEE_RECIPIENT_STEPS } from "health/rules/validators";
 
 const NIMBUS = "nimbus.avado.dnp.dappnode.eth";
 const careFee = {
@@ -24,6 +25,12 @@ describe("careFindingsFromStatus", () => {
       fix: { kind: "link", to: `/packages/${NIMBUS}` },
     });
     expect(out[0].why.endsWith(CARE_SOURCE_NOTE)).toBe(true);
+  });
+
+  it("attaches the Admin's own fee-recipient steps (Care's status has none)", () => {
+    const [f] = careFindingsFromStatus({ findings: [{ ...careFee, steps: ["from Care"] }] });
+    expect(f.steps).toEqual(FEE_RECIPIENT_STEPS);
+    expect(f.steps.length).toBeGreaterThan(0);
   });
 
   it("ignores anything unexpected", () => {

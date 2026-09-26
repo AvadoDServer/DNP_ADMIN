@@ -11,6 +11,7 @@ import { tabsForMode, ADVANCED_TABS } from "settings/visibility";
 import { appStatus, appDescription } from "components/appStatus";
 import { appTitle } from "health/rules/apps";
 import { getClient, ROLES } from "health/clients";
+import { chartUrl } from "health/grafanaLinks";
 import { openUrl } from "components/apps/AppCard";
 import AppAvatar from "components/ui/AppAvatar";
 import StatusPill from "components/ui/StatusPill";
@@ -55,6 +56,8 @@ const menuBtnCls =
  * - aria-haspopup / aria-expanded on the trigger.
  * - Escape closes the menu and returns focus to the trigger.
  * - A click outside the menu also closes it.
+ * - ml-auto keeps it at the right end of the header row on a phone, so the
+ *   menu (right-aligned, w-44) opens on screen even when the row wraps.
  */
 function OverflowMenu({ label, items }) {
   const [open, setOpen] = useState(false);
@@ -85,7 +88,7 @@ function OverflowMenu({ label, items }) {
   if (!items.length) return null;
 
   return (
-    <div ref={containerRef} className="relative" onKeyDown={onKeyDown}>
+    <div ref={containerRef} className="relative ml-auto" onKeyDown={onKeyDown}>
       <button
         ref={triggerRef}
         type="button"
@@ -118,7 +121,8 @@ function OverflowMenu({ label, items }) {
               }}
               className={cn(
                 "flex w-full items-center px-3 py-2 text-left transition-colors hover:bg-fg/[0.06]",
-                item.tone === "danger" ? "text-danger-text" : "text-fg"
+                item.tone === "danger" ? "text-danger-text" : "text-fg",
+                item.className
               )}
             >
               {item.label}
@@ -132,7 +136,7 @@ function OverflowMenu({ label, items }) {
 
 export function AppPage({ dnp, id, loading, history, location, isCore: isCoreProp = false }) {
   const { theme } = useTheme();
-  const { findings, updates } = useHealth();
+  const { findings, updates, packages } = useHealth();
   const { mode, isAdvanced } = useMode();
   const dispatch = useDispatch();
   if (!dnp) return loading ? <LoadingState label="Loading app…" /> : <NoDnpInstalled id={id} moduleName="packages" />;
@@ -166,6 +170,8 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
   const external = openUrl(dnp);
   const showOpen = Boolean(external || url);
   const running = dnp.state === "running";
+  // This client's Grafana dashboard (Nimbus, Teku, Prysm), once Grafana can open it.
+  const charts = chartUrl(dnp.name, packages);
 
   const isConsensus = getClient(dnp.name)?.role === ROLES.CONSENSUS;
 
@@ -191,7 +197,10 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
 
   // Stop/Start acts directly on the container; hide it for core (system)
   // services in this menu the same way Reset/Remove already are.
+  // On a phone "Charts" sits here instead of in the header, which then keeps
+  // to Open, Restart and "⋯" on one line.
   const menuItems = [
+    ...(charts ? [{ label: "Charts", className: "sm:hidden", onClick: () => window.open(charts, "_blank", "noopener,noreferrer") }] : []),
     ...(!isCore ? [{ label: running ? "Stop" : "Start", onClick: toggle }] : []),
     ...(!isCore ? [{ label: "Reset", onClick: reset }] : []),
     ...(!isCore ? [{ label: "Remove", tone: "danger", onClick: remove }] : []),
@@ -218,6 +227,11 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
                 Open
               </Button>
             ))}
+          {charts && (
+            <Button as="a" href={charts} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm" className="hidden sm:inline-flex">
+              Charts
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={restart}>
             Restart
           </Button>

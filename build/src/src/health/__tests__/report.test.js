@@ -7,7 +7,8 @@ const input = {
     envs: { GF_SECURITY_ADMIN_PASSWORD: "hunter2", FEE_RECIPIENT: "0xabc" },
     volumes: [{ size: 2e11 }], manifest: { title: "Nimbus" } }],
   stats: { cpu: "4%", memory: "10%", disk: "12%", diskTotal: "3.6 TB" },
-  params: { internalIp: "192.168.1.20", ip: "85.84.83.82", nodeid: "0xNODE", name: "My AVADO" },
+  // As the core sends them (DAPPMANAGER getParams): `internalip`, lower-case.
+  params: { internalip: "192.168.1.20", ip: "85.84.83.82", nodeid: "0xNODE", name: "My AVADO" },
   chainData: [{ name: "Nimbus", syncing: false, message: "Synced" }],
   userActionLogs: [{ event: "restartPackage.dappmanager.dnp.dappnode.eth", level: "info", message: "Restarted", timestamp: "2026-09-22T10:00:00Z", kwargs: { id: "x", privateKey: "0xSECRET" } }],
   versions: { admin: "10.0.52", dappmanager: "10.0.47" },
@@ -21,8 +22,12 @@ describe("buildReport", () => {
     expect(r).toContain("[critical] Nimbus has no execution client");
     expect(r).toContain("admin 10.0.52");
     expect(r).toContain("Nimbus (nimbus.avado.dnp.dappnode.eth) 0.0.48 running");
-    expect(r).toContain("192.168.1.20");
+    expect(r).toContain("- internal IP 192.168.1.20");
     expect(r).toContain("0xNODE");
+  });
+  it("also reads the old internalIp spelling", () => {
+    expect(buildReport({ ...input, params: { internalIp: "192.168.1.30" } })).toContain("- internal IP 192.168.1.30");
+    expect(buildReport({ ...input, params: {} })).toContain("- internal IP ?");
   });
   it("never leaks env values, public IPs or log arguments", () => {
     expect(r).not.toContain("hunter2");
