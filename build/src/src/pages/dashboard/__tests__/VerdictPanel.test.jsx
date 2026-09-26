@@ -14,7 +14,7 @@ vi.mock("health/HealthProvider", () => ({ useHealth: () => health.current }));
 // A stand-in that still honours hideTitle/showWhy so the "no repeat"
 // behaviour is actually observable, without pulling in FindingRow's real
 // dependencies (react-redux dispatch, health/fixActions, ...).
-function FindingRowStub({ finding, hideTitle, showWhy }) {
+function FindingRowStub({ finding, hideTitle, showWhy, canHide }) {
   React.useState(() => {
     mountLog.push(finding.id);
     return null;
@@ -23,6 +23,7 @@ function FindingRowStub({ finding, hideTitle, showWhy }) {
     <li>
       {!hideTitle && finding.title}
       {showWhy && finding.why}
+      {canHide && finding.dismissable && <button type="button">Hide {finding.id}</button>}
     </li>
   );
 }
@@ -139,51 +140,34 @@ describe("VerdictView", () => {
   });
 });
 
-describe("Show hidden tips", () => {
-  const view = props => (
-    <MemoryRouter>
-      <VerdictView verdict={{ level: "ok", label: "All good" }} findings={[]} checkedAt={new Date(0)} onRefresh={() => {}} checksPassed={12} {...props} />
-    </MemoryRouter>
-  );
+describe("Hiding tips", () => {
+  const tip = { id: "remote-access-missing", severity: "info", topic: "access", title: "Remote access", dismissable: true };
+  const twoApps = { id: "two-validator-clients:mainnet", severity: "warning", topic: "setup", title: "Nimbus and Teku are both installed", dismissable: true };
 
-  it("adds nothing to the footer while no tip is hidden", () => {
-    render(view({ hiddenCount: 0, onShowHidden: () => {} }));
-    expect(screen.queryByText(/hidden tips/)).not.toBeInTheDocument();
+  it("Home offers Hide on its dismissable findings, headline included", () => {
+    render(
+      <MemoryRouter>
+        <VerdictView verdict={{ level: "warning", label: "Needs attention" }} findings={[twoApps, tip]} checkedAt={new Date(0)} onRefresh={() => {}} checksPassed={12} />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("button", { name: `Hide ${twoApps.id}` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Hide ${tip.id}` })).toBeInTheDocument();
   });
 
-  it("offers 'Show hidden tips (N)' once tips are hidden, and calls onShowHidden", () => {
-    const onShowHidden = vi.fn();
-    render(view({ hiddenCount: 2, onShowHidden }));
-    fireEvent.click(screen.getByRole("button", { name: "Show hidden tips (2)" }));
-    expect(onShowHidden).toHaveBeenCalledTimes(1);
-  });
-
-  it("VerdictPanel counts hidden tips as allFindings minus findings and wires undismissAll", () => {
-    const tip = { id: "remote-access-missing", severity: "info", topic: "access", title: "Remote access", dismissable: true };
-    const undismissAll = vi.fn();
+  it("adds no 'Show hidden tips' link to Home's footer, even with a hidden tip or warning still firing", () => {
     health.current = {
       verdict: { level: "ok", label: "All good" },
       findings: [],
-      allFindings: [tip],
+      allFindings: [tip, twoApps],
       checkedAt: new Date(0),
       refresh: () => {},
       checksPassed: 12,
       ready: true,
-      undismissAll,
+      undismissAll: vi.fn(),
     };
     render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
-    fireEvent.click(screen.getByRole("button", { name: "Show hidden tips (1)" }));
-    expect(undismissAll).toHaveBeenCalledTimes(1);
-  });
-
-  it("VerdictPanel shows no link when nothing is hidden or allFindings is not there", () => {
-    const base = { verdict: { level: "ok", label: "All good" }, findings: [], checkedAt: new Date(0), refresh: () => {}, checksPassed: 12, ready: true, undismissAll: () => {} };
-    health.current = { ...base, allFindings: [] };
-    const { unmount } = render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
-    expect(screen.queryByText(/hidden tips/)).not.toBeInTheDocument();
-    unmount();
-    health.current = base;
-    render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
-    expect(screen.queryByText(/hidden tips/)).not.toBeInTheDocument();
+    expect(screen.getByText(/12 other checks passed/)).toBeInTheDocument();
+    expect(screen.queryByText(/hidden/i)).not.toBeInTheDocument();
+    expect(health.current.undismissAll).not.toHaveBeenCalled();
   });
 });

@@ -28,7 +28,10 @@ function joinLinks(links) {
   ));
 }
 
-export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false }) {
+// canHide: only Home (VerdictPanel) offers "Hide" on a dismissable finding.
+// Hidden findings leave Home's list only; Help and the app pages list them
+// anyway, where "Hide" would seem to do nothing.
+export default function FindingRow({ finding, compact = false, hideTitle = false, showWhy = false, canHide = false }) {
   const [whyOpen, setWhyOpen] = useState(false);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -137,7 +140,7 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
             {finding.secondary && (
               <Button as={Link} to={finding.secondary.to} size="sm" variant="ghost">{finding.secondary.label}</Button>
             )}
-            {finding.dismissable && (
+            {canHide && finding.dismissable && (
               <Button size="sm" variant="ghost" onClick={() => dismiss(finding.id)}>Hide</Button>
             )}
           </div>

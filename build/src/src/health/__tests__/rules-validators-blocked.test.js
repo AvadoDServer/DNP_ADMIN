@@ -4,7 +4,6 @@ import {
   twoValidatorClients,
   TWO_VALIDATOR_APPS_STEPS,
   KEY_MOVE_WAIT_MINUTES,
-  SWITCHING_CLIENTS_DOCS,
   joinNames,
 } from "health/rules/validators";
 import { updateBlocked, UPDATE_BLOCKED_AFTER_MS } from "health/rules/updates";
@@ -59,24 +58,34 @@ describe("twoValidatorClients", () => {
       dismissable: true,
       title: "Nimbus and Teku are both installed for Ethereum mainnet",
       fix: { kind: "steps" },
-      learnMore: SWITCHING_CLIENTS_DOCS,
     });
     expect(f.why).toMatch(/one app only/);
-    expect(f.why).toMatch(/hide this/);
+    // Hide is offered on Home only (FindingRow canHide).
+    expect(f.why).toMatch(/hide this on Home/);
     expect(f.steps).toEqual(TWO_VALIDATOR_APPS_STEPS);
+    // No "Read more": that docs page opens with "Stop the validators".
+    expect(f.learnMore).toBeUndefined();
   });
 
   it("walks through the safe order: remove the validators, wait, import, remove the old app, never just stop it", () => {
     // docs.ava.do asks for at least 5 finalized epochs (about 32 minutes) and
     // recommends 10 (64 minutes): never less than that.
     expect(KEY_MOVE_WAIT_MINUTES).toBeGreaterThanOrEqual(64);
-    expect(TWO_VALIDATOR_APPS_STEPS).toHaveLength(4);
-    expect(TWO_VALIDATOR_APPS_STEPS[0]).toMatch(/remove your validators/);
-    expect(TWO_VALIDATOR_APPS_STEPS[0]).toMatch(/Stopping the app is not enough/);
-    expect(TWO_VALIDATOR_APPS_STEPS[1]).toBe(`Wait at least ${KEY_MOVE_WAIT_MINUTES} minutes.`);
-    expect(TWO_VALIDATOR_APPS_STEPS[2]).toMatch(/^Import your validators/);
-    expect(TWO_VALIDATOR_APPS_STEPS[3]).toMatch(/remove the old app/);
-    for (const step of TWO_VALIDATOR_APPS_STEPS) expect(step).not.toMatch(/^Stop/);
+    expect(TWO_VALIDATOR_APPS_STEPS).toHaveLength(5);
+    // Rocket Pool picks its app in a package setting, not in Rocket Pool: support first.
+    expect(TWO_VALIDATOR_APPS_STEPS[0]).toMatch(/Rocket Pool validators, contact AVADO support before you start/);
+    expect(TWO_VALIDATOR_APPS_STEPS[1]).toMatch(/remove your validators/);
+    expect(TWO_VALIDATOR_APPS_STEPS[1]).toMatch(/Stopping the app is not enough/);
+    // One slashing-protection file per validator, imported with its own key.
+    expect(TWO_VALIDATOR_APPS_STEPS[1]).toMatch(/slashing-protection files .*\(one per validator\)/);
+    expect(TWO_VALIDATOR_APPS_STEPS[2]).toBe(`Wait at least ${KEY_MOVE_WAIT_MINUTES} minutes.`);
+    expect(TWO_VALIDATOR_APPS_STEPS[3]).toMatch(/^Import your validators/);
+    expect(TWO_VALIDATOR_APPS_STEPS[3]).toMatch(/each with its own slashing-protection file/);
+    expect(TWO_VALIDATOR_APPS_STEPS[4]).toMatch(/remove the old app/);
+    for (const step of TWO_VALIDATOR_APPS_STEPS) {
+      expect(step).not.toMatch(/^Stop/);
+      expect(step).not.toMatch(/Rocket Pool's settings|follow its prompts|that file/);
+    }
   });
 
   it("counts a stopped app: it starts again by itself after a reboot or an update", () => {

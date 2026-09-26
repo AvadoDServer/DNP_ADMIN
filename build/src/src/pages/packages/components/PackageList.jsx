@@ -50,12 +50,14 @@ export const AUTOUPDATE_PENDING_TIMEOUT = 60000;
  * requested value right away and disables itself, since the real change only
  * lands once the backend pushes the updated package back over WAMP (there is
  * no optimistic redux update). It waits for redux to agree with the
- * requested value, or reverts to whatever redux says after 60s.
+ * requested value, or reverts to whatever redux says after 60s. A call that
+ * fails reverts it at once: no push will come.
  */
 export function AutoUpdateSwitch({ dnp, title, setAutoUpdate }) {
     const actual = getAutoUpdateState(dnp);
     const [pending, setPending] = useState(null); // null | boolean (the requested value)
     const timeoutRef = useRef(null);
+    const requestRef = useRef(0); // which click a late failure belongs to
 
     // Redux caught up with the requested value (or moved on its own) — clear the pending state.
     useEffect(() => {
@@ -74,10 +76,15 @@ export function AutoUpdateSwitch({ dnp, title, setAutoUpdate }) {
 
     const onToggle = () => {
         const next = !actual;
+        const request = ++requestRef.current;
         setPending(next);
-        setAutoUpdate(dnp.name, next);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => setPending(null), AUTOUPDATE_PENDING_TIMEOUT);
+        Promise.resolve(setAutoUpdate(dnp.name, next)).catch(() => {
+            if (request !== requestRef.current) return;
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setPending(null);
+        });
     };
 
     return (

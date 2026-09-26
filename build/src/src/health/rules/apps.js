@@ -8,16 +8,21 @@ const isClient = pkg => {
 };
 const logsLink = name => `/packages/${name}?tab=logs`;
 
-// A stopped app that can hold validator keys while another one runs on the
-// same network: the owner may have moved the validators there and stopped
-// this one. A one-click "Start it" could then sign with the same keys twice
-// (see twoValidatorClients), so such an app gets a link and a warning only.
-const otherValidatorAppRuns = (p, packages) => {
+// "Nimbus and Teku", "Nimbus, Teku and Lighthouse"
+export const joinNames = names =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+
+// Other apps that can hold validator keys and run on the same network as a
+// stopped one. The owner may have moved the validators there, so a one-click
+// "Start it" could sign with the same keys twice (see twoValidatorClients):
+// such an app gets a link to its page instead. It stays critical, so AVADO
+// Care still emails about it: the running app may have none of its keys.
+const runningKeyHolders = (p, packages) => {
   const c = getClient(p.name);
-  return Boolean(
-    c && c.holdsKeys &&
-    keyHolders(packages).some(({ pkg, client }) => pkg.name !== p.name && client.network === c.network && pkg.state === "running")
-  );
+  if (!c || !c.holdsKeys) return [];
+  return keyHolders(packages)
+    .filter(({ pkg, client }) => pkg.name !== p.name && client.network === c.network && pkg.state === "running")
+    .map(({ pkg }) => pkg);
 };
 
 export function appStopped({ packages }) {
@@ -27,15 +32,16 @@ export function appStopped({ packages }) {
     // not as a generic "X is stopped" here as well.
     .filter(p => p && !p.isCore && p.name !== PROMETHEUS_PACKAGE && (p.state === "exited" || p.state === "dead"))
     .map(p => {
-      const careful = otherValidatorAppRuns(p, packages);
+      const others = runningKeyHolders(p, packages);
+      const careful = others.length > 0;
       return {
         id: `app-stopped:${p.name}`,
-        severity: isClient(p) && !careful ? "critical" : "warning",
+        severity: isClient(p) ? "critical" : "warning",
         topic: "sync",
         appId: p.name,
         title: `${appTitle(p)} is stopped`,
         why: careful
-          ? "Another validator app is running for this network. If you moved your validators there, do not start this one: remove it in My DApps. Start it only if it has validators of its own."
+          ? `While it is stopped, any validators it has miss attestations and rewards. Start it only if they were not moved to ${joinNames(others.map(appTitle))}: a validator key that runs in two apps gets slashed.`
           : isClient(p)
             ? "While it is stopped it does not follow the chain, so your validators miss attestations and rewards."
             : "Anything that depends on it will not work until it runs again.",

@@ -83,4 +83,53 @@ describe("AutoUpdateSwitch", () => {
     expect(input.checked).toBe(true); // reverted; redux's manifest.autoupdate never changed
     expect(input).not.toBeDisabled();
   });
+
+  it("goes back at once when the call fails (no push will come), not after 60s", async () => {
+    const setAutoUpdate = vi.fn(() => Promise.reject(new Error("no such procedure")));
+    const dnp = { name: "grafana.avado.dnp.dappnode.eth", manifest: { autoupdate: true } };
+    const { getByRole } = render(
+      <AutoUpdateSwitch dnp={dnp} title="Grafana" setAutoUpdate={setAutoUpdate} />
+    );
+    const input = getByRole("checkbox", { name: "Auto-update for Grafana" });
+
+    fireEvent.click(input);
+    expect(input.checked).toBe(false);
+    expect(input).toBeDisabled();
+
+    await act(async () => {}); // the rejection lands; no timer has run
+    expect(input.checked).toBe(true);
+    expect(input).not.toBeDisabled();
+
+    // The 60 s fallback was cleared with it: nothing flips later.
+    act(() => {
+      vi.advanceTimersByTime(AUTOUPDATE_PENDING_TIMEOUT);
+    });
+    expect(input.checked).toBe(true);
+    expect(input).not.toBeDisabled();
+  });
+
+  it("a late failure of an earlier click does not cancel a newer one", async () => {
+    let rejectFirst;
+    const setAutoUpdate = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise((resolve, reject) => { rejectFirst = reject; }))
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const dnp = { name: "grafana.avado.dnp.dappnode.eth", manifest: { autoupdate: true } };
+    const { getByRole } = render(
+      <AutoUpdateSwitch dnp={dnp} title="Grafana" setAutoUpdate={setAutoUpdate} />
+    );
+    const input = getByRole("checkbox", { name: "Auto-update for Grafana" });
+
+    fireEvent.click(input); // first call never answers
+    act(() => {
+      vi.advanceTimersByTime(AUTOUPDATE_PENDING_TIMEOUT);
+    });
+    expect(input).not.toBeDisabled();
+    fireEvent.click(input); // second click, pending again
+    expect(input).toBeDisabled();
+
+    await act(async () => rejectFirst(new Error("late")));
+    expect(input.checked).toBe(false);
+    expect(input).toBeDisabled();
+  });
 });

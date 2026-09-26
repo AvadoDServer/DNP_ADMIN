@@ -28,11 +28,13 @@ export const updatePackageEnv = (id, envs) => () =>
 export const togglePackage = (id) => () =>
   api.togglePackage({ id }, { toastMessage: `Toggling ${sn(id)}...` });
 
+// Rejects when the call fails (the toast still reports it), so the switch
+// can go back at once instead of waiting for a push that never comes.
 export const setAutoUpdate = (id, autoUpdate) => () => {
   console.log(`setting ${id} to ${autoUpdate}`);
-  api.setAutoUpdate(
+  return api.setAutoUpdate(
     { id, autoUpdate },
-    { toastMessage: `Changing Auto-update to ${autoUpdate}` },
+    { toastMessage: `Changing Auto-update to ${autoUpdate}`, throw: true },
   );
 };
 

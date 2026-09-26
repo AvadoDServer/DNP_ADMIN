@@ -32,11 +32,18 @@ describe("appStopped", () => {
   it("no one-click start for a validator app while another one runs for the same network", () => {
     const TEKU = "teku.avado.dnp.dappnode.eth";
     const stoppedTeku = pkg(TEKU, { state: "exited", running: false, manifest: { title: "Teku" } });
-    const [f] = appStopped(snapshot({ packages: [pkg(NIMBUS), stoppedTeku] }));
+    const [f] = appStopped(snapshot({ packages: [pkg(NIMBUS, { manifest: { title: "Nimbus" } }), stoppedTeku] }));
     // Its validators may have moved to Nimbus: starting Teku could sign twice.
-    expect(f).toMatchObject({ id: `app-stopped:${TEKU}`, severity: "warning", appId: TEKU, title: "Teku is stopped" });
+    // Still critical: Nimbus may hold none of Teku's keys (split keys, or an
+    // app with none left), and AVADO Care emails only critical findings.
+    expect(f).toMatchObject({ id: `app-stopped:${TEKU}`, severity: "critical", appId: TEKU, title: "Teku is stopped" });
     expect(f.fix).toEqual({ kind: "link", to: `/packages/${TEKU}`, label: "Open the app" });
-    expect(f.why).toMatch(/do not start this one/);
+    expect(f.why).toMatch(/Start it only if they were not moved to Nimbus/);
+    // Never tells the owner to remove it: it may be the app with the keys.
+    expect(f.why).not.toMatch(/remove/i);
+    const lighthouse = pkg("lighthouse.avado.dnp.dappnode.eth", { manifest: { title: "Lighthouse" } });
+    const [both] = appStopped(snapshot({ packages: [pkg(NIMBUS, { manifest: { title: "Nimbus" } }), lighthouse, stoppedTeku] }));
+    expect(both.why).toMatch(/not moved to Nimbus and Lighthouse:/);
     // Prysm's beacon chain holds no keys, another network does not count, and
     // with both validator apps stopped the usual start action stays.
     for (const other of [pkg("prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth"), pkg("teku-holesky.avado.dnp.dappnode.eth"), pkg(NIMBUS, { state: "exited", running: false })]) {

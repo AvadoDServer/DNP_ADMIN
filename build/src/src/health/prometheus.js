@@ -78,7 +78,9 @@ async function query(q, fetchImpl) {
  * Every query in QUERIES, by key. One failing query must not take down the
  * others: a key whose query failed is null (rules that need it are skipped,
  * see health/rules/chain.js), and the whole result is null only when every
- * query failed, i.e. Prometheus itself is unreachable.
+ * query failed, i.e. Prometheus itself is unreachable. A caller that carries
+ * findings over while a source is down (AVADO Care) must treat a null key as
+ * a failed read of that query, not as "no problem".
  */
 export async function fetchMetrics(fetchImpl = fetch) {
   const keys = Object.keys(QUERIES);

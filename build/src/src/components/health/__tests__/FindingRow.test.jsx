@@ -74,7 +74,7 @@ describe("FindingRow", () => {
     expect(screen.queryByText(WHY_TEXT)).not.toBeInTheDocument();
   });
 
-  it("shows Hide for a dismissable finding and calls dismiss(id) when clicked", () => {
+  it("shows Hide for a dismissable finding where hiding is offered (Home) and calls dismiss(id) when clicked", () => {
     renderRow(
       stepsAndWhyFinding({
         id: "remote-access-missing",
@@ -82,10 +82,16 @@ describe("FindingRow", () => {
         fix: null,
         steps: undefined,
         why: undefined,
-      })
+      }),
+      { canHide: true }
     );
     fireEvent.click(screen.getByText("Hide"));
     expect(dismissSpy).toHaveBeenCalledWith("remote-access-missing");
+  });
+
+  it("no Hide outside Home: Help and the app pages list hidden findings anyway", () => {
+    renderRow(stepsAndWhyFinding({ id: "remote-access-missing", dismissable: true, fix: null, steps: undefined, why: undefined }));
+    expect(screen.queryByText("Hide")).not.toBeInTheDocument();
   });
 
   it("renders a link to fix.to for a link fix", () => {

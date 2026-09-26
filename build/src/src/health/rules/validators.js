@@ -1,5 +1,7 @@
 import { getClient, keyHolders, NETWORKS } from "health/clients";
-import { appTitle } from "./apps";
+import { appTitle, joinNames } from "./apps";
+
+export { joinNames };
 
 // What the owner can do about a missing fee recipient. Shared with the same
 // finding when AVADO Care reports it (health/careFindings.js), whose status
@@ -40,9 +42,9 @@ feeRecipientMissing.needs = "feeRecipients";
 // them into another. docs.ava.do ("Switching from Prysm to Teku, etc.") asks
 // for at least 5 finalized epochs (about 32 minutes on mainnet) and
 // recommends 10 to be completely safe: 10 × 6.4 minutes = 64, rounded up.
+// The finding does not link that page: its Quick Steps open with "Stop the
+// validators", which the steps below warn against.
 export const KEY_MOVE_WAIT_MINUTES = 70;
-
-export const SWITCHING_CLIENTS_DOCS = "https://docs.ava.do/quick-help/switching-from-prysm-to-teku-etc.";
 
 // Shared with the installer's confirm before a second validator app
 // (pages/installer/components/confirmSecondValidatorApp.js).
@@ -52,16 +54,17 @@ export const ONE_APP_PER_KEY =
 // The safe order for moving validators to another app. Never "stop the old
 // app": every validator app has restart "always", and an update starts it
 // again, so a stopped app comes back with the keys still in it.
+// Rocket Pool picks its app from a package setting (not a screen in Rocket
+// Pool, and the Settings tab is Advanced only), and its keys live inside
+// Rocket Pool, so those owners get support before they start. The apps give
+// one slashing-protection file per validator and take one file per import.
 export const TWO_VALIDATOR_APPS_STEPS = [
-  "Open the app you are moving away from and remove your validators there. Keep the slashing-protection file it gives you. Stopping the app is not enough: it starts again by itself.",
+  "If some of your validators are Rocket Pool validators, contact AVADO support before you start.",
+  "Open the app you are moving away from and remove your validators there. Keep the slashing-protection files it gives you (one per validator). Stopping the app is not enough: it starts again by itself.",
   `Wait at least ${KEY_MOVE_WAIT_MINUTES} minutes.`,
-  "Import your validators into the app you keep, with that file. Rocket Pool validators: pick the new app in Rocket Pool's settings and follow its prompts.",
+  "Import your validators into the app you keep, one at a time, each with its own slashing-protection file.",
   "When they run there, remove the old app in My DApps.",
 ];
-
-// "Nimbus and Teku", "Nimbus, Teku and Lighthouse"
-export const joinNames = names =>
-  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
 // Two apps that can hold validator keys on one network. The same key signing
 // in both gets the validator slashed. This stays a warning: installed apps
@@ -84,10 +87,9 @@ export function twoValidatorClients({ packages }) {
         severity: "warning",
         topic: "setup",
         title: `${names} are ${list.length === 2 ? "both" : "all"} installed for ${networkLabel}`,
-        why: `${ONE_APP_PER_KEY} If each app has different keys, or one has none left, you can hide this.`,
+        why: `${ONE_APP_PER_KEY} If each app has different keys, or one has none left, you can hide this on Home.`,
         fix: { kind: "steps", label: "How to move validators safely" },
         steps: TWO_VALIDATOR_APPS_STEPS,
-        learnMore: SWITCHING_CLIENTS_DOCS,
         dismissable: true,
       };
     });

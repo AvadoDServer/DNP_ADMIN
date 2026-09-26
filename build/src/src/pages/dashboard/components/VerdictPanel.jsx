@@ -19,7 +19,7 @@ export function verdictSentence(verdict, findings) {
   return findings[0] ? findings[0].title : verdict.label;
 }
 
-export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true, hiddenCount = 0, onShowHidden }) {
+export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true }) {
   const [all, setAll] = useState(false);
 
   // Until the installed-packages list has actually loaded, there is nothing
@@ -70,10 +70,10 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
               finding is the headline reuses the same FindingRow instance —
               its internal "Starting…" (action-button) state would then
               wrongly carry over onto an unrelated finding. */}
-          <FindingRow key={headline.id} finding={headline} hideTitle showWhy />
+          <FindingRow key={headline.id} finding={headline} hideTitle showWhy canHide />
         </ul>
       )}
-      {shown.length > 0 && <ul className="divide-y divide-border/70 pl-0">{shown.map(f => <FindingRow key={f.id} finding={f} />)}</ul>}
+      {shown.length > 0 && <ul className="divide-y divide-border/70 pl-0">{shown.map(f => <FindingRow key={f.id} finding={f} canHide />)}</ul>}
       <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted">
         <span>{checksPassed} other checks passed ·</span>
         {checkedAtButton}
@@ -87,25 +87,17 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
             </button>
           </>
         )}
-        {/* Only once the owner has hidden a tip: nothing extra on Home otherwise. */}
-        {hiddenCount > 0 && onShowHidden && (
-          <>
-            <span>·</span>
-            <button type="button" className="font-medium text-accent hover:underline" onClick={onShowHidden}>
-              Show hidden tips ({hiddenCount})
-            </button>
-          </>
-        )}
       </div>
     </div>
   );
 }
 
 export default function VerdictPanel() {
-  const { verdict, findings, allFindings, checkedAt, refresh, checksPassed, ready, undismissAll } = useHealth();
-  // Tips the owner hid with "Hide". Only Home leaves them out (`findings`);
-  // Help and the app pages list them anyway (`allFindings`).
-  const hiddenCount = ready && allFindings ? allFindings.length - findings.length : 0;
+  // Home lists `findings`, without what the owner hid here with "Hide"; Help
+  // and the app pages list `allFindings`, hidden ones too. No "Show hidden
+  // tips" link: it would stay on Home for as long as a hidden tip keeps
+  // firing, and would bring a hidden two-validator-apps warning back too.
+  const { verdict, findings, checkedAt, refresh, checksPassed, ready } = useHealth();
   return (
     <VerdictView
       verdict={verdict}
@@ -114,8 +106,6 @@ export default function VerdictPanel() {
       onRefresh={refresh}
       checksPassed={checksPassed}
       ready={ready}
-      hiddenCount={hiddenCount}
-      onShowHidden={undismissAll}
     />
   );
 }

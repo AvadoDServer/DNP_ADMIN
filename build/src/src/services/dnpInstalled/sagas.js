@@ -1,5 +1,4 @@
 import { put, call, all, delay, race, take, takeLatest } from "redux-saga/effects";
-import { eventChannel } from "redux-saga";
 import api from "API/rpcMethods";
 import * as a from "./actions";
 import * as t from "./actionTypes";
@@ -9,6 +8,7 @@ import { CONNECTION_OPEN } from "services/connectionStatus/actionTypes";
 // Utils
 
 import { rootWatcher } from "utils/redux";
+import { tabVisible, visibilityChannel } from "utils/tabVisibility";
 
 // Service > dnpInstalled
 
@@ -50,20 +50,6 @@ export const SILENT_REFRESH_TIMEOUT_MS = 90 * 1000;
 // Coming back to the tab refreshes at once, unless the last refresh was this
 // recent (switching back and forth between tabs must not hammer the box).
 export const VISIBLE_REFRESH_MIN_GAP_MS = 60 * 1000;
-
-const tabVisible = () => typeof document === "undefined" || !document.hidden;
-
-/** Emits each time this tab becomes visible again. */
-export function visibilityChannel() {
-  return eventChannel(emit => {
-    if (typeof document === "undefined") return () => {};
-    const onChange = () => {
-      if (tabVisible()) emit("visible");
-    };
-    document.addEventListener("visibilitychange", onChange);
-    return () => document.removeEventListener("visibilitychange", onChange);
-  });
-}
 
 export function* silentRefresh() {
   try {

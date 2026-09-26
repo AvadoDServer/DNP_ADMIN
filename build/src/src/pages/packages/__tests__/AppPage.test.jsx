@@ -280,6 +280,32 @@ describe("app page Charts button", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  it("on a phone it moves into the ⋯ menu, so the header keeps to Open, Restart and ⋯", () => {
+    const nimbus = app("nimbus.avado.dnp.dappnode.eth");
+    const url = "http://grafana.my.ava.do:3000/d/avado-nimbus?var-instance=nimbus.my.ava.do:8008";
+    mockPackages = [grafana(), prometheus(), nimbus];
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderPage(nimbus);
+    // The header button shows from the sm breakpoint up only.
+    expect(screen.getByRole("link", { name: "Charts" }).className).toMatch(/(^| )hidden sm:inline-flex( |$)/);
+    fireEvent.click(screen.getByRole("button", { name: /more actions/i }));
+    const item = within(screen.getByRole("menu")).getByRole("menuitem", { name: "Charts" });
+    // ...and the menu item below it only; first, before Stop, Reset and Remove.
+    expect(item.className).toMatch(/(^| )sm:hidden( |$)/);
+    expect(within(screen.getByRole("menu")).getAllByRole("menuitem").map(i => i.textContent)).toEqual(["Charts", "Stop", "Reset", "Remove"]);
+    fireEvent.click(item);
+    expect(open).toHaveBeenCalledWith(url, "_blank", "noopener,noreferrer");
+    open.mockRestore();
+  });
+
+  it("the ⋯ menu has no Charts item without a dashboard", () => {
+    const nimbus = app("nimbus.avado.dnp.dappnode.eth");
+    mockPackages = [nimbus];
+    renderPage(nimbus);
+    fireEvent.click(screen.getByRole("button", { name: /more actions/i }));
+    expect(within(screen.getByRole("menu")).queryByRole("menuitem", { name: "Charts" })).not.toBeInTheDocument();
+  });
+
   it("is there for the Prysm validator app too", () => {
     const validator = app("eth2validator.avado.dnp.dappnode.eth");
     mockPackages = [grafana("0.0.3"), prometheus(), validator];
