@@ -19,7 +19,7 @@ export function verdictSentence(verdict, findings) {
   return findings[0] ? findings[0].title : verdict.label;
 }
 
-export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true }) {
+export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true, hiddenCount = 0, onShowHidden }) {
   const [all, setAll] = useState(false);
 
   // Until the installed-packages list has actually loaded, there is nothing
@@ -87,13 +87,25 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
             </button>
           </>
         )}
+        {/* Only once the owner has hidden a tip: nothing extra on Home otherwise. */}
+        {hiddenCount > 0 && onShowHidden && (
+          <>
+            <span>·</span>
+            <button type="button" className="font-medium text-accent hover:underline" onClick={onShowHidden}>
+              Show hidden tips ({hiddenCount})
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 export default function VerdictPanel() {
-  const { verdict, findings, checkedAt, refresh, checksPassed, ready } = useHealth();
+  const { verdict, findings, allFindings, checkedAt, refresh, checksPassed, ready, undismissAll } = useHealth();
+  // Tips the owner hid with "Hide". Only Home leaves them out (`findings`);
+  // Help and the app pages list them anyway (`allFindings`).
+  const hiddenCount = ready && allFindings ? allFindings.length - findings.length : 0;
   return (
     <VerdictView
       verdict={verdict}
@@ -102,6 +114,8 @@ export default function VerdictPanel() {
       onRefresh={refresh}
       checksPassed={checksPassed}
       ready={ready}
+      hiddenCount={hiddenCount}
+      onShowHidden={undismissAll}
     />
   );
 }

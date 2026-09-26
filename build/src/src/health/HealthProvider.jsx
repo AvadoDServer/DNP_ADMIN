@@ -25,7 +25,7 @@ const sortFindings = list =>
       String(a.title).localeCompare(String(b.title))
   );
 import { ALL_RULES } from "./rules";
-import { isDismissed, dismiss as persistDismiss } from "./dismissals";
+import { isDismissed, dismiss as persistDismiss, undismissAll as persistUndismissAll } from "./dismissals";
 
 const STORE_INTERVAL = 10 * 60 * 1000;
 const METRICS_INTERVAL = 60 * 1000;
@@ -283,6 +283,12 @@ export function HealthProvider({
       refresh: () => setTick(t => t + 1),
       dismiss: id => {
         persistDismiss(id);
+        setDismissVersion(v => v + 1);
+      },
+      // Brings every hidden tip back. Bumps dismissVersion like dismiss does:
+      // refresh() would only refetch, and `tick` does not re-run this memo.
+      undismissAll: () => {
+        persistUndismissAll();
         setDismissVersion(v => v + 1);
       },
     };

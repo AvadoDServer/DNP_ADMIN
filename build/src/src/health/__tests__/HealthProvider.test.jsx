@@ -26,8 +26,8 @@ const state = {
 // non-dismissable finding, since nimbus has no execution client) both fire
 // against this fixture regardless of the store/metrics impls passed in.
 
-function Probe({ dismissId }) {
-  const { verdict, findings, allFindings, sources, dismiss, checksPassed, checksTotal, ready, metrics } = useHealth();
+function Probe({ dismissId, withUndismissAll }) {
+  const { verdict, findings, allFindings, sources, dismiss, undismissAll, checksPassed, checksTotal, ready, metrics } = useHealth();
   return (
     <div>
       <span data-testid="ready">{String(ready)}</span>
@@ -38,6 +38,11 @@ function Probe({ dismissId }) {
       {dismissId && (
         <button data-testid="dismiss-btn" onClick={() => dismiss(dismissId)}>
           dismiss
+        </button>
+      )}
+      {withUndismissAll && (
+        <button data-testid="undismiss-all-btn" onClick={() => undismissAll()}>
+          show hidden
         </button>
       )}
       <span data-testid="checksPassed">{checksPassed}</span>
@@ -362,6 +367,22 @@ describe("HealthProvider dismissals", () => {
     renderWith(okStore);
     await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
     expect(screen.getByTestId("ids").textContent).not.toContain("remote-access-missing");
+  });
+
+  it("undismissAll brings a hidden tip back at once, without refetching anything", async () => {
+    const fetchStoreImpl = vi.fn(async () => ({ packages: [] }));
+    renderWith({ ...okStore, fetchStoreImpl }, { dismissId: "remote-access-missing", withUndismissAll: true });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    fireEvent.click(screen.getByTestId("dismiss-btn"));
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).not.toContain("remote-access-missing"));
+    const storeCalls = fetchStoreImpl.mock.calls.length;
+
+    fireEvent.click(screen.getByTestId("undismiss-all-btn"));
+
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("remote-access-missing"));
+    expect(JSON.parse(localStorage.getItem("avado.dismissedFindings"))).toEqual([]);
+    // Not refresh(): that would refetch the store before anything re-rendered.
+    expect(fetchStoreImpl).toHaveBeenCalledTimes(storeCalls);
   });
 
   it("never hides a critical, non-dismissable finding even if dismiss is called on its id", async () => {

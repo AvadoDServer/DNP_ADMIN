@@ -101,6 +101,8 @@ export function updateBlocked({ updates, updateAges, packages, now }) {
           ? "Automatic updates are off for this app, and a newer version has been waiting for more than 2 days. Updates carry fixes and support for network upgrades."
           : "A newer version has been available for more than 2 days, but your AVADO has not installed it. An app that misses a network upgrade can stop working.",
         detail: `Installed ${u.from}, available ${u.to}`,
+        // Two version numbers are plain enough to show in Simple mode too.
+        detailInSimple: true,
         fix: { kind: "link", to: "/system/updates", label: "Review updates" },
         steps: manual
           ? ["Open System → Updates and install the update, or turn automatic updates back on."]

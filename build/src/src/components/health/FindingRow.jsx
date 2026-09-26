@@ -24,6 +24,12 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
   const { isAdvanced } = useMode();
   const icon = ICON[finding.severity] || ICON.info;
   const { fix } = finding;
+  const hasSteps = Array.isArray(finding.steps) && finding.steps.length > 0;
+  // Only https links: `learnMore` opens outside the Admin, in a new tab.
+  const learnMore = typeof finding.learnMore === "string" && /^https:\/\//.test(finding.learnMore) ? finding.learnMore : null;
+  // `detail` is mostly technical (slot numbers, error text), so Simple mode
+  // shows it only when the rule marks it as plain enough (detailInSimple).
+  const showDetail = !compact && Boolean(finding.detail) && (isAdvanced || finding.detailInSimple === true);
 
   useEffect(() => {
     if (!starting) return undefined;
@@ -49,6 +55,23 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
       </Button>
     ) : null;
 
+  // Written steps behind a link or action fix get their own toggle (the same
+  // list and state). A "steps" fix already is that toggle: never a second one.
+  const stepsToggle =
+    hasSteps && !(fix && fix.kind === "steps") ? (
+      <Button size="sm" variant="ghost" onClick={() => setStepsOpen(o => !o)} aria-expanded={stepsOpen}>
+        How to fix it
+      </Button>
+    ) : null;
+
+  // "Read more" belongs to the explanation: it shows with the why text (inline
+  // when the why is always shown), so it adds no button to the row.
+  const learnMoreLink = learnMore ? (
+    <a href={learnMore} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+      Read more
+    </a>
+  ) : null;
+
   return (
     <li className="flex gap-3 py-3.5">
       <span className={cn("mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full", icon.cls)}>
@@ -63,19 +86,27 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
             {!hideTitle && <p className="mb-0 break-words font-medium text-fg">{finding.title}</p>}
             {!compact && finding.why && (
               showWhy ? (
-                <p className="mt-0.5 text-sm text-fg-muted">{finding.why}</p>
+                <p className="mt-0.5 text-sm text-fg-muted">
+                  {finding.why}
+                  {learnMoreLink && <> {learnMoreLink}</>}
+                </p>
               ) : (
-                <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
-                  {whyOpen ? finding.why : "Why this matters"}
-                </button>
+                <>
+                  <button type="button" onClick={() => setWhyOpen(o => !o)} className="mt-0.5 text-left text-sm text-fg-muted hover:text-fg" aria-expanded={whyOpen}>
+                    {whyOpen ? finding.why : "Why this matters"}
+                  </button>
+                  {whyOpen && learnMoreLink && <p className="mb-0 mt-0.5 text-sm">{learnMoreLink}</p>}
+                </>
               )
             )}
-            {!compact && isAdvanced && finding.detail && (
+            {!compact && !finding.why && learnMoreLink && <p className="mb-0 mt-0.5 text-sm">{learnMoreLink}</p>}
+            {showDetail && (
               <p className="mt-0.5 break-words text-xs text-fg-subtle">{finding.detail}</p>
             )}
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
             {fixButton}
+            {stepsToggle}
             {finding.secondary && (
               <Button as={Link} to={finding.secondary.to} size="sm" variant="ghost">{finding.secondary.label}</Button>
             )}
@@ -84,7 +115,7 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
             )}
           </div>
         </div>
-        {stepsOpen && finding.steps && finding.steps.length > 0 && (
+        {stepsOpen && hasSteps && (
           <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-fg-muted">
             {finding.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>

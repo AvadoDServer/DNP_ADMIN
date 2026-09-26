@@ -1,13 +1,15 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { verdictSentence, VerdictView } from "pages/dashboard/components/VerdictPanel";
+import VerdictPanel, { verdictSentence, VerdictView } from "pages/dashboard/components/VerdictPanel";
 
 // mountLog records the finding id every time a *new* FindingRow instance is
 // created (a fresh call to the useState lazy initializer, which only ever
 // runs once per mounted instance) — used to prove the headline row remounts
 // instead of being reused when the headline finding's id changes.
-const { mountLog } = vi.hoisted(() => ({ mountLog: [] }));
+const { mountLog, health } = vi.hoisted(() => ({ mountLog: [], health: { current: null } }));
+// Only the default export (VerdictPanel) reads the context; VerdictView takes props.
+vi.mock("health/HealthProvider", () => ({ useHealth: () => health.current }));
 
 // A stand-in that still honours hideTitle/showWhy so the "no repeat"
 // behaviour is actually observable, without pulling in FindingRow's real
@@ -134,5 +136,54 @@ describe("VerdictView", () => {
     // A fresh instance was mounted for "b" — the "a" instance (and any
     // internal state it held) was discarded, not reused with new props.
     expect(mountLog).toEqual(["a", "b"]);
+  });
+});
+
+describe("Show hidden tips", () => {
+  const view = props => (
+    <MemoryRouter>
+      <VerdictView verdict={{ level: "ok", label: "All good" }} findings={[]} checkedAt={new Date(0)} onRefresh={() => {}} checksPassed={12} {...props} />
+    </MemoryRouter>
+  );
+
+  it("adds nothing to the footer while no tip is hidden", () => {
+    render(view({ hiddenCount: 0, onShowHidden: () => {} }));
+    expect(screen.queryByText(/hidden tips/)).not.toBeInTheDocument();
+  });
+
+  it("offers 'Show hidden tips (N)' once tips are hidden, and calls onShowHidden", () => {
+    const onShowHidden = vi.fn();
+    render(view({ hiddenCount: 2, onShowHidden }));
+    fireEvent.click(screen.getByRole("button", { name: "Show hidden tips (2)" }));
+    expect(onShowHidden).toHaveBeenCalledTimes(1);
+  });
+
+  it("VerdictPanel counts hidden tips as allFindings minus findings and wires undismissAll", () => {
+    const tip = { id: "remote-access-missing", severity: "info", topic: "access", title: "Remote access", dismissable: true };
+    const undismissAll = vi.fn();
+    health.current = {
+      verdict: { level: "ok", label: "All good" },
+      findings: [],
+      allFindings: [tip],
+      checkedAt: new Date(0),
+      refresh: () => {},
+      checksPassed: 12,
+      ready: true,
+      undismissAll,
+    };
+    render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
+    fireEvent.click(screen.getByRole("button", { name: "Show hidden tips (1)" }));
+    expect(undismissAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("VerdictPanel shows no link when nothing is hidden or allFindings is not there", () => {
+    const base = { verdict: { level: "ok", label: "All good" }, findings: [], checkedAt: new Date(0), refresh: () => {}, checksPassed: 12, ready: true, undismissAll: () => {} };
+    health.current = { ...base, allFindings: [] };
+    const { unmount } = render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
+    expect(screen.queryByText(/hidden tips/)).not.toBeInTheDocument();
+    unmount();
+    health.current = base;
+    render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
+    expect(screen.queryByText(/hidden tips/)).not.toBeInTheDocument();
   });
 });

@@ -59,6 +59,8 @@ describe("setup pairing", () => {
     const [f] = consensusWithoutExecution(snapshot({ packages: [pkg(NIMBUS)] }));
     expect(f).toMatchObject({ id: "consensus-without-execution:mainnet", severity: "critical", topic: "setup", appId: NIMBUS });
     expect(f.fix).toMatchObject({ kind: "link", to: "/installer?category=ethstaking" });
+    // The docs page that walks through installing one, not the docs home page.
+    expect(f.learnMore).toBe("https://docs.ava.do/staking-ethereum/setting-up-the-eth-clients");
   });
   it("is quiet when both halves are installed", () => {
     const s = snapshot({ packages: [pkg(NIMBUS), pkg(GETH)] });

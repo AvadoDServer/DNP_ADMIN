@@ -1,4 +1,4 @@
-import { feeRecipientMissing } from "health/rules/validators";
+import { feeRecipientMissing, FEE_RECIPIENT_STEPS } from "health/rules/validators";
 import { updateBlocked, UPDATE_BLOCKED_AFTER_MS } from "health/rules/updates";
 import { runChecksDetailed } from "health/engine";
 import { ALL_RULES } from "health/rules";
@@ -18,6 +18,8 @@ describe("feeRecipientMissing", () => {
     expect(f.title).toBe("Validators in Nimbus have no fee recipient");
     expect(f.title).not.toMatch(ADDRESS_RE);
     expect(f.detail).toBe("2 validators without a fee recipient");
+    expect(f.steps).toEqual(FEE_RECIPIENT_STEPS);
+    expect(FEE_RECIPIENT_STEPS).toHaveLength(3);
   });
   it("no finding without validators, when all are set, or when the client could not be read", () => {
     expect(feeRecipientMissing(snapshot({ feeRecipients: { [NIMBUS]: { validators: 0, checked: 0, missing: 0 } } }))).toEqual([]);
@@ -39,6 +41,8 @@ describe("updateBlocked", () => {
     const [f] = updateBlocked(s);
     expect(f).toMatchObject({ id: `update-blocked:${NIMBUS}`, severity: "critical", topic: "updates", title: "Nimbus can't update" });
     expect(f.detail).toBe("Installed 0.0.50, available 0.0.51");
+    // Plain version numbers: FindingRow shows them in Simple mode too.
+    expect(f.detailInSimple).toBe(true);
   });
   it("is a warning when the owner turned automatic updates off", () => {
     const s = snapshot({ packages: [pkg(NIMBUS, { manifest: { title: "Nimbus", autoupdate: false } })], updates, updateAges: { [NIMBUS]: NOW - UPDATE_BLOCKED_AFTER_MS - 1 }, now: NOW });
