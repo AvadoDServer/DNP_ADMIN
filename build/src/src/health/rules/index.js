@@ -1,7 +1,7 @@
 import { appStopped, appRestarting, coreAppDown } from "./apps";
 import { consensusWithoutExecution, executionWithoutConsensus, monitoringMissing, metricsUnavailable, monitoringStopped } from "./setup";
 import { updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable, updateBlocked } from "./updates";
-import { feeRecipientMissing } from "./validators";
+import { feeRecipientMissing, twoValidatorClients } from "./validators";
 import { remoteAccessMissing } from "./access";
 import { diskHigh } from "./storage";
 import { diagnoseFailed } from "./core";
@@ -16,7 +16,7 @@ export const ALL_RULES = [
   appStopped, appRestarting, coreAppDown,
   consensusWithoutExecution, executionWithoutConsensus, monitoringMissing, metricsUnavailable, monitoringStopped,
   updatesAvailable, coreUpdateAvailable, autoupdateOff, storeUnreachable, updateBlocked,
-  feeRecipientMissing,
+  feeRecipientMissing, twoValidatorClients,
   remoteAccessMissing,
   diskHigh, diagnoseFailed,
   chainSyncing, chainError, headBehind, lowPeers, missedAttestations,

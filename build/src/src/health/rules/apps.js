@@ -1,4 +1,4 @@
-import { getClient, ROLES, PROMETHEUS_PACKAGE } from "health/clients";
+import { getClient, keyHolders, ROLES, PROMETHEUS_PACKAGE } from "health/clients";
 
 const shortName = (name = "") => name.split(".")[0];
 export const appTitle = pkg => (pkg && pkg.manifest && pkg.manifest.title) || shortName(pkg && pkg.name);
@@ -8,24 +8,43 @@ const isClient = pkg => {
 };
 const logsLink = name => `/packages/${name}?tab=logs`;
 
+// A stopped app that can hold validator keys while another one runs on the
+// same network: the owner may have moved the validators there and stopped
+// this one. A one-click "Start it" could then sign with the same keys twice
+// (see twoValidatorClients), so such an app gets a link and a warning only.
+const otherValidatorAppRuns = (p, packages) => {
+  const c = getClient(p.name);
+  return Boolean(
+    c && c.holdsKeys &&
+    keyHolders(packages).some(({ pkg, client }) => pkg.name !== p.name && client.network === c.network && pkg.state === "running")
+  );
+};
+
 export function appStopped({ packages }) {
   return (packages || [])
     // Prometheus gets its own, more specific finding (monitoringStopped, in
     // health/rules/setup.js) so a stopped monitoring package surfaces once,
     // not as a generic "X is stopped" here as well.
     .filter(p => p && !p.isCore && p.name !== PROMETHEUS_PACKAGE && (p.state === "exited" || p.state === "dead"))
-    .map(p => ({
-      id: `app-stopped:${p.name}`,
-      severity: isClient(p) ? "critical" : "warning",
-      topic: "sync",
-      appId: p.name,
-      title: `${appTitle(p)} is stopped`,
-      why: isClient(p)
-        ? "While it is stopped it does not follow the chain, so your validators miss attestations and rewards."
-        : "Anything that depends on it will not work until it runs again.",
-      fix: { kind: "action", action: "restartPackage", label: "Start it" },
-      secondary: { kind: "link", to: logsLink(p.name), label: "See why in the logs" },
-    }));
+    .map(p => {
+      const careful = otherValidatorAppRuns(p, packages);
+      return {
+        id: `app-stopped:${p.name}`,
+        severity: isClient(p) && !careful ? "critical" : "warning",
+        topic: "sync",
+        appId: p.name,
+        title: `${appTitle(p)} is stopped`,
+        why: careful
+          ? "Another validator app is running for this network. If you moved your validators there, do not start this one: remove it in My DApps. Start it only if it has validators of its own."
+          : isClient(p)
+            ? "While it is stopped it does not follow the chain, so your validators miss attestations and rewards."
+            : "Anything that depends on it will not work until it runs again.",
+        fix: careful
+          ? { kind: "link", to: `/packages/${p.name}`, label: "Open the app" }
+          : { kind: "action", action: "restartPackage", label: "Start it" },
+        secondary: { kind: "link", to: logsLink(p.name), label: "See why in the logs" },
+      };
+    });
 }
 
 export function appRestarting({ packages }) {

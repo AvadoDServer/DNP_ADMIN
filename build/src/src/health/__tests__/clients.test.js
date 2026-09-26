@@ -1,4 +1,4 @@
-import { getClient, clientsByRole, currentSlot, ROLES, NETWORKS } from "health/clients";
+import { getClient, clientsByRole, keyHolders, currentSlot, ROLES, NETWORKS } from "health/clients";
 
 describe("client table", () => {
   it("knows the AVADO mainnet clients from the store", () => {
@@ -15,6 +15,42 @@ describe("client table", () => {
   it("never offers a data reset for consensus clients (validator keys live there)", () => {
     for (const name of ["nimbus.avado.dnp.dappnode.eth", "teku.avado.dnp.dappnode.eth", "lighthouse.avado.dnp.dappnode.eth", "eth2validator.avado.dnp.dappnode.eth"])
       expect(getClient(name).canResetData).toBe(false);
+  });
+
+  it("knows which apps can hold validator keys: every consensus package except Prysm's beacon chain", () => {
+    for (const name of [
+      "nimbus.avado.dnp.dappnode.eth",
+      "nimbus-holesky.avado.dnp.dappnode.eth",
+      "teku.avado.dnp.dappnode.eth",
+      "teku-holesky.avado.dnp.dappnode.eth",
+      "teku-gnosis.avado.dnp.dappnode.eth",
+      "lighthouse.avado.dnp.dappnode.eth",
+      "lighthouse-holesky.avado.dnp.dappnode.eth",
+      "lighthouse-gnosis.avado.dnp.dappnode.eth",
+      "eth2validator.avado.dnp.dappnode.eth",
+    ])
+      expect(getClient(name).holdsKeys, name).toBe(true);
+    for (const name of ["prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth", "ethchain-geth.public.dappnode.eth", "mevboost.avado.dnp.dappnode.eth", "grafana.avado.dappnode.eth"])
+      expect(getClient(name).holdsKeys, name).toBe(false);
+  });
+
+  it("knows Lighthouse on Holesky and Gnosis, labelled like the Prometheus lighthouse job", () => {
+    expect(getClient("lighthouse-holesky.avado.dnp.dappnode.eth")).toMatchObject({ role: ROLES.CONSENSUS, network: "holesky", promClient: "lighthouse", canResetData: false });
+    expect(getClient("lighthouse-gnosis.avado.dnp.dappnode.eth")).toMatchObject({ role: ROLES.CONSENSUS, network: "gnosis", promClient: "lighthouse", canResetData: false });
+  });
+
+  it("keyHolders lists installed key-holding apps, stopped ones too, and skips retired networks", () => {
+    const packages = [
+      { name: "nimbus.avado.dnp.dappnode.eth", state: "running" },
+      { name: "teku.avado.dnp.dappnode.eth", state: "exited", running: false },
+      { name: "prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth" },
+      { name: "ethchain-geth.public.dappnode.eth" },
+      { name: "teku-prater.avado.dnp.dappnode.eth" },
+      { name: "unknown.dnp.dappnode.eth" },
+    ];
+    expect(keyHolders(packages).map(k => k.pkg.name)).toEqual(["nimbus.avado.dnp.dappnode.eth", "teku.avado.dnp.dappnode.eth"]);
+    expect(NETWORKS.goerli.retired).toBe(true);
+    expect(keyHolders(undefined)).toEqual([]);
   });
 
   it("returns null for unknown packages", () => {

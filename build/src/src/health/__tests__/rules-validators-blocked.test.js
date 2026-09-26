@@ -1,4 +1,12 @@
-import { feeRecipientMissing, FEE_RECIPIENT_STEPS } from "health/rules/validators";
+import {
+  feeRecipientMissing,
+  FEE_RECIPIENT_STEPS,
+  twoValidatorClients,
+  TWO_VALIDATOR_APPS_STEPS,
+  KEY_MOVE_WAIT_MINUTES,
+  SWITCHING_CLIENTS_DOCS,
+  joinNames,
+} from "health/rules/validators";
 import { updateBlocked, UPDATE_BLOCKED_AFTER_MS } from "health/rules/updates";
 import { runChecksDetailed } from "health/engine";
 import { ALL_RULES } from "health/rules";
@@ -30,6 +38,101 @@ describe("feeRecipientMissing", () => {
     const withData = runChecksDetailed(snapshot({ feeRecipients: {}, updateAges: {} }), ALL_RULES).total;
     const without = runChecksDetailed(snapshot({ feeRecipients: null, updateAges: null }), ALL_RULES).total;
     expect(withData - without).toBe(2);
+  });
+});
+
+describe("twoValidatorClients", () => {
+  const TEKU = "teku.avado.dnp.dappnode.eth";
+  const LIGHTHOUSE = "lighthouse.avado.dnp.dappnode.eth";
+  const PRYSM_BEACON = "prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth";
+  const PRYSM_VALIDATOR = "eth2validator.avado.dnp.dappnode.eth";
+  const titled = (name, title, overrides) => pkg(name, { manifest: { name, title }, ...overrides });
+  const run = packages => twoValidatorClients(snapshot({ packages }));
+
+  it("warns (never critical) when two validator apps are installed for the same network", () => {
+    const [f, ...rest] = run([titled(NIMBUS, "Nimbus"), titled(TEKU, "Teku")]);
+    expect(rest).toEqual([]);
+    expect(f).toMatchObject({
+      id: "two-validator-clients:mainnet",
+      severity: "warning",
+      topic: "setup",
+      dismissable: true,
+      title: "Nimbus and Teku are both installed for Ethereum mainnet",
+      fix: { kind: "steps" },
+      learnMore: SWITCHING_CLIENTS_DOCS,
+    });
+    expect(f.why).toMatch(/one app only/);
+    expect(f.why).toMatch(/hide this/);
+    expect(f.steps).toEqual(TWO_VALIDATOR_APPS_STEPS);
+  });
+
+  it("walks through the safe order: remove the validators, wait, import, remove the old app, never just stop it", () => {
+    // docs.ava.do asks for at least 5 finalized epochs (about 32 minutes) and
+    // recommends 10 (64 minutes): never less than that.
+    expect(KEY_MOVE_WAIT_MINUTES).toBeGreaterThanOrEqual(64);
+    expect(TWO_VALIDATOR_APPS_STEPS).toHaveLength(4);
+    expect(TWO_VALIDATOR_APPS_STEPS[0]).toMatch(/remove your validators/);
+    expect(TWO_VALIDATOR_APPS_STEPS[0]).toMatch(/Stopping the app is not enough/);
+    expect(TWO_VALIDATOR_APPS_STEPS[1]).toBe(`Wait at least ${KEY_MOVE_WAIT_MINUTES} minutes.`);
+    expect(TWO_VALIDATOR_APPS_STEPS[2]).toMatch(/^Import your validators/);
+    expect(TWO_VALIDATOR_APPS_STEPS[3]).toMatch(/remove the old app/);
+    for (const step of TWO_VALIDATOR_APPS_STEPS) expect(step).not.toMatch(/^Stop/);
+  });
+
+  it("counts a stopped app: it starts again by itself after a reboot or an update", () => {
+    const stopped = titled(TEKU, "Teku", { state: "exited", running: false });
+    expect(run([titled(NIMBUS, "Nimbus"), stopped])).toHaveLength(1);
+  });
+
+  it("Prysm's beacon chain and validator are one validator app, and the beacon chain alone holds no keys", () => {
+    expect(run([pkg(PRYSM_BEACON), pkg(PRYSM_VALIDATOR)])).toEqual([]);
+    expect(run([pkg(PRYSM_BEACON), titled(TEKU, "Teku")])).toEqual([]);
+    const [f] = run([pkg(PRYSM_BEACON), titled(PRYSM_VALIDATOR, "Prysm"), titled(TEKU, "Teku")]);
+    expect(f.title).toBe("Prysm and Teku are both installed for Ethereum mainnet");
+  });
+
+  it("keeps networks apart and skips the retired Goerli/Prater testnet", () => {
+    expect(run([titled(NIMBUS, "Nimbus"), pkg("teku-holesky.avado.dnp.dappnode.eth")])).toEqual([]);
+    expect(run([pkg("teku-gnosis.avado.dnp.dappnode.eth"), pkg("nethermind-gnosis.avado.dnp.dappnode.eth")])).toEqual([]);
+    const [f, ...rest] = run([
+      titled(NIMBUS, "Nimbus"),
+      titled("teku-holesky.avado.dnp.dappnode.eth", "Teku Holesky Testnet"),
+      titled("lighthouse-holesky.avado.dnp.dappnode.eth", "Lighthouse Holesky Testnet"),
+    ]);
+    expect(rest).toEqual([]);
+    expect(f).toMatchObject({ id: "two-validator-clients:holesky", title: "Teku Holesky Testnet and Lighthouse Holesky Testnet are both installed for Holesky testnet" });
+    expect(run([pkg("nimbus-prater.avado.dnp.dappnode.eth"), pkg("teku-prater.avado.dnp.dappnode.eth")])).toEqual([]);
+  });
+
+  it("one finding per network, naming every app", () => {
+    const findings = run([
+      titled(NIMBUS, "Nimbus"),
+      titled(TEKU, "Teku"),
+      titled(LIGHTHOUSE, "Lighthouse"),
+      pkg("teku-gnosis.avado.dnp.dappnode.eth"),
+      pkg("lighthouse-gnosis.avado.dnp.dappnode.eth"),
+    ]);
+    expect(findings.map(f => f.id)).toEqual(["two-validator-clients:mainnet", "two-validator-clients:gnosis"]);
+    expect(findings[0].title).toBe("Nimbus, Teku and Lighthouse are all installed for Ethereum mainnet");
+    expect(findings[1].title).toBe("teku-gnosis and lighthouse-gnosis are both installed for Gnosis chain");
+  });
+
+  it("no finding with one validator app or none", () => {
+    expect(run([titled(NIMBUS, "Nimbus"), pkg("ethchain-geth.public.dappnode.eth")])).toEqual([]);
+    expect(run([])).toEqual([]);
+    expect(twoValidatorClients(snapshot({ packages: undefined }))).toEqual([]);
+  });
+
+  it("runs as part of ALL_RULES and stays a warning", () => {
+    const s = snapshot({ packages: [pkg("ethchain-geth.public.dappnode.eth"), titled(NIMBUS, "Nimbus"), titled(TEKU, "Teku")] });
+    const f = runChecksDetailed(s, ALL_RULES).findings.find(x => x.id === "two-validator-clients:mainnet");
+    expect(f).toMatchObject({ severity: "warning" });
+  });
+
+  it("joinNames reads like a sentence", () => {
+    expect(joinNames(["Nimbus"])).toBe("Nimbus");
+    expect(joinNames(["Nimbus", "Teku"])).toBe("Nimbus and Teku");
+    expect(joinNames(["Nimbus", "Teku", "Lighthouse"])).toBe("Nimbus, Teku and Lighthouse");
   });
 });
 

@@ -29,6 +29,24 @@ describe("appStopped", () => {
     const s = snapshot({ packages: [pkg("rotki.avado.dnp.dappnode.eth", { state: "created", running: false })] });
     expect(appStopped(s)).toEqual([]);
   });
+  it("no one-click start for a validator app while another one runs for the same network", () => {
+    const TEKU = "teku.avado.dnp.dappnode.eth";
+    const stoppedTeku = pkg(TEKU, { state: "exited", running: false, manifest: { title: "Teku" } });
+    const [f] = appStopped(snapshot({ packages: [pkg(NIMBUS), stoppedTeku] }));
+    // Its validators may have moved to Nimbus: starting Teku could sign twice.
+    expect(f).toMatchObject({ id: `app-stopped:${TEKU}`, severity: "warning", appId: TEKU, title: "Teku is stopped" });
+    expect(f.fix).toEqual({ kind: "link", to: `/packages/${TEKU}`, label: "Open the app" });
+    expect(f.why).toMatch(/do not start this one/);
+    // Prysm's beacon chain holds no keys, another network does not count, and
+    // with both validator apps stopped the usual start action stays.
+    for (const other of [pkg("prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth"), pkg("teku-holesky.avado.dnp.dappnode.eth"), pkg(NIMBUS, { state: "exited", running: false })]) {
+      const out = appStopped(snapshot({ packages: [other, stoppedTeku] })).find(x => x.appId === TEKU);
+      expect(out).toMatchObject({ severity: "critical", fix: { kind: "action", action: "restartPackage" } });
+    }
+    // An execution client keeps its start action next to a running Nimbus.
+    const [geth] = appStopped(snapshot({ packages: [pkg(NIMBUS), pkg(GETH, { state: "exited", running: false })] }));
+    expect(geth).toMatchObject({ severity: "critical", fix: { kind: "action" } });
+  });
   it("skips a stopped Prometheus package — monitoringStopped covers it instead", () => {
     const s = snapshot({ packages: [pkg(PROMETHEUS_PACKAGE, { state: "exited", running: false })] });
     expect(appStopped(s)).toEqual([]);
