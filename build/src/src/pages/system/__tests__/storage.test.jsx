@@ -299,6 +299,21 @@ describe("SystemStorage consensus clients: storage mode and Free up space", () =
 
   beforeEach(() => mockConfirm.mockClear());
 
+  it("without the button the advice keeps the never-delete warning and says what to update", () => {
+    renderPage({ packages: [teku(), dm("10.0.49")] });
+    fireEvent.click(screen.getByText("How to free up this app's space"));
+    expect(screen.getByText(/never delete it yourself/)).toBeInTheDocument();
+    expect(screen.getByText(/Update your AVADO system/)).toBeInTheDocument();
+  });
+
+  it("Prysm's validator app never offers the button and its advice points to support", () => {
+    renderPage({ packages: [{ name: "eth2validator.avado.dnp.dappnode.eth", volumes: [{ size: "1GB" }], manifest: { title: "Prysm" } }, dm("10.0.50")] });
+    expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Storage mode:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("How to free up this app's space"));
+    expect(screen.getByText(/contact support/)).toBeInTheDocument();
+  });
+
   it("shows the storage mode line for a consensus client, and none for an execution client", () => {
     renderPage({ packages: [teku(), geth, dm("10.0.50")] });
     expect(screen.getAllByText(/Storage mode:/)).toHaveLength(1);

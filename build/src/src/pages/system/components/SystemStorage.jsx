@@ -18,9 +18,19 @@ import {
   FORECAST_WARN_DAYS,
 } from "health/rules/storage";
 import { appTitle } from "health/rules/apps";
-import { storageMode } from "health/storageMode";
 import confirmResetBeaconData from "pages/packages/components/confirmResetBeaconData";
-import { getClient, canResetBeaconData, GRAFANA_PACKAGE, NODE_EXPORTER_PACKAGE, PROMETHEUS_PACKAGE, ROCKET_POOL_PACKAGE } from "health/clients";
+import {
+  getClient,
+  canResetBeaconData,
+  storageMode,
+  ROLES,
+  CONSENSUS_ADVICE_UPDATE_NEEDED,
+  CONSENSUS_ADVICE_NO_RESET,
+  GRAFANA_PACKAGE,
+  NODE_EXPORTER_PACKAGE,
+  PROMETHEUS_PACKAGE,
+  ROCKET_POOL_PACKAGE,
+} from "health/clients";
 import { KIT_PRICE, KIT_URL, showKitOffer } from "health/diskUpgrade";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
@@ -51,9 +61,16 @@ export function storageRows(packages) {
 function StorageRow({ pkg, size, share, canFreeUp, resetBeaconData, isAdvanced }) {
   const [adviceOpen, setAdviceOpen] = useState(false);
   const client = getClient(pkg.name);
-  const advice = client && client.pruneAdvice;
   const mode = storageMode(pkg);
   const showFreeUp = canFreeUp && Boolean(client && client.canResetBeacon);
+  // A consensus row without the button must not talk about a button it
+  // does not have, and must keep the "never delete it yourself" warning.
+  const advice =
+    client && client.role === ROLES.CONSENSUS && !showFreeUp
+      ? client.canResetBeacon
+        ? CONSENSUS_ADVICE_UPDATE_NEEDED
+        : CONSENSUS_ADVICE_NO_RESET
+      : client && client.pruneAdvice;
 
   return (
     <li className="flex flex-col gap-2 py-3.5">

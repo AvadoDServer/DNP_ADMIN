@@ -23,7 +23,9 @@ describe("storageMode", () => {
     [TEKU, "0.0.75", { EXTRA_OPTS: "--data-storage-mode=minimal" }, "minimal"],
     [TEKU, "0.0.75", { EXTRA_OPTS: "" }, "pruned"],
     [TEKU, undefined, {}, "pruned"],
-    ["teku-gnosis.avado.dnp.dappnode.eth", "0.0.76", {}, "minimal"],
+    // other Teku networks have their own version lines: pruned until listed
+    ["teku-gnosis.avado.dnp.dappnode.eth", "0.0.76", {}, "pruned"],
+    ["teku-gnosis.avado.dnp.dappnode.eth", "0.0.28", { EXTRA_OPTS: "--data-storage-mode=minimal" }, "minimal"],
     // Lighthouse
     [LH, "0.0.50", {}, "pruned"],
     [LH, "0.0.50", { EXTRA_OPTS_BEACON_NODE: "--reconstruct-historic-states" }, "archive"],
@@ -33,10 +35,14 @@ describe("storageMode", () => {
     [NIM, "0.0.50", {}, "pruned"],
     [NIM, "0.0.50", { EXTRA_OPTS: "--history=archive" }, "archive"],
     [NIM, "0.0.50", { EXTRA_OPTS: "--history=prune" }, "pruned"],
+    [NIM, "0.0.50", { EXTRA_OPTS: "--history:archive" }, "archive"],
     // Prysm beacon chain and its validator app
     [PRYSM, "0.0.50", {}, "pruned"],
     [PRYSM, "0.0.50", { EXTRA_OPTS: "--slots-per-archive-point=32" }, "archive"],
-    ["eth2validator.avado.dnp.dappnode.eth", "0.0.50", {}, "pruned"],
+    [PRYSM, "0.0.50", { EXTRA_OPTS: "--slots-per-archive-point=2047" }, "archive"],
+    // a larger spacing stores less, not more
+    [PRYSM, "0.0.50", { EXTRA_OPTS: "--slots-per-archive-point=8192" }, "pruned"],
+    [PRYSM, "0.0.50", { EXTRA_OPTS: "--slots-per-archive-point=2048" }, "pruned"],
   ];
   it.each(cases)("%s %s %j -> %s", (name, version, envs, key) => {
     const m = storageMode(pkg(name, { version, envs }));
@@ -52,8 +58,9 @@ describe("storageMode", () => {
     expect(storageMode(pkg(LH, { envs: { EXTRA_OPTS_BEACON_NODE: "--reconstruct-historic-states" } })).detail).toContain("--reconstruct-historic-states");
   });
 
-  it("is null for execution clients, tools, unknown and missing packages", () => {
+  it("is null for execution clients, tools, Prysm's validator app, unknown and missing packages", () => {
     expect(storageMode(pkg("ethchain-geth.public.dappnode.eth"))).toBeNull();
+    expect(storageMode(pkg("eth2validator.avado.dnp.dappnode.eth"))).toBeNull();
     expect(storageMode(pkg("grafana.avado.dappnode.eth"))).toBeNull();
     expect(storageMode(pkg("rotki.avado.dnp.dappnode.eth"))).toBeNull();
     expect(storageMode(null)).toBeNull();

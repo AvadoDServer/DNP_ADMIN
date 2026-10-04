@@ -59,8 +59,8 @@ describe("consensusTooBig", () => {
     expect(run([big(TEKU, 200), dm("10.0.50")])).toEqual([]);
   });
 
-  it("883 GB Teku with DAPPMANAGER 10.0.50: a Free up space action", () => {
-    const out = run([big(TEKU, 883, { envs: { EXTRA_OPTS: "--data-storage-mode=archive" } }), dm("10.0.50")]);
+  it("883 GB Teku (prune era) with DAPPMANAGER 10.0.50: a Free up space action", () => {
+    const out = run([big(TEKU, 883, { version: "0.0.75" }), dm("10.0.50")]);
     expect(out).toHaveLength(1);
     expect(out[0]).toEqual({
       id: `consensus-too-big:${TEKU}`,
@@ -69,9 +69,16 @@ describe("consensusTooBig", () => {
       appId: TEKU,
       title: "Teku is using 883.0 GB",
       why: "Normal is under 200 GB. Free up space deletes only its chain data and downloads a recent checkpoint instead. Your validator keys, slashing protection and settings stay. Your validators are offline for about 15 to 30 minutes while it syncs again.",
-      detail: "Storage mode: Full history (archive)",
+      detail: "Storage mode: All blocks (pruned)",
       fix: { kind: "action", action: "resetBeaconData", label: "Free up space" },
     });
+  });
+
+  it("an archive setting gets its Settings tab, not a reset that cannot stick", () => {
+    const [f] = run([big(TEKU, 883, { envs: { EXTRA_OPTS: "--data-storage-mode=archive" } }), dm("10.0.50")]);
+    expect(f.detail).toBe("Storage mode: Full history (archive)");
+    expect(f.why).toMatch(/full chain history/);
+    expect(f.fix).toEqual({ kind: "link", to: `/packages/${TEKU}?tab=settings`, label: "Open settings" });
   });
 
   it("with DAPPMANAGER 10.0.49, a link to System > Storage instead", () => {
