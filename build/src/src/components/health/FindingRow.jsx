@@ -61,8 +61,9 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
   }, [starting]);
 
   const handleAction = () => {
-    setStarting(true);
-    runFixAction(finding, dispatch);
+    // resetBeaconData opens a confirm and its toast carries the progress.
+    if (fix.action !== "resetBeaconData") setStarting(true);
+    runFixAction(finding, dispatch, packages);
   };
 
   const fixButton =

@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import { createStructuredSelector } from "reselect";
 import * as a from "../actions";
+import { resetBeaconData } from "pages/packages/actions";
 import { DISK_CLEANUP } from "../signedCommands";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getDappnodeParams, getDappnodeStats } from "services/dappnodeStatus/selectors";
@@ -18,7 +19,19 @@ import {
   FORECAST_WARN_DAYS,
 } from "health/rules/storage";
 import { appTitle } from "health/rules/apps";
-import { getClient, GRAFANA_PACKAGE, NODE_EXPORTER_PACKAGE, PROMETHEUS_PACKAGE, ROCKET_POOL_PACKAGE } from "health/clients";
+import confirmResetBeaconData from "pages/packages/components/confirmResetBeaconData";
+import {
+  getClient,
+  canResetBeaconData,
+  storageMode,
+  ROLES,
+  CONSENSUS_ADVICE_UPDATE_NEEDED,
+  CONSENSUS_ADVICE_NO_RESET,
+  GRAFANA_PACKAGE,
+  NODE_EXPORTER_PACKAGE,
+  PROMETHEUS_PACKAGE,
+  ROCKET_POOL_PACKAGE,
+} from "health/clients";
 import { KIT_PRICE, KIT_URL, showKitOffer } from "health/diskUpgrade";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
@@ -46,10 +59,19 @@ export function storageRows(packages) {
     .map(({ pkg, size }) => ({ pkg, size, share: total ? size / total : 0 }));
 }
 
-function StorageRow({ pkg, size, share }) {
+function StorageRow({ pkg, size, share, canFreeUp, resetBeaconData, isAdvanced }) {
   const [adviceOpen, setAdviceOpen] = useState(false);
   const client = getClient(pkg.name);
-  const advice = client && client.pruneAdvice;
+  const mode = storageMode(pkg);
+  const showFreeUp = canFreeUp && Boolean(client && client.canResetBeacon);
+  // A consensus row without the button must not talk about a button it
+  // does not have, and must keep the "never delete it yourself" warning.
+  const advice =
+    client && client.role === ROLES.CONSENSUS && !showFreeUp
+      ? client.canResetBeacon
+        ? CONSENSUS_ADVICE_UPDATE_NEEDED
+        : CONSENSUS_ADVICE_NO_RESET
+      : client && client.pruneAdvice;
 
   return (
     <li className="flex flex-col gap-2 py-3.5">
@@ -61,6 +83,19 @@ function StorageRow({ pkg, size, share }) {
         </div>
         <span className="flex-shrink-0 font-mono text-xs text-fg-subtle">{formatDockerSize(size)}</span>
       </div>
+      {mode && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pl-[2.75rem]">
+          <p className="mb-0 text-xs text-fg-muted">
+            Storage mode: {mode.label}
+            {isAdvanced && mode.detail && <span className="text-fg-subtle"> · {mode.detail}</span>}
+          </p>
+          {showFreeUp && (
+            <Button variant="secondary" size="sm" onClick={() => confirmResetBeaconData(pkg, id => resetBeaconData(id))}>
+              Free up space
+            </Button>
+          )}
+        </div>
+      )}
       {advice && (
         <button
           type="button"
@@ -181,7 +216,7 @@ export const DiskUpgradeCard = React.forwardRef(function DiskUpgradeCard({ space
   );
 });
 
-function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedCmd }) {
+function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedCmd, resetBeaconData = () => {} }) {
   const rows = storageRows(dnpInstalled);
   // Same parser and 80/90 thresholds as Home's Resources strip, so the two
   // pages never disagree about how full the disk is.
@@ -189,6 +224,7 @@ function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedC
   const status = pct >= 90 ? "danger" : pct >= 80 ? "warning" : "accent";
   const { diskForecast, diskTrendStatus } = useHealth();
   const { isAdvanced } = useMode();
+  const canFreeUp = canResetBeaconData(dnpInstalled);
   const showKit = showKitOffer(dappnodeStats, diskForecast);
   // "Get more space" on a disk finding links here with ?kit=1: bring the card into view.
   const location = useLocation();
@@ -256,7 +292,7 @@ function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedC
         ) : (
           <ul className="divide-y divide-border px-4">
             {rows.map(row => (
-              <StorageRow key={row.pkg.name} {...row} />
+              <StorageRow key={row.pkg.name} {...row} canFreeUp={canFreeUp} resetBeaconData={resetBeaconData} isAdvanced={isAdvanced} />
             ))}
           </ul>
         )}
@@ -273,6 +309,7 @@ const mapStateToProps = createStructuredSelector({
 
 const mapDispatchToProps = {
   runSignedCmd: a.runSignedCmd,
+  resetBeaconData,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(SystemStorage);

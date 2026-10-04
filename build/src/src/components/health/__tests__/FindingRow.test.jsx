@@ -426,3 +426,25 @@ describe("FindingRow 'Get more space' (4 TB kit)", () => {
     expect(screen.queryByRole("link", { name: "Get more space" })).not.toBeInTheDocument();
   });
 });
+
+describe("FindingRow Free up space (resetBeaconData)", () => {
+  it("passes the installed packages to runFixAction and never shows Starting…", async () => {
+    const { runFixAction } = await import("health/fixActions");
+    runFixAction.mockClear();
+    const packages = [pkg("teku.avado.dnp.dappnode.eth")];
+    healthState.packages = packages;
+    const finding = {
+      id: "consensus-too-big:teku.avado.dnp.dappnode.eth",
+      severity: "warning",
+      topic: "storage",
+      appId: "teku.avado.dnp.dappnode.eth",
+      title: "Teku is using 883.0 GB",
+      fix: { kind: "action", action: "resetBeaconData", label: "Free up space" },
+    };
+    renderRow(finding);
+    fireEvent.click(screen.getByRole("button", { name: "Free up space" }));
+    expect(runFixAction).toHaveBeenCalledWith(finding, expect.any(Function), packages);
+    expect(screen.getByRole("button", { name: "Free up space" })).not.toBeDisabled();
+    expect(screen.queryByText("Starting…")).not.toBeInTheDocument();
+  });
+});

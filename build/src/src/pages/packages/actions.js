@@ -41,6 +41,11 @@ export const setAutoUpdate = (id, autoUpdate) => () => {
 export const restartPackage = (id) => () =>
   api.restartPackage({ id }, { toastMessage: `Restarting ${sn(id)}...` });
 
+// Deletes only a consensus client's chain data (DAPPMANAGER 10.0.50+). The
+// pending toast is the progress; it resolves with the core's own message.
+export const resetBeaconData = (id) => () =>
+  api.resetBeaconData({ id }, { toastMessage: `Freeing up space on ${sn(id)}…` });
+
 export const restartPackageVolumes = (id) => () =>
   api.restartPackageVolumes(
     { id },

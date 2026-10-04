@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ModeProvider } from "settings/ModeProvider";
 import { storageRows, SystemStorage, MONITORING_INSTALL_PATH } from "pages/system/components/SystemStorage";
@@ -9,6 +9,9 @@ import { PRIORITY_CARE_EMAIL } from "pages/priority/data";
 
 const { healthState } = vi.hoisted(() => ({ healthState: { diskForecast: { state: "none" }, diskTrendStatus: "not-installed" } }));
 vi.mock("health/HealthProvider", () => ({ useHealth: () => healthState }));
+
+const { mockConfirm } = vi.hoisted(() => ({ mockConfirm: vi.fn() }));
+vi.mock("components/ConfirmDialog", () => ({ confirm: mockConfirm }));
 
 const DAY = 86400;
 const GB = 1e9;
@@ -285,5 +288,81 @@ describe("storageRows", () => {
     expect(storageRows([{ name: "empty", volumes: [] }])).toEqual([]);
     expect(storageRows([])).toEqual([]);
     expect(storageRows()).toEqual([]);
+  });
+});
+
+describe("SystemStorage consensus clients: storage mode and Free up space", () => {
+  const TEKU = "teku.avado.dnp.dappnode.eth";
+  const teku = (extra = {}) => ({ name: TEKU, version: "0.0.76", volumes: [{ size: "883GB" }], manifest: { title: "Teku" }, ...extra });
+  const dm = version => ({ name: "dappmanager.dnp.dappnode.eth", version, isCore: true, volumes: [] });
+  const geth = { name: "ethchain-geth.public.dappnode.eth", volumes: [{ size: "600GB" }], manifest: { title: "Geth" } };
+
+  beforeEach(() => mockConfirm.mockClear());
+
+  it("without the button the advice keeps the never-delete warning and says what to update", () => {
+    renderPage({ packages: [teku(), dm("10.0.49")] });
+    fireEvent.click(screen.getByText("How to free up this app's space"));
+    expect(screen.getByText(/never delete it yourself/)).toBeInTheDocument();
+    expect(screen.getByText(/Update your AVADO system/)).toBeInTheDocument();
+  });
+
+  it("Prysm's validator app never offers the button and its advice points to support", () => {
+    renderPage({ packages: [{ name: "eth2validator.avado.dnp.dappnode.eth", volumes: [{ size: "1GB" }], manifest: { title: "Prysm" } }, dm("10.0.50")] });
+    expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Storage mode:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("How to free up this app's space"));
+    expect(screen.getByText(/contact support/)).toBeInTheDocument();
+  });
+
+  it("shows the storage mode line for a consensus client, and none for an execution client", () => {
+    renderPage({ packages: [teku(), geth, dm("10.0.50")] });
+    expect(screen.getAllByText(/Storage mode:/)).toHaveLength(1);
+    expect(screen.getByText(/Storage mode: Recent data only \(minimal\)/)).toBeInTheDocument();
+  });
+
+  it("Advanced mode adds the detail sentence; Simple mode does not", () => {
+    renderPage({ packages: [teku(), dm("10.0.50")] });
+    expect(screen.queryByText(/Teku default for package/)).not.toBeInTheDocument();
+    renderPage({ packages: [teku(), dm("10.0.50")], mode: "advanced" });
+    expect(screen.getByText(/Teku default for package 0.0.76 and newer/)).toBeInTheDocument();
+  });
+
+  it("shows Free up space with DAPPMANAGER 10.0.50, and not with 10.0.49", () => {
+    renderPage({ packages: [teku(), dm("10.0.50")] });
+    expect(screen.getByRole("button", { name: "Free up space" })).toBeInTheDocument();
+  });
+
+  it("hides Free up space (but keeps the mode line) with DAPPMANAGER 10.0.49 or none", () => {
+    renderPage({ packages: [teku(), dm("10.0.49")] });
+    expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Storage mode:/)).toBeInTheDocument();
+    renderPage({ packages: [teku()] });
+    expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+  });
+
+  it("never offers it for the Prysm validator app", () => {
+    const val = { name: "eth2validator.avado.dnp.dappnode.eth", volumes: [{ size: "1GB" }], manifest: { title: "Prysm" } };
+    renderPage({ packages: [val, dm("10.0.50")] });
+    expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+  });
+
+  it("clicking it opens the confirm, and dispatches only when confirmed", () => {
+    const resetBeaconData = vi.fn();
+    localStorage.setItem("avado.mode", "simple");
+    render(
+      <ModeProvider>
+        <MemoryRouter>
+          <SystemStorage dnpInstalled={[teku(), dm("10.0.50")]} dappnodeStats={{ disk: "50%" }} runSignedCmd={() => {}} resetBeaconData={resetBeaconData} />
+        </MemoryRouter>
+      </ModeProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Free up space" }));
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
+    const opts = mockConfirm.mock.calls[0][0];
+    expect(opts).toMatchObject({ title: "Free up space on Teku", label: "Free up space" });
+    expect(opts.text).toContain("chain data (883.0 GB)");
+    expect(resetBeaconData).not.toHaveBeenCalled();
+    opts.onClick();
+    expect(resetBeaconData).toHaveBeenCalledWith(TEKU);
   });
 });
