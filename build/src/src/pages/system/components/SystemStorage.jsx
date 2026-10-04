@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import { createStructuredSelector } from "reselect";
 import * as a from "../actions";
+import { resetBeaconData } from "pages/packages/actions";
 import { DISK_CLEANUP } from "../signedCommands";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getDappnodeParams, getDappnodeStats } from "services/dappnodeStatus/selectors";
@@ -308,7 +309,7 @@ const mapStateToProps = createStructuredSelector({
 
 const mapDispatchToProps = {
   runSignedCmd: a.runSignedCmd,
-  resetBeaconData: a.resetBeaconData,
+  resetBeaconData,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(SystemStorage);
