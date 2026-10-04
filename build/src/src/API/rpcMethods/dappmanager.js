@@ -404,6 +404,18 @@ export default {
   },
 
   /**
+   * [resetBeaconData]
+   * Deletes only the beacon (chain) data of a consensus client and starts it
+   * again from its checkpoint. Validator keys, slashing protection and
+   * settings are kept. DAPPMANAGER 10.0.50 and newer.
+   *
+   * @param {string} id DNP .eth name
+   */
+  resetBeaconData: {
+    manadatoryKwargs: ["id"],
+  },
+
+  /**
    * [restartPackageVolumes]
    * Removes a package volumes. The re-ups the package
    *

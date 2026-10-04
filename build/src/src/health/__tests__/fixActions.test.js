@@ -1,7 +1,10 @@
 import { runFixAction } from "health/fixActions";
-import { togglePackage, restartPackage } from "pages/packages/actions";
+import { togglePackage, restartPackage, resetBeaconData } from "pages/packages/actions";
+import confirmResetBeaconData from "pages/packages/components/confirmResetBeaconData";
 
+vi.mock("pages/packages/components/confirmResetBeaconData", () => ({ default: vi.fn() }));
 vi.mock("pages/packages/actions", () => ({
+  resetBeaconData: vi.fn(id => ({ __thunk: "resetBeaconData", id })),
   togglePackage: vi.fn(id => ({ __thunk: "toggle", id })),
   restartPackage: vi.fn(id => ({ __thunk: "restart", id })),
 }));
@@ -15,6 +18,8 @@ describe("runFixAction", () => {
     dispatch = vi.fn();
     togglePackage.mockClear();
     restartPackage.mockClear();
+    resetBeaconData.mockClear();
+    confirmResetBeaconData.mockClear();
   });
 
   it("does nothing when finding is null or undefined", () => {
@@ -52,5 +57,35 @@ describe("runFixAction", () => {
   it("does nothing for an unrecognised fix.action", () => {
     runFixAction({ fix: { kind: "action", action: "resyncPackage" }, appId }, dispatch);
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  describe("resetBeaconData", () => {
+    const teku = "teku.avado.dnp.dappnode.eth";
+    const finding = { fix: { kind: "action", action: "resetBeaconData" }, appId: teku };
+    const packages = [{ name: "nimbus.avado.dnp.dappnode.eth" }, { name: teku, volumes: [] }];
+
+    it("opens the confirm for the package and dispatches nothing yet", () => {
+      runFixAction(finding, dispatch, packages);
+      expect(confirmResetBeaconData).toHaveBeenCalledTimes(1);
+      expect(confirmResetBeaconData).toHaveBeenCalledWith(packages[1], expect.any(Function));
+      expect(dispatch).not.toHaveBeenCalled();
+      expect(resetBeaconData).not.toHaveBeenCalled();
+    });
+
+    it("dispatches resetBeaconData(id) only when the confirm calls back", () => {
+      runFixAction(finding, dispatch, packages);
+      confirmResetBeaconData.mock.calls[0][1](teku);
+      expect(resetBeaconData).toHaveBeenCalledWith(teku);
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      expect(dispatch).toHaveBeenCalledWith(resetBeaconData.mock.results[0].value);
+    });
+
+    it("does nothing for an unknown appId or without packages", () => {
+      runFixAction({ ...finding, appId: "gone.avado.dnp.dappnode.eth" }, dispatch, packages);
+      runFixAction(finding, dispatch, []);
+      runFixAction(finding, dispatch);
+      expect(confirmResetBeaconData).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
   });
 });

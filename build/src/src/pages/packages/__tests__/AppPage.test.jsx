@@ -48,6 +48,11 @@ vi.mock("pages/packages/components/confirmRestartPackage", () => ({
   default: (...args) => mockConfirmRestart(...args),
 }));
 
+const mockConfirmBeacon = vi.fn();
+vi.mock("pages/packages/components/confirmResetBeaconData", () => ({
+  default: (...args) => mockConfirmBeacon(...args),
+}));
+
 const mockConfirmReset = vi.fn();
 vi.mock("pages/packages/components/confirmResetPackage", () => ({
   default: (...args) => mockConfirmReset(...args),
@@ -86,6 +91,29 @@ describe("app page header actions", () => {
     render(<AppPage dnp={dnp} {...baseProps} isCore={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Restart" }));
     expect(mockConfirmRestart).toHaveBeenCalledWith(dnp.name, expect.any(Function));
+  });
+
+  describe("Free up space", () => {
+    const teku = { name: "teku.avado.dnp.dappnode.eth", state: "running", version: "0.0.76", manifest: {} };
+    const dm = version => ({ name: "dappmanager.dnp.dappnode.eth", version, isCore: true });
+    const props = { ...baseProps, id: teku.name };
+
+    it("is in the header for a consensus client when the DAPPMANAGER is 10.0.50 or newer", () => {
+      mockPackages = [teku, dm("10.0.50")];
+      render(<AppPage dnp={teku} {...props} isCore={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "Free up space" }));
+      expect(mockConfirmBeacon).toHaveBeenCalledWith(teku, expect.any(Function));
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
+
+    it("is hidden with an older DAPPMANAGER, and for apps that are not consensus clients", () => {
+      mockPackages = [teku, dm("10.0.49")];
+      render(<AppPage dnp={teku} {...props} isCore={false} />);
+      expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+      mockPackages = [dnp, dm("10.0.50")];
+      render(<AppPage dnp={{ ...dnp, name: "ethchain-geth.public.dappnode.eth" }} {...baseProps} isCore={false} />);
+      expect(screen.queryByRole("button", { name: "Free up space" })).not.toBeInTheDocument();
+    });
   });
 
   it("overflow menu lists Stop, Reset and Remove for a non-core running app", () => {

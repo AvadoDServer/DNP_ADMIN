@@ -24,8 +24,44 @@ export const NETWORKS = {
 
 const EXECUTION_PRUNE =
   "Execution clients keep the whole chain state and grow over time. Resetting its data makes it sync again from scratch (several hours to a few days). No validator keys are stored in an execution client, so this is safe, but your validators cannot attest until it is synced again.";
-const CONSENSUS_PRUNE =
-  "Consensus clients normally stay under 200 GB. If yours is much larger, contact support: its data folder also holds your validator keys and slashing protection, so never delete it yourself.";
+const CONSENSUS_ADVICE =
+  "Consensus clients normally stay under 200 GB. Free up space deletes only the chain data; your validator keys, slashing protection and settings stay, and the client downloads a recent checkpoint and is back in about 15 to 30 minutes.";
+
+// A consensus client normally stays under this (decimal bytes, like parseDockerSize).
+export const CONSENSUS_SIZE_LIMIT = 200e9;
+
+// The DAPPMANAGER that has the resetBeaconData call.
+export const BEACON_RESET_SINCE = "10.0.50";
+const DAPPMANAGER_PACKAGE = "dappmanager.dnp.dappnode.eth";
+
+// "10.0.50" -> [10, 0, 50]; null when it is not a plain x.y.z version. No
+// semver import: AVADO Care copies this file byte for byte.
+const versionParts = v => {
+  const m = typeof v === "string" ? v.trim().match(/^v?(\d+)\.(\d+)\.(\d+)/) : null;
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+};
+
+// Packages whose beacon (chain) data the DAPPMANAGER's resetBeaconData can
+// delete on its own, keeping the validator files. Keep in sync with its table
+// (calls/resetBeaconData.js). eth2validator (Prysm's validator) is not one.
+const canResetBeaconName = name =>
+  /^(teku|lighthouse|nimbus)(-[a-z]+)?\.avado\.dnp\.dappnode\.eth$/.test(name) ||
+  name === "prysm-beacon-chain-mainnet.avado.dnp.dappnode.eth";
+
+/**
+ * True when the installed DAPPMANAGER (it is in `packages`, as a core
+ * package) is 10.0.50 or newer, the first one with resetBeaconData. An older
+ * or unreadable version is false: the button must not call something the core
+ * does not have.
+ */
+export function canResetBeaconData(packages) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  const have = versionParts(core && core.version);
+  const need = versionParts(BEACON_RESET_SINCE);
+  if (!have) return false;
+  for (let i = 0; i < 3; i++) if (have[i] !== need[i]) return have[i] > need[i];
+  return true;
+}
 
 const table = [
   // Execution
@@ -73,9 +109,10 @@ const byName = Object.fromEntries(
       label,
       promClient,
       canResetData: role === ROLES.EXECUTION,
+      canResetBeacon: role === ROLES.CONSENSUS && canResetBeaconName(name),
       holdsKeys: role === ROLES.CONSENSUS && !NO_VALIDATOR_CLIENT.has(name),
       pruneAdvice:
-        role === ROLES.EXECUTION ? EXECUTION_PRUNE : role === ROLES.CONSENSUS ? CONSENSUS_PRUNE : null,
+        role === ROLES.EXECUTION ? EXECUTION_PRUNE : role === ROLES.CONSENSUS ? CONSENSUS_ADVICE : null,
     },
   ])
 );

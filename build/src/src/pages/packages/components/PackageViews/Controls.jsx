@@ -13,8 +13,11 @@ import { toLowercase } from "utils/strings";
 import confirmRemovePackage from "../confirmRemovePackage";
 import confirmRestartPackage from "../confirmRestartPackage";
 import confirmResetPackage from "../confirmResetPackage";
+import confirmResetBeaconData from "../confirmResetBeaconData";
 import confirmStopPackage from "../confirmStopPackage";
-import { getClient, ROLES } from "health/clients";
+import { createStructuredSelector } from "reselect";
+import { getDnpInstalled } from "services/dnpInstalled/selectors";
+import { getClient, canResetBeaconData, ROLES } from "health/clients";
 import { appTitle } from "health/rules/apps";
 
 function PackageControls({
@@ -23,7 +26,9 @@ function PackageControls({
   restartPackage,
   restartPackageVolumes,
   resyncPackage,
+  resetBeaconData,
   removePackage,
+  packages = [],
   showToggle = true,
   showRestart = true,
   showResync = false,
@@ -67,6 +72,17 @@ function PackageControls({
       action: () => confirmRestartPackage(dnp.name, restartPackage),
       availableForCore: true,
       type: "secondary",
+    });
+  // Only for consensus clients, and only when the installed DAPPMANAGER has
+  // resetBeaconData (10.0.50 and newer).
+  getClient(dnp.name)?.canResetBeacon &&
+    canResetBeaconData(packages) &&
+    actions.push({
+      name: "Free up space",
+      text: "Deletes only the chain data and downloads a recent checkpoint. Validator keys, slashing protection and settings stay.",
+      action: () => confirmResetBeaconData(dnp, resetBeaconData),
+      availableForCore: false,
+      type: "warning",
     });
   showResync &&
     actions.push({
@@ -141,13 +157,14 @@ function PackageControls({
   );
 }
 
-const mapStateToProps = null;
+const mapStateToProps = createStructuredSelector({ packages: getDnpInstalled });
 
 const mapDispatchToProps = {
   togglePackage: action.togglePackage,
   restartPackage: action.restartPackage,
   restartPackageVolumes: action.restartPackageVolumes,
   resyncPackage: action.resyncPackage,
+  resetBeaconData: action.resetBeaconData,
   removePackage: action.removePackage,
 };
 

@@ -10,7 +10,7 @@ import { useMode } from "settings/ModeProvider";
 import { tabsForMode, ADVANCED_TABS } from "settings/visibility";
 import { appStatus, appDescription } from "components/appStatus";
 import { appTitle } from "health/rules/apps";
-import { getClient, ROLES } from "health/clients";
+import { getClient, canResetBeaconData, ROLES } from "health/clients";
 import { chartUrl } from "health/grafanaLinks";
 import { openUrl } from "components/apps/AppCard";
 import AppAvatar from "components/ui/AppAvatar";
@@ -29,6 +29,7 @@ import { LoadingState } from "./PackagePresentation";
 import { getIsLoading } from "services/loadingStatus/selectors";
 import confirmRestartPackage from "./confirmRestartPackage";
 import confirmResetPackage from "./confirmResetPackage";
+import confirmResetBeaconData from "./confirmResetBeaconData";
 import confirmRemovePackage from "./confirmRemovePackage";
 import confirmStopPackage from "./confirmStopPackage";
 
@@ -175,6 +176,9 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
 
   const isConsensus = getClient(dnp.name)?.role === ROLES.CONSENSUS;
 
+  const canFreeUp = Boolean(getClient(dnp.name)?.canResetBeacon) && canResetBeaconData(packages);
+  const freeUp = () => confirmResetBeaconData(dnp, id => dispatch(a.resetBeaconData(id)));
+
   const restart = () => confirmRestartPackage(dnp.name, restartId => dispatch(a.restartPackage(restartId)));
   // Starting is not destructive and needs no confirmation; stopping does,
   // since it takes the app (and, for a client, its validators) offline.
@@ -235,6 +239,11 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
           <Button variant="secondary" size="sm" onClick={restart}>
             Restart
           </Button>
+          {canFreeUp && (
+            <Button variant="secondary" size="sm" onClick={freeUp}>
+              Free up space
+            </Button>
+          )}
           <OverflowMenu label={`More actions for ${title}`} items={menuItems} />
         </div>
       </header>
