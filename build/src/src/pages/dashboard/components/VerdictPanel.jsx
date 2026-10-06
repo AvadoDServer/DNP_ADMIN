@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "components/ui/cn";
 import FindingRow from "components/health/FindingRow";
+import CarePrompt from "components/health/CarePrompt";
 import Spinner from "components/ui/Spinner";
 import { useHealth } from "health/HealthProvider";
 
@@ -19,7 +20,7 @@ export function verdictSentence(verdict, findings) {
   return findings[0] ? findings[0].title : verdict.label;
 }
 
-export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true }) {
+export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5, checksPassed, ready = true, packages }) {
   const [all, setAll] = useState(false);
 
   // Until the installed-packages list has actually loaded, there is nothing
@@ -88,6 +89,9 @@ export function VerdictView({ verdict, findings, checkedAt, onRefresh, limit = 5
           </>
         )}
       </div>
+      {/* Last and only once: the Priority Care offer, while one of the
+          findings above is a real problem (health/carePrompt.js). */}
+      <CarePrompt findings={findings} packages={packages} />
     </div>
   );
 }
@@ -97,7 +101,7 @@ export default function VerdictPanel() {
   // and the app pages list `allFindings`, hidden ones too. No "Show hidden
   // tips" link: it would stay on Home for as long as a hidden tip keeps
   // firing, and would bring a hidden two-validator-apps warning back too.
-  const { verdict, findings, checkedAt, refresh, checksPassed, ready } = useHealth();
+  const { verdict, findings, checkedAt, refresh, checksPassed, ready, packages } = useHealth();
   return (
     <VerdictView
       verdict={verdict}
@@ -106,6 +110,7 @@ export default function VerdictPanel() {
       onRefresh={refresh}
       checksPassed={checksPassed}
       ready={ready}
+      packages={packages}
     />
   );
 }
