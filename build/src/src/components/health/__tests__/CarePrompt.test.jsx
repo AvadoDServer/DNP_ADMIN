@@ -8,7 +8,7 @@ const TEKU = "teku.avado.dnp.dappnode.eth";
 const f = (id, severity) => ({ id, severity, topic: "sync", title: `title ${id}`, why: `why ${id}` });
 const stopped = f(`app-stopped:${TEKU}`, "critical");
 const packages = [{ name: TEKU, isCore: false, state: "exited" }];
-const TEXT = /Want an email the next time something like this happens\? Priority Care watches your AVADO for you\. 14 days free\./;
+const TEXT = /Want an email the next time something like this happens\? Priority Care watches your AVADO for you\. New subscribers get 14 days free\./;
 
 const renderPrompt = (props = {}) =>
   render(

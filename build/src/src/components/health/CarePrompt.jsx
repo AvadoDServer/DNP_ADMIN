@@ -16,7 +16,7 @@ export default function CarePrompt({ findings, packages }) {
 
   return (
     <p className="mb-0 text-sm text-fg-muted">
-      Want an email the next time something like this happens? Priority Care watches your AVADO for you. 14 days free.{" "}
+      Want an email the next time something like this happens? Priority Care watches your AVADO for you. New subscribers get 14 days free.{" "}
       <Link to="/priority" className="font-medium text-accent hover:underline">See Priority Care</Link>
       <span aria-hidden="true"> · </span>
       <button type="button" className="font-medium hover:text-fg" onClick={() => setHiddenUntil(hideCarePrompt())}>
