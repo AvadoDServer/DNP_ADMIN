@@ -13,6 +13,7 @@ import VerdictPanel from "./VerdictPanel";
 import ResourcesStrip from "./ResourcesStrip";
 import ChainStatus from "./ChainStatus";
 import EthPrice from "./EthPrice";
+import NewsCard from "./NewsCard";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
@@ -94,6 +95,10 @@ function Dashboard({
             <ResourcesStrip stats={dappnodeStats} />
           </div>
         </Card>
+
+        {/* News from AVADO, when there is any: nothing is rendered (and no
+            room kept) until an item has arrived and is meant for this box. */}
+        <NewsCard stats={dappnodeStats} />
 
         <section aria-labelledby="apps-title">
           <SectionHeader

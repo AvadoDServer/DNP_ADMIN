@@ -7,6 +7,8 @@ const { useHealthMock } = vi.hoisted(() => ({ useHealthMock: vi.fn() }));
 vi.mock("health/HealthProvider", () => ({ useHealth: useHealthMock }));
 // EthPrice fetches from CoinGecko — stub it so these tests never touch the network.
 vi.mock("pages/dashboard/components/EthPrice", () => ({ default: () => <div data-testid="eth-price" /> }));
+// NewsCard fetches the news item from bo.ava.do — same reason. Its own tests are in NewsCard.test.jsx.
+vi.mock("pages/dashboard/components/NewsCard", () => ({ default: () => <div data-testid="news-card" /> }));
 
 const baseProps = {
   dappnodeStats: {},
@@ -125,5 +127,15 @@ describe("Dashboard hero", () => {
     expect(hero).toContainElement(screen.getByRole("heading", { name: "Your AVADO is healthy." }));
     expect(hero).toContainElement(screen.getByRole("region", { name: "Box readings" }));
     expect(hero).toContainElement(screen.getByTestId("eth-price"));
+  });
+
+  it("puts the news from AVADO right below the hero card and above the apps", () => {
+    useHealthMock.mockReturnValue(ready("ok", "All good"));
+    renderDashboard();
+    const hero = screen.getByRole("region", { name: "Your AVADO" });
+    const news = screen.getByTestId("news-card");
+    const apps = screen.getByRole("region", { name: "Running on your AVADO" });
+    expect(hero.nextElementSibling).toBe(news);
+    expect(news.nextElementSibling).toBe(apps);
   });
 });

@@ -140,6 +140,66 @@ describe("VerdictView", () => {
   });
 });
 
+describe("Priority Care prompt", () => {
+  const view = (findings, packages) =>
+    render(<MemoryRouter><VerdictView verdict={{ level: "critical", label: "Action required" }} findings={findings} packages={packages} checkedAt={new Date(0)} onRefresh={() => {}} checksPassed={3} /></MemoryRouter>);
+
+  beforeEach(() => localStorage.clear());
+
+  it("shows once, under the findings and the checks line, when a finding is a real problem", () => {
+    const findings = [f("app-stopped:teku.avado.dnp.dappnode.eth", "critical"), f("disk-high", "critical"), f("updates-available", "warning")];
+    view(findings, []);
+    const prompts = screen.getAllByText(/Priority Care watches your AVADO for you/);
+    expect(prompts).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "See Priority Care" })).toHaveAttribute("href", "/priority");
+    // Below the last finding row and the "other checks passed" line.
+    const after = node => Boolean(node.compareDocumentPosition(prompts[0]) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(after(screen.getByText("title updates-available"))).toBe(true);
+    expect(after(screen.getByText(/3 other checks passed/))).toBe(true);
+  });
+
+  it("does not show for findings that are only information, or when AVADO Care is installed", () => {
+    const calm = view([f("updates-available", "warning"), f("no-upnp", "info")], []);
+    expect(screen.queryByText(/Priority Care/)).not.toBeInTheDocument();
+    calm.unmount();
+    view([f("disk-high", "critical")], [{ name: "care.avado.dnp.dappnode.eth" }]);
+    expect(screen.queryByText(/Priority Care/)).not.toBeInTheDocument();
+  });
+
+  it("does not show while healthy or still checking", () => {
+    const healthy = render(<MemoryRouter><VerdictView verdict={{ level: "ok", label: "All good" }} findings={[]} packages={[]} checkedAt={new Date(0)} onRefresh={() => {}} /></MemoryRouter>);
+    expect(screen.queryByText(/Priority Care/)).not.toBeInTheDocument();
+    healthy.unmount();
+    render(<MemoryRouter><VerdictView ready={false} verdict={{ level: "critical", label: "Action required" }} findings={[f("disk-high", "critical")]} packages={[]} checkedAt={new Date(0)} onRefresh={() => {}} /></MemoryRouter>);
+    expect(screen.queryByText(/Priority Care/)).not.toBeInTheDocument();
+  });
+
+  it('"Not now" puts it away', () => {
+    view([f("disk-high", "critical")], []);
+    fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByText(/Priority Care/)).not.toBeInTheDocument();
+    expect(Number(localStorage.getItem("avado.carePromptHiddenUntil"))).toBeGreaterThan(Date.now());
+  });
+
+  it("reads the installed packages from the health context", () => {
+    health.current = {
+      verdict: { level: "critical", label: "Action required" },
+      findings: [f("disk-high", "critical")],
+      checkedAt: new Date(0),
+      refresh: () => {},
+      checksPassed: 3,
+      ready: true,
+      packages: [{ name: "care.avado.dnp.dappnode.eth" }],
+    };
+    const withCare = render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
+    expect(screen.queryByText(/Priority Care/)).not.toBeInTheDocument();
+    withCare.unmount();
+    health.current = { ...health.current, packages: [] };
+    render(<MemoryRouter><VerdictPanel /></MemoryRouter>);
+    expect(screen.getByText(/Priority Care watches your AVADO for you/)).toBeInTheDocument();
+  });
+});
+
 describe("Hiding tips", () => {
   const tip = { id: "remote-access-missing", severity: "info", topic: "access", title: "Remote access", dismissable: true };
   const twoApps = { id: "two-validator-clients:mainnet", severity: "warning", topic: "setup", title: "Nimbus and Teku are both installed", dismissable: true };
