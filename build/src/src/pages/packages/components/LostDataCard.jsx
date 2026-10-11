@@ -15,6 +15,8 @@ import { appTitle } from "health/rules/apps";
 import { formatDockerSize } from "health/rules/storage";
 import { findLostData, recoverLostData, recoveryInFlight, forgetRecovery, STILL_COPYING_AFTER_MS } from "../lostDataApi";
 
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 const CONFIRM_TEXT =
   "This copies the files from the old storage into the app's storage. Files that are already there are kept. The app restarts; this can take a few minutes. Nothing is deleted.";
 const STILL_COPYING =
@@ -64,8 +66,8 @@ function successNotices(result) {
       variant: "success",
       text:
         skipped > 0
-          ? `Done: ${Math.max(files - skipped, 0)} files recovered. ${skipped} files were already in the app's storage and were kept. The app is starting again.`
-          : `Done: ${files} files recovered. The app is starting again.`,
+          ? `Done: ${plural(Math.max(files - skipped, 0), "file")} recovered. ${plural(skipped, "file")} ${skipped === 1 ? "was" : "were"} already in the app's storage and ${skipped === 1 ? "was" : "were"} kept. The app is starting again.`
+          : `Done: ${plural(files, "file")} recovered. The app is starting again.`,
     },
   ];
   if (result && typeof result.warning === "string" && result.warning)
