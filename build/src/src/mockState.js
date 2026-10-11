@@ -10,6 +10,14 @@ import { mountPoint as isInstallingLogsMountPoint } from "services/isInstallingL
 import { mountPoint as loadingStatusMountPoint } from "services/loadingStatus/data";
 import { mountPoint as notificationsMountPoint } from "services/notifications/data";
 import { mountPoint as userActionLogsMountPoint } from "services/userActionLogs/data";
+// MEV-Boost: its manifest defaults are the recommended live relays and no minimum (package 0.0.19).
+import relayList from "pages/packages/apps/mevboost/relays.bundled.json";
+
+const relayUrl = id => relayList.relays.find(r => r.id === id).url;
+const mevBoostDefaultRelays = relayList.relays
+  .filter(r => r.recommended && r.status === "live")
+  .map(r => r.url)
+  .join(",");
 
 export const mockState = {
   /* chainData */
@@ -87,6 +95,23 @@ export const mockState = {
       isDnp: true,
       version: "0.1.0",
       state: "running",
+    },
+    {
+      // The Relays card: one live relay, one that has shut down, one custom, and a minimum bid.
+      name: "mevboost.avado.dnp.dappnode.eth",
+      isDnp: true,
+      version: "0.0.19",
+      state: "running",
+      envs: {
+        NETWORK: "mainnet",
+        RELAYS: [relayUrl("ultrasound"), relayUrl("bloxroute-ethical"), "https://0x" + "e".repeat(96) + "@my.custom.relay"].join(","),
+        EXTRA_OPTS: "-min-bid 0.05",
+      },
+      manifest: {
+        name: "mevboost.avado.dnp.dappnode.eth",
+        version: "0.0.19",
+        image: { environment: ["NETWORK=mainnet", `RELAYS=${mevBoostDefaultRelays}`, "EXTRA_OPTS="] },
+      },
     },
   ],
 

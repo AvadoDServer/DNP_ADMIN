@@ -8,6 +8,10 @@ import {
   applyRecommended,
   toEnvs,
   packageEnvs,
+  cardRows,
+  readMinBid,
+  safeAboutUrl,
+  listDate,
 } from "pages/packages/apps/mevboost/relayConfig";
 
 const key = c => "0x" + c.repeat(96);
@@ -98,6 +102,11 @@ describe("parseExtraOpts", () => {
     expect(parseExtraOpts("-json")).toEqual({ minBid: 0, rest: "-json" });
     expect(parseExtraOpts("-min-bid 0")).toEqual({ minBid: 0, rest: "" });
   });
+
+  it("keeps the value exactly as it was, only trimmed, when there is no minimum", () => {
+    expect(parseExtraOpts("  -loglevel debug   -json ")).toEqual({ minBid: 0, rest: "-loglevel debug   -json" });
+    expect(serialiseExtraOpts(parseExtraOpts("-a  'b c'"))).toBe("-a  'b c'");
+  });
 });
 
 describe("serialiseExtraOpts", () => {
@@ -110,6 +119,13 @@ describe("serialiseExtraOpts", () => {
   it("writes rest first, then the minimum", () => {
     expect(serialiseExtraOpts({ minBid: 0.02, rest: "" })).toBe("-min-bid 0.02");
     expect(serialiseExtraOpts({ minBid: 0.02, rest: "-x 1" })).toBe("-x 1 -min-bid 0.02");
+  });
+
+  it("writes at most 4 decimals and never exponent form", () => {
+    expect(serialiseExtraOpts({ minBid: 0.0001, rest: "" })).toBe("-min-bid 0.0001");
+    expect(serialiseExtraOpts({ minBid: 0.123456, rest: "" })).toBe("-min-bid 0.1235");
+    expect(serialiseExtraOpts({ minBid: 0.1 + 0.2, rest: "" })).toBe("-min-bid 0.3");
+    expect(serialiseExtraOpts({ minBid: 0.00001, rest: "-x 1" })).toBe("-x 1");
   });
 
   it("round-trips a value that holds only the minimum", () => {
@@ -247,5 +263,61 @@ describe("packageEnvs", () => {
   it("copes with a package that has no manifest or no envs", () => {
     expect(packageEnvs({ envs: { RELAYS: "mine" } })).toEqual({ RELAYS: "mine" });
     expect(packageEnvs({ manifest: { image: { environment: ["NETWORK=mainnet"] } } })).toEqual({ NETWORK: "mainnet" });
+  });
+});
+
+describe("readMinBid", () => {
+  it("reads an amount from 0.001 to 1 ETH, rounded to 4 decimals", () => {
+    expect(readMinBid("0.05")).toBe(0.05);
+    expect(readMinBid(" 0.001 ")).toBe(0.001);
+    expect(readMinBid("1")).toBe(1);
+    expect(readMinBid("0.123456")).toBe(0.1235);
+    expect(readMinBid(".5")).toBe(0.5);
+  });
+
+  it("gives null for anything else", () => {
+    for (const bad of ["", " ", "abc", "0", "0.0009", "-0.05", "1.01", "5", "1e-3", "0x1", undefined, null]) {
+      expect(readMinBid(bad)).toBeNull();
+    }
+  });
+});
+
+describe("safeAboutUrl", () => {
+  it("keeps an https address and drops anything else", () => {
+    expect(safeAboutUrl("https://relay.ultrasound.money/")).toBe("https://relay.ultrasound.money/");
+    for (const bad of ["", null, undefined, "http://relay.example.org", "javascript:alert(1)", "//x.org", "not a url", 5]) {
+      expect(safeAboutUrl(bad)).toBeNull();
+    }
+  });
+});
+
+describe("cardRows", () => {
+  it("shows a retired relay only when the box has it", () => {
+    const has = cardRows({ RELAYS: url("d", "bloxroute.ethical.blxrbdn.com") }, list);
+    expect(has.map(r => [r.id, r.checked])).toEqual([
+      ["ultrasound", false],
+      ["agnostic", false],
+      ["titan", false],
+      ["bloxroute-ethical", true],
+    ]);
+    const hasNot = cardRows({ RELAYS: url("a", "relay.ultrasound.money") }, list);
+    expect(hasNot.map(r => r.id)).toEqual(["ultrasound", "agnostic", "titan"]);
+  });
+
+  it("adds the box's custom relays after the list", () => {
+    const rows = cardRows({ RELAYS: url("e", "my.custom.relay") }, list);
+    expect(rows.map(r => r.id)).toEqual(["ultrasound", "agnostic", "titan", "custom:my.custom.relay"]);
+  });
+});
+
+describe("listDate", () => {
+  it("writes the list's date out in words, the same in every time zone", () => {
+    expect(listDate("2026-10-11")).toBe("October 11, 2026");
+    expect(listDate("2026-01-01T00:30:00Z")).toBe("January 1, 2026");
+  });
+
+  it("gives the value as it is when it is not a date", () => {
+    expect(listDate("soon")).toBe("soon");
+    expect(listDate(undefined)).toBe("");
   });
 });

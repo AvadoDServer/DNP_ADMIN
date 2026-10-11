@@ -38,7 +38,7 @@ export function parseExtraOpts(value) {
   const original = String(value || "");
   const tokens = original.split(/\s+/).filter(Boolean);
   const at = tokens.map((t, i) => (MIN_BID_FLAG.test(t) ? i : -1)).filter(i => i >= 0);
-  if (at.length === 0) return { minBid: 0, rest: tokens.join(" ") };
+  if (at.length === 0) return { minBid: 0, rest: original.trim() };
   const custom = { minBid: null, rest: original };
   if (at.length > 1) return custom;
 
@@ -51,11 +51,37 @@ export function parseExtraOpts(value) {
   return { minBid: Number(raw), rest };
 }
 
+// At most 4 decimals, so the value never prints in exponent form (1e-7).
+const roundBid = n => Math.round(n * 10000) / 10000;
+
 export function serialiseExtraOpts({ minBid, rest }) {
   const parts = [];
   if (rest && rest.trim()) parts.push(rest.trim());
-  if (minBid > 0) parts.push(`-min-bid ${minBid}`);
+  const bid = minBid > 0 ? roundBid(minBid) : 0;
+  if (bid > 0) parts.push(`-min-bid ${bid}`);
   return parts.join(" ");
+}
+
+// MEV-Boost refuses to start with a minimum above 1 ETH.
+export const MIN_BID_LOWEST = 0.001;
+export const MIN_BID_HIGHEST = 1;
+
+/** The amount typed in the card, in ETH: a number from 0.001 to 1, rounded to 4 decimals; null otherwise. */
+export function readMinBid(text) {
+  const t = String(text == null ? "" : text).trim();
+  if (!NUMBER.test(t)) return null;
+  const n = Number(t);
+  return n >= MIN_BID_LOWEST && n <= MIN_BID_HIGHEST ? roundBid(n) : null;
+}
+
+/** A relay's "about" address when it is a plain https link (the list comes from the network); null otherwise. */
+export function safeAboutUrl(value) {
+  if (typeof value !== "string") return null;
+  try {
+    return new URL(value).protocol === "https:" ? value : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 // Rows for the card: every list relay (ticked when the box has it with the same
@@ -96,6 +122,19 @@ export function mergeWithList(parsed, list) {
     pubkeyMismatch: false,
   }));
   return [...rows, ...customs];
+}
+
+/** The list's `updatedAt` as "October 11, 2026" (read as UTC); the value itself when it is not a date. */
+export function listDate(value) {
+  const date = new Date(value);
+  if (typeof value !== "string" || isNaN(date.getTime())) return value == null ? "" : String(value);
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+}
+
+// The card's rows for the package's settings: like mergeWithList, without the
+// retired relays the box does not have (nothing to offer there).
+export function cardRows(envs, list) {
+  return mergeWithList(parseRelays(envs.RELAYS), list).filter(r => r.status !== "retired" || r.checked);
 }
 
 export function recommendedSelection(list) {
