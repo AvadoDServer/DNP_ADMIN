@@ -40,6 +40,18 @@ export const mockLostData = [
         entries: [".rocketpool", "data", "user-settings.yml"],
         sizeKb: 1843200,
         target: "rocketpoolavadodnpdappnodeeth_rocketpool",
+        confidence: "high",
+      },
+      {
+        // Low confidence: an anonymous volume that only looks like Rocket
+        // Pool's data (caution line, secondary button; never on Home).
+        name: "9d41f0c27a6e" + "1".repeat(52),
+        anonymous: true,
+        createdAt: null,
+        entries: ["data"],
+        sizeKb: 5120,
+        target: "rocketpoolavadodnpdappnodeeth_rocketpool",
+        confidence: "low",
       },
     ],
     recovered: [{ volume: "3f9c2a7be14d" + "0".repeat(52), at: "2025-06-02T08:00:00Z" }],

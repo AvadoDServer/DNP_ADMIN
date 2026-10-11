@@ -19,6 +19,10 @@ const CONFIRM_TEXT =
 const STILL_COPYING =
   "Still copying. This can take a while for a lot of data. You can leave this page and come back later.";
 const WARNING_TAIL = "If the app does not work as before, contact AVADO support.";
+// A "low" confidence candidate is an anonymous volume that only looks like
+// this app's data (a "high" one is named after the app; missing = high).
+const LOW_CONFIDENCE =
+  "This storage may belong to another app. Only recover it if this app lost its data after an update, and contact AVADO support if you are not sure.";
 
 const NOTICE = {
   success: "border-success/40 bg-success-subtle text-success-text",
@@ -207,21 +211,36 @@ export function LostDataCardView({
         <ul className="mb-0 divide-y divide-border pl-0">
           {open.map(c => {
             const date = onDate(c.createdAt);
-            return (
+            const low = c.confidence === "low";
+            const info = (
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="text-sm font-medium text-fg">{date ? `Created ${date}` : "Date unknown"}</span>
+                <span className="break-words text-sm text-fg-muted">{contents(c)}</span>
+              </span>
+            );
+            const button = (
+              <Button
+                variant={low ? "secondary" : "primary"}
+                className={low ? "shrink-0 self-start" : "shrink-0 self-start sm:self-center"}
+                loading={Boolean(running) && running.volume === c.name}
+                disabled={Boolean(running)}
+                onClick={() => ask(c.name)}
+              >
+                Recover data
+              </Button>
+            );
+            return low ? (
+              <li key={c.name} className="flex flex-col gap-3 py-3">
+                {info}
+                <p className="mb-0 rounded-md border border-warning/40 bg-warning-subtle px-3 py-2 text-sm text-warning-text">
+                  {LOW_CONFIDENCE}
+                </p>
+                {button}
+              </li>
+            ) : (
               <li key={c.name} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="flex min-w-0 flex-col gap-1">
-                  <span className="text-sm font-medium text-fg">{date ? `Created ${date}` : "Date unknown"}</span>
-                  <span className="break-words text-sm text-fg-muted">{contents(c)}</span>
-                </span>
-                <Button
-                  variant="primary"
-                  className="shrink-0 self-start sm:self-center"
-                  loading={Boolean(running) && running.volume === c.name}
-                  disabled={Boolean(running)}
-                  onClick={() => ask(c.name)}
-                >
-                  Recover data
-                </Button>
+                {info}
+                {button}
               </li>
             );
           })}

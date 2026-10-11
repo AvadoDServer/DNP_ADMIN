@@ -92,6 +92,12 @@ describe("lostData rule", () => {
     expect(run([{ ...entry(RP, []), recovered: [{ volume: "done", at: null }] }])).toEqual([]);
   });
 
+  it("ignores confidence: every candidate it is given is a finding (listLostData never sends low ones)", () => {
+    const found = run([entry(RP, [candidate("high", { confidence: "high" }), candidate("low", { confidence: "low" }), candidate("none")])]);
+    expect(found.map(f => f.id)).toEqual([`lost-data:${RP}:high`, `lost-data:${RP}:low`, `lost-data:${RP}:none`]);
+    expect(new Set(found.map(f => JSON.stringify({ ...f, id: "" }))).size).toBe(1);
+  });
+
   it("skips malformed entries and candidates", () => {
     expect(run([null, { candidates: [candidate("v1")] }, entry(RP, [null, { sizeKb: 1 }, candidate("ok")])]).map(f => f.id)).toEqual([
       `lost-data:${RP}:ok`,

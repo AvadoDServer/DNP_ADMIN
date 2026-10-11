@@ -147,6 +147,29 @@ describe("LostDataCard", () => {
     expect(screen.getAllByRole("button", { name: "Recover data" })).toHaveLength(2);
   });
 
+  it("warns on a low-confidence volume (amber caution above a secondary button), never on a high or unmarked one", async () => {
+    const CAUTION =
+      "This storage may belong to another app. Only recover it if this app lost its data after an update, and contact AVADO support if you are not sure.";
+    await renderCard({
+      found: entry([
+        candidate(OLD_VOL, { confidence: "high" }),
+        candidate(ANON, { anonymous: true, confidence: "low" }),
+        candidate("unmarked"),
+      ]),
+    });
+    const [high, low, unmarked] = rows();
+    expect(screen.getAllByText(CAUTION)).toHaveLength(1);
+    expect(within(low).getByText(CAUTION).className).toContain("bg-warning-subtle");
+    const lowButton = within(low).getByRole("button", { name: "Recover data" });
+    expect(within(low).getByText(CAUTION).compareDocumentPosition(lowButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lowButton.className).toContain("bg-surface");
+    expect(lowButton.className).not.toContain("bg-accent ");
+    for (const row of [high, unmarked]) {
+      expect(row).not.toHaveTextContent("may belong to another app");
+      expect(within(row).getByRole("button", { name: "Recover data" }).className).toContain("bg-accent");
+    }
+  });
+
   it("asks first, in plain words and with a non-red button, and only then recovers that volume", async () => {
     const recover = vi.fn(() => Promise.resolve({ files: 12, sizeKb: 2048, skipped: 0 }));
     await renderCard({ recover });

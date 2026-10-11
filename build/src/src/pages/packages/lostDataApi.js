@@ -11,7 +11,9 @@
  *     `warning` only when a skipped file looks like a wallet or password.
  *
  *   LostDataEntry = { package, title?, live: [{ name, mountPath }],
- *     candidates: [{ name, anonymous, createdAt|null, entries: string[], sizeKb, target }],
+ *     candidates: [{ name, anonymous, confidence: "high"|"low", createdAt|null, entries: string[], sizeKb, target }],
+ *       // confidence "high": named after this app; "low": an anonymous volume
+ *       // that only looks like its data (never in listLostData; missing = high)
  *     recovered: [{ volume, at|null }] }   // recovered volumes leave `candidates`
  *
  * Every call rejects on failure with the DAPPMANAGER's own message (no toast).
@@ -62,7 +64,15 @@ const mockRecover = (id, volume) =>
 
 export function listLostData() {
   if (import.meta.env.REACT_APP_MOCK_DATA)
-    return mockEntries().then(list => delay(clone(list.filter(e => e.candidates.length > 0)), 300));
+    // Like the DAPPMANAGER: low-confidence candidates never reach the list.
+    return mockEntries().then(list =>
+      delay(
+        clone(list)
+          .map(e => ({ ...e, candidates: e.candidates.filter(c => c.confidence !== "low") }))
+          .filter(e => e.candidates.length > 0),
+        300
+      )
+    );
   return rpc().then(api => api.listLostData({}));
 }
 

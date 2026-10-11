@@ -301,6 +301,9 @@ export default {
    *   candidates: [{
    *     name: "rocketpool-avado-dnp-dappnode-eth_rocketpool", {string}
    *     anonymous: false, {bool}
+   *     confidence: "high", {string} "high": named after this app; "low": an
+   *       anonymous volume that only looks like its data (listLostData never
+   *       includes low ones; missing = "high")
    *     createdAt: "2025-03-01T10:00:00Z", {string|null}
    *     entries: [".rocketpool", "data"], {array} top-level names in it
    *     sizeKb: 2048, {number}
