@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getDappnodeStats, getDappnodeParams } from "services/dappnodeStatus/selectors";
@@ -12,7 +12,8 @@ import { fetchMetrics, fetchDiskTrend } from "./prometheus";
 import { fetchFeeRecipients, VALIDATOR_CLIENTS } from "./feeRecipients";
 import { trackUpdateAges } from "./updateAges";
 import { CARE_PACKAGE, careFindingsFromStatus, fetchCareStatus, mergeCareFindings } from "./careFindings";
-import { PROMETHEUS_PACKAGE } from "./clients";
+import { PROMETHEUS_PACKAGE, canFindLostData } from "./clients";
+import { listLostData } from "pages/packages/lostDataApi";
 import { runChecksDetailed, verdictOf, SEVERITIES, TOPICS } from "./engine";
 import { diskForecast } from "./rules/storage";
 
@@ -36,6 +37,10 @@ const DISK_TREND_KEEP_MS = 60 * 60 * 1000;
 const NODEID_TIMEOUT_MS = 20 * 1000;
 const FEE_RECIPIENT_INTERVAL = 10 * 60 * 1000;
 const CARE_STATUS_INTERVAL = 10 * 60 * 1000;
+const LOST_DATA_INTERVAL = 10 * 60 * 1000;
+// Home asks again on every visit, but not when the last scan started less
+// than this long ago (opening the Admin on Home would otherwise scan twice).
+const LOST_DATA_MIN_GAP_MS = 30 * 1000;
 const UPDATE_AGES_KEY = "avado.updateAges";
 
 // When each pending update was first seen, kept in this browser so the
@@ -73,6 +78,7 @@ export function HealthProvider({
   fetchDiskTrendImpl = fetchDiskTrend,
   fetchFeeRecipientsImpl = fetchFeeRecipients,
   fetchCareStatusImpl = fetchCareStatus,
+  fetchLostDataImpl = listLostData,
 }) {
   const packages = useSelector(getDnpInstalled) || [];
   const stats = useSelector(getDappnodeStats) || {};
@@ -103,6 +109,12 @@ export function HealthProvider({
   const [dismissVersion, setDismissVersion] = useState(0);
   const [feeRecipients, setFeeRecipients] = useState(null);
   const [careFindings, setCareFindings] = useState([]);
+  // DAPPMANAGER listLostData: packages whose data sits in an unused storage
+  // volume. null until read, and while the DAPPMANAGER is older than 10.0.51
+  // (the lostData rule is then skipped).
+  const [lostData, setLostData] = useState(null);
+  const [lostDataTick, setLostDataTick] = useState(0);
+  const lostDataStartedAt = useRef(0);
 
   // A string derived from installed name@version pairs. Used as an effect
   // dependency instead of the `packages` array itself, whose identity changes
@@ -257,6 +269,37 @@ export function HealthProvider({
     };
   }, [careRunning, tick]);
 
+  // Lost data (DAPPMANAGER 10.0.51 and newer only: an older core never gets
+  // the call). Every 10 minutes, and on each Home visit (refreshLostData).
+  // A failed read keeps the last answer and leaves one debug line.
+  const lostDataAllowed = canFindLostData(packages);
+  useEffect(() => {
+    if (!lostDataAllowed) {
+      setLostData(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const load = () => {
+      lostDataStartedAt.current = Date.now();
+      Promise.resolve()
+        .then(() => fetchLostDataImpl())
+        .then(list => !cancelled && setLostData(Array.isArray(list) ? list : []))
+        .catch(e => !cancelled && console.debug(`listLostData failed: ${e && e.message}`));
+    };
+    load();
+    const t = setInterval(load, LOST_DATA_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [lostDataAllowed, tick, lostDataTick]);
+  // Nothing to do before the first scan: the effect above runs it as soon as
+  // the DAPPMANAGER is known to have the call.
+  const refreshLostData = useCallback(() => {
+    const started = lostDataStartedAt.current;
+    if (started && Date.now() - started >= LOST_DATA_MIN_GAP_MS) setLostDataTick(t => t + 1);
+  }, []);
+
   const updates = useMemo(
     () => (store.packages ? computeUpdates(store.packages, packages) : null),
     [store.packages, packageKey]
@@ -285,6 +328,7 @@ export function HealthProvider({
       diskTrend: diskTrend.data,
       feeRecipients,
       updateAges,
+      lostData,
       sources: { updates: store.status, metrics: metrics.status },
       // Recomputed whenever this memo re-runs, which includes every metrics
       // poll (`metrics` is a dep below). head-behind is the only rule that
@@ -330,6 +374,10 @@ export function HealthProvider({
       checksPassed,
       checksTotal,
       refresh: () => setTick(t => t + 1),
+      // Home calls this on each visit: scans for lost data again (DAPPMANAGER
+      // 10.0.51 and newer) unless a scan started in the last 30 seconds or
+      // none has run yet.
+      refreshLostData,
       dismiss: id => {
         persistDismiss(id);
         setDismissVersion(v => v + 1);
@@ -341,7 +389,7 @@ export function HealthProvider({
         setDismissVersion(v => v + 1);
       },
     };
-  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, coreAvailable, metrics, diskTrend, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, lostData, refreshLostData, coreAvailable, metrics, diskTrend, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }

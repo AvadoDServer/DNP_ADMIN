@@ -139,3 +139,25 @@ describe("Dashboard hero", () => {
     expect(news.nextElementSibling).toBe(apps);
   });
 });
+
+describe("Dashboard lost data", () => {
+  it("asks for a new lost-data scan once on each visit", () => {
+    const refreshLostData = vi.fn();
+    useHealthMock.mockReturnValue({
+      verdict: { level: "ok", label: "All good" },
+      findings: [],
+      checkedAt: new Date(0),
+      refresh: () => {},
+      checksPassed: 5,
+      ready: true,
+      refreshLostData,
+    });
+    const { rerender } = renderDashboard();
+    rerender(
+      <MemoryRouter>
+        <Dashboard {...baseProps} />
+      </MemoryRouter>
+    );
+    expect(refreshLostData).toHaveBeenCalledTimes(1);
+  });
+});

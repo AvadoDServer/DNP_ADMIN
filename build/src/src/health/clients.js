@@ -62,9 +62,27 @@ const canResetBeaconName = name =>
  * does not have.
  */
 export function canResetBeaconData(packages) {
+  return dappmanagerAtLeast(packages, BEACON_RESET_SINCE);
+}
+
+// The DAPPMANAGER that has listLostData, findLostData and recoverLostData.
+export const LOST_DATA_SINCE = "10.0.51";
+
+/**
+ * True when the installed DAPPMANAGER is 10.0.51 or newer, the first one that
+ * can find a package's data in an unused storage volume and recover it. An
+ * older or unreadable version is false, so those calls are never sent to a
+ * core that does not have them.
+ */
+export function canFindLostData(packages) {
+  return dappmanagerAtLeast(packages, LOST_DATA_SINCE);
+}
+
+// The installed DAPPMANAGER (a core package in `packages`) is `since` or newer.
+function dappmanagerAtLeast(packages, since) {
   const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
   const have = versionParts(core && core.version);
-  const need = versionParts(BEACON_RESET_SINCE);
+  const need = versionParts(since);
   if (!have) return false;
   for (let i = 0; i < 3; i++) if (have[i] !== need[i]) return have[i] > need[i];
   return true;
