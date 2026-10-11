@@ -1,4 +1,4 @@
-import { listLostData, findLostData, recoverLostData, recoveryInFlight, STILL_COPYING_AFTER_MS } from "pages/packages/lostDataApi";
+import { listLostData, findLostData, recoverLostData, recoveryInFlight, forgetRecovery, STILL_COPYING_AFTER_MS } from "pages/packages/lostDataApi";
 
 const { api } = vi.hoisted(() => ({
   api: { listLostData: vi.fn(), findLostData: vi.fn(), recoverLostData: vi.fn() },
@@ -77,5 +77,14 @@ describe("lostDataApi", () => {
     api.recoverLostData.mockRejectedValue(Error("nope"));
     await expect(recoverLostData("pkg2", "vol")).rejects.toThrow("nope");
     expect(recoveryInFlight("pkg2")).toBeNull();
+  });
+
+  it("remembers the session a recovery was sent on, and can forget one whose answer is lost", async () => {
+    const session = { id: "s1" };
+    api.recoverLostData.mockReturnValue(new Promise(() => {}));
+    recoverLostData("pkg3", "vol", { session });
+    expect(recoveryInFlight("pkg3")).toMatchObject({ volume: "vol", session });
+    forgetRecovery("pkg3", "vol");
+    expect(recoveryInFlight("pkg3")).toBeNull();
   });
 });

@@ -18,7 +18,9 @@ export default function AppOverview({ dnp, isCore }) {
   const onFinished = () => refreshLostData && refreshLostData({ force: true });
   return (
     <div className="flex flex-col gap-4">
-      <LostDataCard dnp={dnp} onFinished={onFinished} />
+      {/* key: another app's page starts the card afresh (its running
+          recovery, if any, is picked up from lostDataApi). */}
+      <LostDataCard key={dnp.name} dnp={dnp} onFinished={onFinished} />
       {dnp.name === MEVBOOST_PACKAGE && <RelaysCard dnp={dnp} />}
       {mine.length > 0 && (
         <section className="rounded-lg border border-border bg-surface px-4">

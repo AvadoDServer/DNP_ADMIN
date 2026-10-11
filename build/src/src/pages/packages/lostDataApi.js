@@ -87,20 +87,29 @@ export function findLostData(id) {
 // Recoveries still waiting for the DAPPMANAGER, kept here (not in the card)
 // so leaving the app page and coming back still shows them as running and
 // never offers a second, parallel recovery. key: "<package>\n<volume>"
+// Each remembers the WAMP session it was sent on: autobahn never settles a
+// call whose connection dropped, so after a reconnect the card polls
+// findLostData for the outcome instead of waiting on that promise.
 const inFlight = new Map();
 const keyOf = (id, volume) => `${id}\n${volume}`;
 
-/** This package's recovery still running, or null: { id, volume, promise, startedAt }. */
+/** This package's recovery still running, or null: { id, volume, promise, startedAt, session }. */
 export function recoveryInFlight(id) {
   for (const r of inFlight.values()) if (r.id === id) return r;
   return null;
 }
 
+/** Drops a recovery whose answer can no longer arrive (its connection dropped). */
+export function forgetRecovery(id, volume) {
+  inFlight.delete(keyOf(id, volume));
+}
+
 /**
  * Starts recovering `volume` into package `id`, or returns the recovery of it
  * already running. Settles only with the DAPPMANAGER's own answer.
+ * `session`: the WAMP session it is sent on (redux connectionStatus).
  */
-export function recoverLostData(id, volume) {
+export function recoverLostData(id, volume, { session = null } = {}) {
   const key = keyOf(id, volume);
   const running = inFlight.get(key);
   if (running) return running.promise;
@@ -108,6 +117,6 @@ export function recoverLostData(id, volume) {
     ? mockRecover(id, volume)
     : rpc().then(api => api.recoverLostData({ id, volume }));
   const promise = call.finally(() => inFlight.delete(key));
-  inFlight.set(key, { id, volume, promise, startedAt: Date.now() });
+  inFlight.set(key, { id, volume, promise, startedAt: Date.now(), session });
   return promise;
 }

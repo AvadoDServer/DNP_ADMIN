@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
+import { getConnectionStatus } from "services/connectionStatus/selectors";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
@@ -12,13 +13,22 @@ import { confirm } from "components/ConfirmDialog";
 import { canFindLostData } from "health/clients";
 import { appTitle } from "health/rules/apps";
 import { formatDockerSize } from "health/rules/storage";
-import { findLostData, recoverLostData, recoveryInFlight, STILL_COPYING_AFTER_MS } from "../lostDataApi";
+import { findLostData, recoverLostData, recoveryInFlight, forgetRecovery, STILL_COPYING_AFTER_MS } from "../lostDataApi";
 
 const CONFIRM_TEXT =
   "This copies the files from the old storage into the app's storage. Files that are already there are kept. The app restarts; this can take a few minutes. Nothing is deleted.";
 const STILL_COPYING =
   "Still copying. This can take a while for a lot of data. You can leave this page and come back later.";
 const WARNING_TAIL = "If the app does not work as before, contact AVADO support.";
+// After a dropped connection the recovery's answer is lost (autobahn never
+// settles the call): the card asks findLostData every 30 s instead, for up
+// to 30 minutes.
+export const POLL_MS = 30 * 1000;
+export const POLL_LIMIT_MS = 30 * 60 * 1000;
+const DONE_WHILE_AWAY =
+  "The copy finished while this page was not connected. If the app does not work as before, contact AVADO support.";
+const NOT_SURE =
+  "Could not tell whether the copy finished. Reload the page; if the data is not back, contact AVADO support.";
 // A "low" confidence candidate is an anonymous volume that only looks like
 // this app's data (a "high" one is named after the app; missing = high).
 const LOW_CONFIDENCE =
@@ -75,14 +85,18 @@ function successNotices(result) {
  * A recovery runs until the DAPPMANAGER answers, however long that takes
  * (after 10 minutes the card says it is still copying). It lives in
  * lostDataApi, not here: leaving the page and coming back shows it running.
+ * One sent on an earlier WAMP session (the connection dropped) is polled
+ * with findLostData instead, as its answer can no longer arrive.
  */
 export function LostDataCardView({
   dnp,
   packages,
+  session = null,
   onFinished,
   findLostDataImpl = findLostData,
   recoverLostDataImpl = recoverLostData,
   recoveryInFlightImpl = recoveryInFlight,
+  forgetRecoveryImpl = forgetRecovery,
 }) {
   // Core packages are left out: listLostData skips them and recoverLostData refuses them.
   const allowed = canFindLostData(packages) && !(dnp && dnp.isCore);
@@ -100,42 +114,105 @@ export function LostDataCardView({
   // Each volume's size and contents, kept for its row once it is recovered.
   const known = useRef({});
   const alive = useRef(false);
+  // Which recovery the card is watching: starting another watch (or a
+  // cleanup) bumps it, and older handlers then do nothing.
+  const watch = useRef(0);
+  const pollTimer = useRef(null);
+
+  const stopPolling = () => {
+    clearInterval(pollTimer.current);
+    pollTimer.current = null;
+  };
+  const finish = () => {
+    setRunning(null);
+    setFinishedHere(true);
+    // After a failure too: the DAPPMANAGER may have copied the data and
+    // only failed to start the app again.
+    setScan(s => s + 1);
+  };
 
   // Show a recovery: the one just started, or one still running from an
   // earlier visit to this page. Only this card's own display depends on it.
   function follow(recovery) {
+    const token = ++watch.current;
+    const current = () => alive.current && watch.current === token;
     setRunning({ volume: recovery.volume, startedAt: recovery.startedAt });
     setNotices([]);
     recovery.promise
       .then(
         result => {
-          if (!alive.current) return;
+          if (!current()) return;
           setDoneHere(d => ({ ...d, [recovery.volume]: new Date().toISOString() }));
           setNotices(successNotices(result));
         },
         e => {
-          if (!alive.current) return;
+          if (!current()) return;
           setNotices([{ variant: "danger", text: (e && e.message) || "Recovering the data failed. Try again." }]);
         }
       )
-      .then(() => {
-        if (!alive.current) return;
-        setRunning(null);
-        setFinishedHere(true);
-        // After a failure too: the DAPPMANAGER may have copied the data and
-        // only failed to start the app again.
-        setScan(s => s + 1);
-      });
+      .then(() => current() && finish());
+  }
+
+  // A recovery sent before the connection dropped: its promise never
+  // settles, so ask findLostData until the volume shows as recovered.
+  function poll(recovery) {
+    const token = ++watch.current;
+    const current = () => alive.current && watch.current === token;
+    const began = Date.now();
+    stopPolling();
+    setRunning({ volume: recovery.volume, startedAt: recovery.startedAt });
+    setNotices([]);
+    const done = notice => {
+      stopPolling();
+      forgetRecoveryImpl(id, recovery.volume);
+      setNotices([notice]);
+      finish();
+    };
+    pollTimer.current = setInterval(() => {
+      if (!current()) return stopPolling();
+      Promise.resolve()
+        .then(() => findLostDataImpl(id))
+        .then(
+          found => {
+            if (!current()) return;
+            const recovered = found && Array.isArray(found.recovered) ? found.recovered : [];
+            if (recovered.some(r => r && r.volume === recovery.volume)) {
+              setDoneHere(d => ({ ...d, [recovery.volume]: new Date().toISOString() }));
+              done({ variant: "success", text: DONE_WHILE_AWAY });
+              if (onFinished) onFinished(recovery.volume);
+            } else if (Date.now() - began >= POLL_LIMIT_MS) {
+              done({ variant: "danger", text: NOT_SURE });
+            }
+          },
+          () => {
+            // Not answered this time: ask again on the next round, up to the limit.
+            if (current() && Date.now() - began >= POLL_LIMIT_MS) done({ variant: "danger", text: NOT_SURE });
+          }
+        );
+    }, POLL_MS);
   }
 
   useEffect(() => {
     alive.current = true;
-    const pending = allowed && id ? recoveryInFlightImpl(id) : null;
-    if (pending) follow(pending);
     return () => {
       alive.current = false;
     };
-  }, [allowed, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pick up this package's running recovery, on mount and whenever the WAMP
+  // session changes: follow it when it was sent on this session, else poll.
+  useEffect(() => {
+    if (!allowed || !id) return undefined;
+    const pending = recoveryInFlightImpl(id);
+    if (pending) {
+      if ((pending.session || null) === (session || null)) follow(pending);
+      else poll(pending);
+    }
+    return () => {
+      watch.current++;
+      stopPolling();
+    };
+  }, [allowed, id, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!allowed || !id) return undefined;
@@ -192,7 +269,7 @@ export function LostDataCardView({
       label: "Recover data",
       variant: "primary",
       onClick: () => {
-        const promise = recoverLostDataImpl(id, volume);
+        const promise = recoverLostDataImpl(id, volume, { session });
         // Home looks again however this ends, even if the user has left this page by then.
         if (onFinished) promise.then(() => onFinished(volume), () => onFinished(volume));
         follow({ volume, promise, startedAt: Date.now() });
@@ -283,6 +360,8 @@ export function LostDataCardView({
 
 const mapStateToProps = createStructuredSelector({
   packages: getDnpInstalled,
+  // The WAMP session: a new one after every reconnect.
+  session: state => (getConnectionStatus(state) || {}).session || null,
 });
 
 export default connect(mapStateToProps)(LostDataCardView);

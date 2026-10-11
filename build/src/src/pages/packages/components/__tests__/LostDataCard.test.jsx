@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
-import { LostDataCardView } from "pages/packages/components/LostDataCard";
+import { LostDataCardView, POLL_MS, POLL_LIMIT_MS } from "pages/packages/components/LostDataCard";
 import { STILL_COPYING_AFTER_MS } from "pages/packages/lostDataApi";
 
 const { mockConfirm, api } = vi.hoisted(() => ({
@@ -186,7 +186,7 @@ describe("LostDataCard", () => {
       opts.onClick();
     });
     expect(recover).toHaveBeenCalledTimes(1);
-    expect(recover).toHaveBeenCalledWith(RP, OLD_VOL);
+    expect(recover).toHaveBeenCalledWith(RP, OLD_VOL, { session: null });
   });
 
   it("shows the button loading and disables every button while it runs", async () => {
@@ -310,5 +310,131 @@ describe("LostDataCard", () => {
     await waitFor(() => expect(statuses()).toEqual(["Done: 42 files recovered. The app is starting again."]));
     expect(api.recoverLostData).toHaveBeenCalledTimes(1);
     expect(screen.getAllByRole("button", { name: "Recover data" })).toHaveLength(1);
+  });
+
+  describe("after the connection dropped during a recovery", () => {
+    const OLD_SESSION = { id: "old" };
+    const NEW_SESSION = { id: "new" };
+    const DONE_WHILE_AWAY =
+      "The copy finished while this page was not connected. If the app does not work as before, contact AVADO support.";
+    const NOT_SURE = "Could not tell whether the copy finished. Reload the page; if the data is not back, contact AVADO support.";
+
+    // A recovery sent on OLD_SESSION; its promise is under the test's control.
+    async function renderAfterReconnect({ answers }) {
+      const call = deferred();
+      const hung = { id: RP, volume: OLD_VOL, promise: call.promise, startedAt: Date.now() - 60 * 1000, session: OLD_SESSION };
+      const find = vi.fn(() => Promise.resolve(answers.length > 1 ? answers.shift() : answers[0]));
+      const forget = vi.fn();
+      const onFinished = vi.fn();
+      let view;
+      await act(async () => {
+        view = render(
+          <LostDataCardView
+            dnp={dnp}
+            packages={NEW}
+            session={NEW_SESSION}
+            findLostDataImpl={find}
+            recoverLostDataImpl={vi.fn()}
+            recoveryInFlightImpl={() => hung}
+            forgetRecoveryImpl={forget}
+            onFinished={onFinished}
+          />
+        );
+      });
+      return { ...view, call, find, forget, onFinished };
+    }
+    const tick = ms =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("does not wait on the old session's call: shows it running and polls instead", async () => {
+      const still = entry([candidate(OLD_VOL), candidate(ANON)]);
+      const { call, find } = await renderAfterReconnect({ answers: [still] });
+      for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
+      // Even if that call settled after all, the card is not listening to it
+      await act(async () => call.resolve({ files: 9, sizeKb: 1, skipped: 0 }));
+      expect(statuses().join(" ")).not.toContain("Done: 9");
+      expect(find).toHaveBeenCalledTimes(1);
+      await tick(POLL_MS);
+      expect(find).toHaveBeenCalledTimes(2);
+    });
+
+    it("says the copy finished once the volume shows as recovered", async () => {
+      const still = entry([candidate(OLD_VOL)]);
+      const done = entry([], [{ volume: OLD_VOL, at: "2026-10-11T10:00:00Z" }]);
+      const { find, forget, onFinished } = await renderAfterReconnect({ answers: [still, still, done] });
+      await tick(POLL_MS);
+      expect(statuses().join(" ")).not.toContain("finished");
+      await tick(POLL_MS);
+      expect(statuses()).toEqual([DONE_WHILE_AWAY]);
+      expect(screen.queryByRole("button", { name: "Recover data" })).toBeNull();
+      expect(rows()[0]).toHaveTextContent("Recovered on October 11, 2026");
+      expect(forget).toHaveBeenCalledWith(RP, OLD_VOL);
+      expect(onFinished).toHaveBeenCalledWith(OLD_VOL);
+      const calls = find.mock.calls.length;
+      await tick(POLL_MS * 3);
+      expect(find.mock.calls.length).toBe(calls);
+    });
+
+    it("gives up after 30 minutes of polling, says so, and lets the user try again", async () => {
+      const still = entry([candidate(OLD_VOL)]);
+      const { forget } = await renderAfterReconnect({ answers: [still] });
+      await tick(POLL_LIMIT_MS - POLL_MS);
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByRole("button", { name: "Recover data" })).toBeDisabled();
+      await tick(POLL_MS);
+      expect(screen.getByRole("alert")).toHaveTextContent(NOT_SURE);
+      expect(screen.getByRole("button", { name: "Recover data" })).toBeEnabled();
+      expect(forget).toHaveBeenCalledWith(RP, OLD_VOL);
+    });
+
+    it("stops polling when the page goes away", async () => {
+      const { find, unmount } = await renderAfterReconnect({ answers: [entry([candidate(OLD_VOL)])] });
+      unmount();
+      await tick(POLL_MS * 4);
+      expect(find).toHaveBeenCalledTimes(1);
+    });
+
+    it("switches from waiting to polling when the session changes while the card shows", async () => {
+      const call = deferred();
+      const sent = { id: RP, volume: OLD_VOL, promise: call.promise, startedAt: Date.now(), session: OLD_SESSION };
+      const find = vi.fn(() => Promise.resolve(entry([candidate(OLD_VOL)])));
+      const props = { dnp, packages: NEW, findLostDataImpl: find, recoverLostDataImpl: vi.fn(), recoveryInFlightImpl: () => sent };
+      let view;
+      await act(async () => {
+        view = render(<LostDataCardView {...props} session={OLD_SESSION} />);
+      });
+      await tick(POLL_MS);
+      expect(find).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        view.rerender(<LostDataCardView {...props} session={NEW_SESSION} />);
+      });
+      await tick(POLL_MS);
+      expect(find).toHaveBeenCalledTimes(2);
+      await act(async () => call.resolve({ files: 3, sizeKb: 1, skipped: 0 }));
+      expect(statuses().join(" ")).not.toContain("Done: 3");
+    });
+  });
+
+  it("a card for another app (new key) shows nothing of the first app's recovery", async () => {
+    const recover = vi.fn(() => Promise.resolve({ files: 5, sizeKb: 1, skipped: 0 }));
+    const find = vi.fn(id => Promise.resolve(id === RP ? entry([candidate(OLD_VOL)]) : { package: id, live: [], candidates: [], recovered: [] }));
+    const card = app => (
+      <LostDataCardView key={app.name} dnp={app} packages={NEW} findLostDataImpl={find} recoverLostDataImpl={recover} recoveryInFlightImpl={() => null} />
+    );
+    let view;
+    await act(async () => {
+      view = render(card(dnp));
+    });
+    await recoverRow(rows()[0]);
+    expect(statuses()).toEqual(["Done: 5 files recovered. The app is starting again."]);
+    await act(async () => {
+      view.rerender(card({ name: "teku.avado.dnp.dappnode.eth", manifest: { title: "Teku" } }));
+    });
+    expect(view.container).toBeEmptyDOMElement();
   });
 });

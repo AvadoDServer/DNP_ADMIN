@@ -8,16 +8,23 @@ vi.mock("components/health/FindingRow", () => ({ default: ({ finding }) => <li>f
 vi.mock("pages/packages/components/PackageViews/Controls", () => ({ default: () => <div>controls</div> }));
 vi.mock("pages/packages/components/PackageViews/Details", () => ({ default: () => <div>details</div> }));
 vi.mock("pages/packages/apps/mevboost/RelaysCard", () => ({ default: ({ dnp }) => <div>relays card for {dnp.name}</div> }));
-vi.mock("pages/packages/components/LostDataCard", () => ({
-  default: props => {
-    lostDataCardMock(props);
-    return <div>lost data card for {props.dnp.name}</div>;
-  },
-}));
+vi.mock("pages/packages/components/LostDataCard", async () => {
+  const { useEffect } = await import("react");
+  return {
+    default: props => {
+      lostDataCardMock(props);
+      useEffect(() => {
+        lostDataCardMock.mounts = (lostDataCardMock.mounts || 0) + 1;
+      }, []);
+      return <div>lost data card for {props.dnp.name}</div>;
+    },
+  };
+});
 
 beforeEach(() => {
   useHealthMock.mockReturnValue({ allFindings: [] });
   lostDataCardMock.mockReset();
+  lostDataCardMock.mounts = 0;
 });
 
 describe("AppOverview", () => {
@@ -51,5 +58,13 @@ describe("AppOverview", () => {
     expect(lostDataCardMock.mock.calls[0][0].onRecovered).toBeUndefined();
     lostDataCardMock.mock.calls[0][0].onFinished("old");
     expect(refreshLostData).toHaveBeenCalledWith({ force: true });
+  });
+
+  it("starts the lost-data card afresh on another app's page", () => {
+    const { rerender } = render(<AppOverview dnp={{ name: "a.dnp.dappnode.eth" }} isCore={false} />);
+    rerender(<AppOverview dnp={{ name: "a.dnp.dappnode.eth" }} isCore={false} />);
+    expect(lostDataCardMock.mounts).toBe(1);
+    rerender(<AppOverview dnp={{ name: "b.dnp.dappnode.eth" }} isCore={false} />);
+    expect(lostDataCardMock.mounts).toBe(2);
   });
 });
