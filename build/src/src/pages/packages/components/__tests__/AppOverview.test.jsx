@@ -10,15 +10,14 @@ vi.mock("pages/packages/components/PackageViews/Details", () => ({ default: () =
 vi.mock("pages/packages/apps/mevboost/RelaysCard", () => ({ default: ({ dnp }) => <div>relays card for {dnp.name}</div> }));
 vi.mock("pages/packages/components/LostDataCard", async () => {
   const { useEffect } = await import("react");
-  return {
-    default: props => {
-      lostDataCardMock(props);
-      useEffect(() => {
-        lostDataCardMock.mounts = (lostDataCardMock.mounts || 0) + 1;
-      }, []);
-      return <div>lost data card for {props.dnp.name}</div>;
-    },
-  };
+  function LostDataCardStub(props) {
+    lostDataCardMock(props);
+    useEffect(() => {
+      lostDataCardMock.mounts = (lostDataCardMock.mounts || 0) + 1;
+    }, []);
+    return <div>lost data card for {props.dnp.name}</div>;
+  }
+  return { default: LostDataCardStub };
 });
 
 beforeEach(() => {
