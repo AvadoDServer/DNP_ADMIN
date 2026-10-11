@@ -13,17 +13,17 @@ import Spinner from "./Spinner";
  */
 const VARIANTS = {
   primary:
-    "bg-accent text-accent-fg shadow-sm hover:bg-accent-hover active:bg-accent-active focus-visible:shadow-focus",
+    "bg-accent text-accent-fg shadow-sm hover:bg-accent-hover hover:text-accent-fg active:bg-accent-active focus-visible:shadow-focus",
   secondary:
-    "bg-surface text-fg border border-border hover:bg-surface-hover hover:border-border-strong focus-visible:shadow-focus",
+    "bg-surface text-fg border border-border hover:bg-surface-hover hover:text-fg hover:border-border-strong focus-visible:shadow-focus",
   outline:
-    "bg-transparent text-accent border border-accent/60 hover:bg-accent/10 hover:border-accent focus-visible:shadow-focus",
+    "bg-transparent text-accent border border-accent/60 hover:bg-accent/10 hover:text-accent hover:border-accent focus-visible:shadow-focus",
   ghost:
     "bg-transparent text-fg-muted hover:bg-fg/[0.06] hover:text-fg focus-visible:shadow-focus",
   danger:
-    "bg-danger-solid text-danger-fg shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
+    "bg-danger-solid text-danger-fg shadow-sm hover:brightness-110 hover:text-danger-fg active:brightness-95 focus-visible:shadow-focus",
   success:
-    "bg-success-solid text-success-fg shadow-sm hover:brightness-110 active:brightness-95 focus-visible:shadow-focus",
+    "bg-success-solid text-success-fg shadow-sm hover:brightness-110 hover:text-success-fg active:brightness-95 focus-visible:shadow-focus",
 };
 
 // Appliance visual system: primary and secondary buttons are pills; every
