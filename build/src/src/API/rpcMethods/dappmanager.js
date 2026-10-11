@@ -288,6 +288,64 @@ export default {
   listPackages: {},
 
   /**
+   * [listLostData]
+   * Finds, for every installed non-core package, storage volumes that no
+   * container uses but that hold this package's data (for example an old
+   * volume left behind by an update). Only packages with at least one such
+   * volume are listed. DAPPMANAGER 10.0.51 and newer.
+   *
+   * @returns {array} LostDataEntry[] = [{
+   *   package: "rocketpool.avado.dnp.dappnode.eth", {string}
+   *   title: "Rocket Pool", {string} (optional)
+   *   live: [{ name, mountPath }], {array} the package's own named volumes
+   *   candidates: [{
+   *     name: "rocketpool-avado-dnp-dappnode-eth_rocketpool", {string}
+   *     anonymous: false, {bool}
+   *     confidence: "high", {string} "high": named after this app; "low": an
+   *       anonymous volume that only looks like its data (listLostData never
+   *       includes low ones; missing = "high")
+   *     createdAt: "2025-03-01T10:00:00Z", {string|null}
+   *     entries: [".rocketpool", "data"], {array} top-level names in it
+   *     sizeKb: 2048, {number}
+   *     target: "rocketpoolavadodnpdappnodeeth_rocketpool" {string} where it is copied to
+   *   }, ... ],
+   *   recovered: [{ volume, at }] {array} volumes already recovered (left out
+   *     of candidates); at = ISO date string or null
+   * }, ... ]
+   */
+  listLostData: {},
+
+  /**
+   * [findLostData]
+   * The same as listLostData for one package. DAPPMANAGER 10.0.51 and newer.
+   *
+   * @param {string} id DNP .eth name
+   * @returns {object} LostDataEntry, with candidates: [] when there are none
+   *   (recovered can still list volumes)
+   */
+  findLostData: {
+    manadatoryKwargs: ["id"],
+  },
+
+  /**
+   * [recoverLostData]
+   * Stops the package, copies the files of one of its findLostData candidates
+   * into the package's own volume without overwriting what is already there,
+   * and starts the package again. Nothing is deleted. Can take several
+   * minutes. DAPPMANAGER 10.0.51 and newer.
+   *
+   * @param {string} id DNP .eth name
+   * @param {string} volume a candidate's name, from findLostData
+   * @returns {object} { files, sizeKb, skipped, warning? }
+   *   files: files in the old volume (skipped ones included)
+   *   skipped: files already in the app's storage, which were kept
+   *   warning: only when a skipped file looks like a wallet or a password
+   */
+  recoverLostData: {
+    manadatoryKwargs: ["id", "volume"],
+  },
+
+  /**
    * [logPackage]
    * Returns the logs of the docker container of a package
    *

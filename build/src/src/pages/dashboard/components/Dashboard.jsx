@@ -53,7 +53,13 @@ function Dashboard({
   installedpackages,
   history,
 }) {
-  const { ready } = useHealth();
+  const { ready, refreshLostData } = useHealth();
+
+  // Look for app data in unused storage volumes again on each Home visit
+  // (DAPPMANAGER 10.0.51 and newer; HealthProvider skips an older one).
+  useEffect(() => {
+    if (refreshLostData) refreshLostData();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const interval = setInterval(fetchDappnodeStats, 5 * 1000);

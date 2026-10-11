@@ -8,6 +8,7 @@ import { coreUpdateAvailable } from "health/rules/updates";
 import { feeRecipientMissing } from "health/rules/validators";
 import { headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { diskFillingUp } from "health/rules/storage";
+import { lostData } from "health/rules/lostData";
 import { fetchDiskTrend, DISK_QUERIES, resetPrometheusBase } from "health/prometheus";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
@@ -29,7 +30,7 @@ const state = {
 // against this fixture regardless of the store/metrics impls passed in.
 
 function Probe({ dismissId, withUndismissAll }) {
-  const { verdict, findings, allFindings, sources, dismiss, undismissAll, checksPassed, checksTotal, ready, metrics } = useHealth();
+  const { verdict, findings, allFindings, sources, dismiss, undismissAll, checksPassed, checksTotal, ready, metrics, refreshLostData } = useHealth();
   return (
     <div>
       <span data-testid="ready">{String(ready)}</span>
@@ -50,6 +51,12 @@ function Probe({ dismissId, withUndismissAll }) {
       <span data-testid="checksPassed">{checksPassed}</span>
       <span data-testid="checksTotal">{checksTotal}</span>
       <span data-testid="metrics">{metrics ? JSON.stringify(metrics) : "null"}</span>
+      <button data-testid="refresh-lost-data" onClick={() => refreshLostData()}>
+        scan again
+      </button>
+      <button data-testid="force-lost-data" onClick={() => refreshLostData({ force: true })}>
+        scan now
+      </button>
     </div>
   );
 }
@@ -61,6 +68,7 @@ const renderWith = (props, probeProps, stateOverride) =>
         fetchFeeRecipientsImpl={async () => null}
         fetchCareStatusImpl={async () => ({ findings: [] })}
         fetchDiskTrendImpl={async () => null}
+        fetchLostDataImpl={async () => []}
         {...props}
       >
         <Probe {...probeProps} />
@@ -157,7 +165,8 @@ describe("HealthProvider", () => {
     // Nothing checked for a system update, Prometheus isn't installed (no
     // chain metrics, no disk forecast), and no validator client is readable
     // from the browser: these never count.
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp];
+    // Nor can the DAPPMANAGER (none in this list) look for lost data.
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp, lostData];
     const total = Number(screen.getByTestId("checksTotal").textContent);
     const passed = Number(screen.getByTestId("checksPassed").textContent);
     expect(total).toBe(ALL_RULES.length - skipped.length);
@@ -189,7 +198,7 @@ describe("HealthProvider", () => {
     expect(screen.getByTestId("allids").textContent).not.toContain("metrics-unavailable");
     // headBehind runs (it has samples); lowPeers (failed) and missedAttestations (no samples) don't,
     // nor the disk forecast (no disk trend).
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp];
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp, lostData];
     expect(Number(screen.getByTestId("checksTotal").textContent)).toBe(ALL_RULES.length - skipped.length);
   });
 
@@ -596,3 +605,115 @@ describe("HealthProvider disk forecast", () => {
     expect(ids).not.toContain("disk-filling-up");
   });
 });
+
+describe("HealthProvider lost data", () => {
+  const RP = "rocketpool.avado.dnp.dappnode.eth";
+  const withDappmanager = version => ({
+    ...state,
+    packages: [
+      ...state.packages,
+      { name: "dappmanager.dnp.dappnode.eth", isCore: true, version, state: "running", running: true },
+      { name: RP, version: "1.0.0", state: "running", running: true, manifest: { title: "Rocket Pool" } },
+    ],
+  });
+  const lost = [{ package: RP, live: [], candidates: [{ name: "old_rocketpool", anonymous: false, createdAt: null, entries: ["data"], sizeKb: 4, target: "new_rocketpool" }] }];
+  const base = { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null };
+
+  it("asks a DAPPMANAGER of 10.0.51 and shows a finding per volume", async () => {
+    const fetchLostDataImpl = vi.fn(async () => lost);
+    renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.51"));
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain(`lost-data:${RP}:old_rocketpool`));
+    expect(fetchLostDataImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("never asks an older DAPPMANAGER, and the check does not count", async () => {
+    const fetchLostDataImpl = vi.fn(async () => lost);
+    renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.50"));
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(fetchLostDataImpl).not.toHaveBeenCalled();
+    expect(screen.getByTestId("allids").textContent).not.toContain("lost-data");
+  });
+
+  it("a failed read leaves one debug line and no finding", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error");
+    try {
+      renderWith({ ...base, fetchLostDataImpl: async () => { throw Error("wamp.error.no_such_procedure"); } }, {}, withDappmanager("10.0.51"));
+      await waitFor(() => expect(debug).toHaveBeenCalledTimes(1));
+      expect(debug.mock.calls[0][0]).toContain("no_such_procedure");
+      expect(error).not.toHaveBeenCalled();
+      expect(screen.getByTestId("allids").textContent).not.toContain("lost-data");
+    } finally {
+      debug.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it("Home's refreshLostData scans again, but not within 30 seconds of the last scan", async () => {
+    const fetchLostDataImpl = vi.fn(async () => []);
+    const now = vi.spyOn(Date, "now");
+    let t = 1_000_000;
+    now.mockImplementation(() => t);
+    try {
+      renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.51"));
+      await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(1));
+      t += 10 * 1000;
+      fireEvent.click(screen.getByTestId("refresh-lost-data"));
+      await act(async () => {});
+      expect(fetchLostDataImpl).toHaveBeenCalledTimes(1);
+      t += 30 * 1000;
+      fireEvent.click(screen.getByTestId("refresh-lost-data"));
+      await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(2));
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  it("never runs two scans at once: the interval, Check again and Home wait for the running one", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const now = vi.spyOn(Date, "now");
+    let t = 1_000_000;
+    now.mockImplementation(() => t);
+    let finish;
+    const fetchLostDataImpl = vi.fn(() => new Promise(resolve => (finish = resolve)));
+    try {
+      renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.51"));
+      await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(1));
+      t += 11 * 60 * 1000;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+      });
+      fireEvent.click(screen.getByTestId("refresh-lost-data"));
+      await act(async () => {});
+      expect(fetchLostDataImpl).toHaveBeenCalledTimes(1);
+      await act(async () => finish(lost));
+      await waitFor(() => expect(screen.getByTestId("allids").textContent).toContain("lost-data:"));
+      fireEvent.click(screen.getByTestId("refresh-lost-data"));
+      await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(2));
+      await act(async () => finish([]));
+    } finally {
+      now.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("refreshLostData({ force: true }) scans at once, or right after the running scan", async () => {
+    let finish;
+    const fetchLostDataImpl = vi.fn(() => new Promise(resolve => (finish = resolve)));
+    renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.51"));
+    await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(1));
+    // Within 30 s and while the first scan runs: queued, not run alongside it
+    fireEvent.click(screen.getByTestId("force-lost-data"));
+    await act(async () => {});
+    expect(fetchLostDataImpl).toHaveBeenCalledTimes(1);
+    await act(async () => finish(lost));
+    await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(2));
+    await act(async () => finish([]));
+    await waitFor(() => expect(screen.getByTestId("allids").textContent).not.toContain("lost-data:"));
+    // No scan running, last one a moment ago: runs at once
+    fireEvent.click(screen.getByTestId("force-lost-data"));
+    await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(3));
+    await act(async () => finish([]));
+  });
+});
+

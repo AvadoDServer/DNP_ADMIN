@@ -1,4 +1,4 @@
-import { getClient, clientsByRole, keyHolders, currentSlot, ROLES, NETWORKS } from "health/clients";
+import { getClient, clientsByRole, keyHolders, currentSlot, ROLES, NETWORKS, canFindLostData, LOST_DATA_SINCE } from "health/clients";
 
 describe("client table", () => {
   it("knows the AVADO mainnet clients from the store", () => {
@@ -91,5 +91,30 @@ describe("client table", () => {
       expect([ROLES.EXECUTION, ROLES.CONSENSUS]).toContain(client.role);
       expect(client.network).toBe("mainnet");
     }
+  });
+});
+
+describe("canFindLostData", () => {
+  const dm = version => ({ name: "dappmanager.dnp.dappnode.eth", isCore: true, version });
+
+  it("starts at DAPPMANAGER 10.0.51", () => {
+    expect(LOST_DATA_SINCE).toBe("10.0.51");
+  });
+
+  it("is true for DAPPMANAGER 10.0.51 and newer", () => {
+    for (const v of ["10.0.51", "10.0.52", "10.0.100", "10.1.0", "11.0.0"]) expect(canFindLostData([dm(v)]), v).toBe(true);
+  });
+
+  it("is false for an older DAPPMANAGER", () => {
+    for (const v of ["10.0.50", "10.0.49", "10.0.5", "9.9.99"]) expect(canFindLostData([dm(v)]), v).toBe(false);
+  });
+
+  it("is false when the DAPPMANAGER is missing or its version unreadable", () => {
+    expect(canFindLostData([])).toBe(false);
+    expect(canFindLostData(null)).toBe(false);
+    expect(canFindLostData(undefined)).toBe(false);
+    expect(canFindLostData([{ name: "rocketpool.avado.dnp.dappnode.eth", version: "10.0.60" }])).toBe(false);
+    expect(canFindLostData([dm(undefined)])).toBe(false);
+    expect(canFindLostData([dm("latest")])).toBe(false);
   });
 });
