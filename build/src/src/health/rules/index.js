@@ -6,6 +6,7 @@ import { remoteAccessMissing } from "./access";
 import { diskHigh, diskFillingUp, consensusTooBig } from "./storage";
 import { diagnoseFailed } from "./core";
 import { chainSyncing, chainError, headBehind, lowPeers, missedAttestations } from "./chain";
+import { mevboostRelays } from "./mevboost";
 
 // portsClosed, noUpnp and noNatLoopback (./access) are left out: the core no
 // longer sends the router params they read (DAPPMANAGER getParams has
@@ -20,4 +21,5 @@ export const ALL_RULES = [
   remoteAccessMissing,
   diskHigh, diskFillingUp, consensusTooBig, diagnoseFailed,
   chainSyncing, chainError, headBehind, lowPeers, missedAttestations,
+  mevboostRelays,
 ];
