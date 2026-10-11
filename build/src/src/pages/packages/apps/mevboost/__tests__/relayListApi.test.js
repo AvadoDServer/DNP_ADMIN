@@ -60,6 +60,19 @@ describe("parseRelayList", () => {
     for (const body of bad) expect(parseRelayList(body)).toBeNull();
   });
 
+  it("gives null when a relay has no true/false recommended", () => {
+    for (const value of [undefined, "true", 1, null]) {
+      expect(parseRelayList(doc({ relays: [relay({ recommended: value })] }))).toBeNull();
+    }
+  });
+
+  it("keeps the first of two relays with the same address", () => {
+    const first = relay({ id: "first" });
+    const second = relay({ id: "second" });
+    const other = relay({ id: "other", url: "https://0x" + "b".repeat(96) + "@agnostic-relay.net" });
+    expect(parseRelayList(doc({ relays: [first, other, second] })).relays).toEqual([first, other]);
+  });
+
   it("gives null when a relay lacks id, name, url or status", () => {
     for (const key of ["id", "name", "url", "status"]) {
       expect(parseRelayList(doc({ relays: [relay({ [key]: undefined })] }))).toBeNull();

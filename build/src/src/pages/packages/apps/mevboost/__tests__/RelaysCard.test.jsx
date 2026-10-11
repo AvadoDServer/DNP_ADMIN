@@ -32,9 +32,8 @@ const dnpWith = envs => ({
 });
 const boxDnp = dnpWith({ RELAYS: [ULTRA, ETHICAL, CUSTOM].join(","), EXTRA_OPTS: "-min-bid 0.05" });
 
-async function renderCard({ dnp = boxDnp, stale = false } = {}) {
+async function renderCard({ dnp = boxDnp, stale = false, updateEnvs = vi.fn(() => Promise.resolve()) } = {}) {
   loadRelayList.mockResolvedValue({ list, stale });
-  const updateEnvs = vi.fn();
   let view;
   await act(async () => {
     view = render(<RelaysCardView dnp={dnp} updateEnvs={updateEnvs} />);
@@ -45,6 +44,11 @@ async function renderCard({ dnp = boxDnp, stale = false } = {}) {
 const box = name => screen.getByRole("checkbox", { name: new RegExp(name) });
 const row = name => box(name).closest("li");
 const save = () => screen.getByRole("button", { name: "Save" });
+// Save settles asynchronously (the saving flag clears when updateEnvs resolves).
+const clickSave = () =>
+  act(async () => {
+    fireEvent.click(save());
+  });
 const useRecommended = () => screen.getByRole("button", { name: "Use recommended" });
 
 describe("RelaysCard", () => {
@@ -82,7 +86,8 @@ describe("RelaysCard", () => {
     expect(within(custom).queryByText("Filters sanctioned transactions")).toBeNull();
     expect(within(custom).queryByRole("link")).toBeNull();
 
-    const about = within(row("Ultra Sound")).getByRole("link", { name: "About" });
+    const about = within(row("Ultra Sound")).getByRole("link", { name: "About Ultra Sound" });
+    expect(about).toHaveTextContent("About");
     expect(about).toHaveAttribute("href", "https://relay.ultrasound.money/");
     expect(about).toHaveAttribute("target", "_blank");
     expect(about).toHaveAttribute("rel", "noreferrer");
@@ -102,7 +107,7 @@ describe("RelaysCard", () => {
     await renderCard();
     expect(screen.getByRole("radio", { name: "Only bids above" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Take every bid (recommended)" })).not.toBeChecked();
-    expect(screen.getByRole("spinbutton", { name: "Minimum bid in ETH" })).toHaveValue(0.05);
+    expect(screen.getByRole("spinbutton", { name: "Amount in ETH" })).toHaveValue(0.05);
     expect(screen.getByText(/With a minimum, your AVADO builds its own block/)).toBeInTheDocument();
   });
 
@@ -134,7 +139,7 @@ describe("RelaysCard", () => {
   it("Save writes the relays and the minimum, passing the other settings through", async () => {
     const { updateEnvs } = await renderCard();
     fireEvent.click(useRecommended());
-    fireEvent.click(save());
+    await clickSave();
     expect(updateEnvs).toHaveBeenCalledTimes(1);
     expect(updateEnvs).toHaveBeenCalledWith(MEVBOOST_PACKAGE, {
       NETWORK: "mainnet",
@@ -145,33 +150,105 @@ describe("RelaysCard", () => {
 
   it("Save writes a new minimum, rounded to 4 decimals", async () => {
     const { updateEnvs } = await renderCard();
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Minimum bid in ETH" }), { target: { value: "0.123456" } });
-    fireEvent.click(save());
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Amount in ETH" }), { target: { value: "0.123456" } });
+    await clickSave();
     expect(updateEnvs.mock.calls[0][1].EXTRA_OPTS).toBe("-min-bid 0.1235");
     expect(updateEnvs.mock.calls[0][1].RELAYS).toBe([ULTRA, ETHICAL, CUSTOM].join(","));
   });
 
-  it("asks for a usable amount and keeps Save off until there is one", async () => {
+  it("asks for an amount within AVADO's limits and keeps Save off until there is one", async () => {
     await renderCard({ dnp: dnpWith({ RELAYS: ULTRA, EXTRA_OPTS: "" }) });
     fireEvent.click(screen.getByRole("radio", { name: "Only bids above" }));
-    const amount = screen.getByRole("spinbutton", { name: "Minimum bid in ETH" });
-    expect(amount).toHaveAttribute("step", "0.01");
+    const amount = screen.getByRole("spinbutton", { name: "Amount in ETH" });
+    expect(amount).toHaveAttribute("step", "0.001");
     expect(amount).toHaveAttribute("min", "0.001");
-    expect(screen.getByText("Enter an amount from 0.001 to 1 ETH.")).toBeInTheDocument();
+    const message = "Enter an amount between 0.001 and 1 ETH. Larger or smaller values can be set in the advanced settings.";
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(amount).toHaveAttribute("aria-invalid", "true");
+    expect(amount).toHaveAccessibleDescription(message);
     expect(save()).toBeDisabled();
     fireEvent.change(amount, { target: { value: "5" } });
     expect(save()).toBeDisabled();
     fireEvent.change(amount, { target: { value: "0.02" } });
-    expect(screen.queryByText("Enter an amount from 0.001 to 1 ETH.")).toBeNull();
+    expect(screen.queryByText(message)).toBeNull();
+    expect(amount).not.toHaveAttribute("aria-invalid");
     expect(save()).toBeEnabled();
   });
+
+  for (const value of ["-min-bid 2", "-min-bid 0.0005", "-min-bid 0.12345"]) {
+    it(`leaves a minimum outside the card's range as it is (${value})`, async () => {
+      const { updateEnvs } = await renderCard({ dnp: dnpWith({ RELAYS: ULTRA, EXTRA_OPTS: value }) });
+      expect(screen.getByText("A custom value is set in the advanced settings and is left as it is.")).toBeInTheDocument();
+      for (const radio of screen.getAllByRole("radio")) {
+        expect(radio).toBeDisabled();
+        expect(radio).not.toBeChecked();
+      }
+      expect(screen.queryByRole("spinbutton")).toBeNull();
+      expect(screen.queryByText(/Enter an amount/)).toBeNull();
+      expect(save()).toBeDisabled();
+      fireEvent.click(box("Agnostic Gnosis"));
+      expect(save()).toBeEnabled();
+      await clickSave();
+      expect(updateEnvs).toHaveBeenCalledWith(MEVBOOST_PACKAGE, { NETWORK: "mainnet", RELAYS: [ULTRA, AGNOSTIC].join(","), EXTRA_OPTS: value });
+    });
+  }
 
   it("unticking every relay turns Save off and says why", async () => {
     await renderCard();
     expect(screen.queryByText("Tick at least one relay.")).toBeNull();
     for (const name of ["Ultra Sound", "bloXroute Ethical", "my.custom.relay"]) fireEvent.click(box(name));
-    expect(screen.getByText("Tick at least one relay.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Tick at least one relay.");
     expect(save()).toBeDisabled();
+  });
+
+  it("on a box with no relays, points to Use recommended and saves the recommended set", async () => {
+    const { updateEnvs } = await renderCard({ dnp: dnpWith({ RELAYS: "", EXTRA_OPTS: "" }) });
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    for (const name of ["Ultra Sound", "Agnostic Gnosis", "Titan Relay Regional"]) expect(box(name)).not.toBeChecked();
+    expect(screen.queryByRole("checkbox", { name: /bloXroute Ethical/ })).toBeNull();
+    expect(screen.getByText("No relays are set yet. Use recommended picks a good set.")).toBeInTheDocument();
+    expect(screen.queryByText("Tick at least one relay.")).toBeNull();
+    expect(save()).toBeDisabled();
+    fireEvent.click(useRecommended());
+    expect(screen.queryByText(/No relays are set yet/)).toBeNull();
+    await clickSave();
+    expect(updateEnvs).toHaveBeenCalledWith(MEVBOOST_PACKAGE, { NETWORK: "mainnet", RELAYS: [ULTRA, AGNOSTIC].join(","), EXTRA_OPTS: "" });
+  });
+
+  it("keeps Save off when the changes add up to what the box already has", async () => {
+    await renderCard();
+    fireEvent.click(box("Agnostic Gnosis"));
+    expect(save()).toBeEnabled();
+    fireEvent.click(box("Agnostic Gnosis"));
+    expect(save()).toBeDisabled();
+    // Same minimum typed again.
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Amount in ETH" }), { target: { value: "0.050" } });
+    expect(save()).toBeDisabled();
+  });
+
+  it("turns Save off while saving, and back on when the save fails", async () => {
+    let fail;
+    const updateEnvs = vi.fn(() => new Promise((resolve, reject) => (fail = reject)));
+    await renderCard({ updateEnvs });
+    fireEvent.click(box("Agnostic Gnosis"));
+    fireEvent.click(save());
+    expect(save()).toBeDisabled();
+    fireEvent.click(save());
+    expect(updateEnvs).toHaveBeenCalledTimes(1);
+    await act(async () => fail(Error("Could not save")));
+    // The box still has the old settings, so the change is still there to save.
+    expect(box("Agnostic Gnosis")).toBeChecked();
+    expect(save()).toBeEnabled();
+  });
+
+  it("keeps unsaved edits when the package list refreshes with the same settings", async () => {
+    const { rerender, updateEnvs } = await renderCard();
+    fireEvent.click(box("Agnostic Gnosis"));
+    await act(async () => {
+      rerender(<RelaysCardView dnp={{ ...boxDnp, envs: { ...boxDnp.envs }, state: "running" }} updateEnvs={updateEnvs} />);
+    });
+    expect(box("Agnostic Gnosis")).toBeChecked();
+    expect(save()).toBeEnabled();
   });
 
   it("toggles rows by address, so two custom relays on one host stay apart", async () => {
@@ -183,7 +260,7 @@ describe("RelaysCard", () => {
     fireEvent.click(both[0]);
     expect(both[0]).not.toBeChecked();
     expect(both[1]).toBeChecked();
-    fireEvent.click(save());
+    await clickSave();
     expect(updateEnvs.mock.calls[0][1].RELAYS).toBe(two);
   });
 
@@ -205,7 +282,7 @@ describe("RelaysCard", () => {
     for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
     expect(screen.queryByText(/Other options are set/)).toBeNull();
     fireEvent.click(useRecommended());
-    fireEvent.click(save());
+    await clickSave();
     expect(updateEnvs.mock.calls[0][1].EXTRA_OPTS).toBe("-min-bid abc");
   });
 
@@ -215,7 +292,7 @@ describe("RelaysCard", () => {
     });
     expect(screen.getByText("Other options are set and are kept as they are: -request-timeout-getheader 1500")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "Take every bid (recommended)" }));
-    fireEvent.click(save());
+    await clickSave();
     expect(updateEnvs.mock.calls[0][1].EXTRA_OPTS).toBe("-request-timeout-getheader 1500");
   });
 

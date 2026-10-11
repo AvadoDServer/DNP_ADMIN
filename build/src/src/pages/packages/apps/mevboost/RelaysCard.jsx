@@ -20,6 +20,7 @@ import {
   readMinBid,
   safeAboutUrl,
   listDate,
+  sameSettings,
   MIN_BID_LOWEST,
   MIN_BID_HIGHEST,
 } from "./relayConfig";
@@ -27,17 +28,28 @@ import {
 const radioClass = "h-4 w-4 shrink-0 border-border-strong text-accent focus-visible:shadow-focus disabled:cursor-not-allowed";
 const checkboxClass = "mt-1 h-4 w-4 shrink-0 rounded border-border-strong text-accent focus-visible:shadow-focus";
 
+const AMOUNT_ERROR = "Enter an amount between 0.001 and 1 ETH. Larger or smaller values can be set in the advanced settings.";
+
 // The form as the box has it: rows ticked as in RELAYS, the minimum as in
-// EXTRA_OPTS. mode is null when the minimum can't be read (left as it is).
+// EXTRA_OPTS. mode is null when the card can't offer the minimum as it is
+// (unreadable, or outside the amounts the card takes): then EXTRA_OPTS is
+// kept whole in rest and written back unchanged.
 function initialForm(envs, list) {
   const { minBid, rest } = parseExtraOpts(envs.EXTRA_OPTS);
+  const offered = minBid === 0 || (minBid !== null && readMinBid(String(minBid)) === minBid);
   return {
     rows: cardRows(envs, list.relays),
-    rest,
-    mode: minBid === null ? null : minBid > 0 ? "above" : "every",
-    amount: minBid > 0 ? String(minBid) : "",
-    dirty: false,
+    rest: offered ? rest : String(envs.EXTRA_OPTS || ""),
+    mode: !offered ? null : minBid > 0 ? "above" : "every",
+    amount: offered && minBid > 0 ? String(minBid) : "",
+    touched: false,
   };
+}
+
+// The minimum Save writes: 0 for every bid, null to leave EXTRA_OPTS as it is.
+function minBidOf(form) {
+  if (form.mode === null) return null;
+  return form.mode === "every" ? 0 : readMinBid(form.amount);
 }
 
 function RelayRow({ row, onToggle }) {
@@ -56,7 +68,7 @@ function RelayRow({ row, onToggle }) {
         </span>
       </label>
       {about && (
-        <a href={about} target="_blank" rel="noreferrer" className="shrink-0 text-sm font-semibold text-accent hover:underline">
+        <a href={about} target="_blank" rel="noreferrer" aria-label={`About ${row.name}`} className="shrink-0 text-sm font-semibold text-accent hover:underline">
           About
         </a>
       )}
@@ -73,6 +85,7 @@ function RelayRow({ row, onToggle }) {
 export function RelaysCardView({ dnp, updateEnvs }) {
   const [loaded, setLoaded] = useState(null);
   const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,11 +106,14 @@ export function RelaysCardView({ dnp, updateEnvs }) {
     if (list) setForm(initialForm(envs, list));
   }, [settings, list]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const update = patch => setForm(f => ({ ...f, ...patch, dirty: true }));
+  const update = patch => setForm(f => ({ ...f, ...patch, touched: true }));
 
   const ticked = form ? form.rows.filter(r => r.checked).length : 0;
   const amountOk = !form || form.mode !== "above" || readMinBid(form.amount) !== null;
-  const canSave = Boolean(form) && form.dirty && ticked > 0 && amountOk;
+  // What Save would write; Save is on only when that differs from what the box has.
+  const payload = form && toEnvs(form.rows, { minBid: minBidOf(form), rest: form.rest }, envs);
+  const dirty = Boolean(payload) && !sameSettings(payload, envs);
+  const canSave = dirty && ticked > 0 && amountOk && !saving;
 
   function toggle(url) {
     update({ rows: form.rows.map(r => (r.url === url ? { ...r, checked: !r.checked } : r)) });
@@ -112,8 +128,15 @@ export function RelaysCardView({ dnp, updateEnvs }) {
   }
 
   function save() {
-    const minBid = form.mode === null ? null : form.mode === "every" ? 0 : readMinBid(form.amount);
-    updateEnvs(dnp.name, toEnvs(form.rows, { minBid, rest: form.rest }, packageEnvs(dnp)));
+    setSaving(true);
+    let pending;
+    try {
+      pending = Promise.resolve(updateEnvs(dnp.name, payload));
+    } catch (e) {
+      pending = Promise.resolve();
+    }
+    // A failed save leaves the form as it is, ready to try again.
+    pending.catch(() => {}).then(() => setSaving(false));
   }
 
   return (
@@ -145,7 +168,14 @@ export function RelaysCardView({ dnp, updateEnvs }) {
                   <RelayRow key={row.url} row={row} onToggle={() => toggle(row.url)} />
                 ))}
               </ul>
-              {ticked === 0 && <p className="mb-0 mt-2 text-sm font-medium text-danger-text">Tick at least one relay.</p>}
+              {ticked === 0 && form.touched && (
+                <p role="status" className="mb-0 mt-2 text-sm font-medium text-danger-text">
+                  Tick at least one relay.
+                </p>
+              )}
+              {ticked === 0 && !form.touched && (
+                <p className="mb-0 mt-2 text-sm text-fg-muted">No relays are set yet. Use recommended picks a good set.</p>
+              )}
             </div>
 
             <fieldset className="flex min-w-0 flex-col gap-3">
@@ -161,38 +191,33 @@ export function RelaysCardView({ dnp, updateEnvs }) {
                 />
                 Take every bid (recommended)
               </label>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <label className="mb-0 flex cursor-pointer items-center gap-3 text-sm text-fg">
-                  <input
-                    type="radio"
-                    name="minbid"
-                    className={radioClass}
-                    checked={form.mode === "above"}
-                    disabled={form.mode === null}
-                    onChange={() => update({ mode: "above" })}
-                  />
-                  Only bids above
-                </label>
-                {form.mode === "above" && (
-                  <span className="flex items-center gap-2 pl-7 sm:pl-0">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={String(MIN_BID_LOWEST)}
-                      max={String(MIN_BID_HIGHEST)}
-                      inputMode="decimal"
-                      inputSize="sm"
-                      placeholder="0.05"
-                      aria-label="Minimum bid in ETH"
-                      className="w-28"
-                      value={form.amount}
-                      onChange={e => update({ amount: e.target.value })}
-                    />
-                    <span className="text-sm text-fg-muted">ETH</span>
-                  </span>
-                )}
-              </div>
-              {!amountOk && <p className="mb-0 text-sm font-medium text-danger-text">Enter an amount from 0.001 to 1 ETH.</p>}
+              <label className="mb-0 flex cursor-pointer items-center gap-3 text-sm text-fg">
+                <input
+                  type="radio"
+                  name="minbid"
+                  className={radioClass}
+                  checked={form.mode === "above"}
+                  disabled={form.mode === null}
+                  onChange={() => update({ mode: "above" })}
+                />
+                Only bids above
+              </label>
+              {form.mode === "above" && (
+                <Input
+                  type="number"
+                  step="0.001"
+                  min={String(MIN_BID_LOWEST)}
+                  max={String(MIN_BID_HIGHEST)}
+                  inputMode="decimal"
+                  inputSize="sm"
+                  placeholder="0.05"
+                  label="Amount in ETH"
+                  className="max-w-xs pl-7"
+                  error={amountOk ? undefined : AMOUNT_ERROR}
+                  value={form.amount}
+                  onChange={e => update({ amount: e.target.value })}
+                />
+              )}
               {form.mode === null && (
                 <p className="mb-0 text-sm text-fg-muted">A custom value is set in the advanced settings and is left as it is.</p>
               )}
@@ -212,7 +237,7 @@ export function RelaysCardView({ dnp, updateEnvs }) {
                 <Button variant="secondary" onClick={useRecommended}>
                   Use recommended
                 </Button>
-                <Button variant="primary" disabled={!canSave} onClick={save}>
+                <Button variant="primary" disabled={!canSave} loading={saving} onClick={save}>
                   Save
                 </Button>
               </div>

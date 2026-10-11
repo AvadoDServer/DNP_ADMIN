@@ -12,6 +12,7 @@ import {
   readMinBid,
   safeAboutUrl,
   listDate,
+  sameSettings,
 } from "pages/packages/apps/mevboost/relayConfig";
 
 const key = c => "0x" + c.repeat(96);
@@ -319,5 +320,23 @@ describe("listDate", () => {
   it("gives the value as it is when it is not a date", () => {
     expect(listDate("soon")).toBe("soon");
     expect(listDate(undefined)).toBe("");
+  });
+});
+
+describe("sameSettings", () => {
+  it("treats the same relays in another order and the same minimum in another spelling as unchanged", () => {
+    const a = url("a", "relay.ultrasound.money");
+    const b = url("b", "agnostic-relay.net");
+    expect(sameSettings({ RELAYS: `${a},${b}`, EXTRA_OPTS: "-min-bid 0.1" }, { RELAYS: ` ${b} ,${a}`, EXTRA_OPTS: "--min-bid=0.1" })).toBe(true);
+    expect(sameSettings({ RELAYS: "", EXTRA_OPTS: "" }, {})).toBe(true);
+    expect(sameSettings({ RELAYS: "", EXTRA_OPTS: "-min-bid abc" }, { EXTRA_OPTS: "-min-bid abc" })).toBe(true);
+  });
+
+  it("sees a relay or a minimum that changed", () => {
+    const a = url("a", "relay.ultrasound.money");
+    const b = url("b", "agnostic-relay.net");
+    expect(sameSettings({ RELAYS: a, EXTRA_OPTS: "" }, { RELAYS: `${a},${b}`, EXTRA_OPTS: "" })).toBe(false);
+    expect(sameSettings({ RELAYS: a, EXTRA_OPTS: "" }, { RELAYS: a, EXTRA_OPTS: "-min-bid 0.05" })).toBe(false);
+    expect(sameSettings({ RELAYS: a, EXTRA_OPTS: "-json" }, { RELAYS: a, EXTRA_OPTS: "" })).toBe(false);
   });
 });

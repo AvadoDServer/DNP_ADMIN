@@ -62,7 +62,9 @@ export function serialiseExtraOpts({ minBid, rest }) {
   return parts.join(" ");
 }
 
-// MEV-Boost refuses to start with a minimum above 1 ETH.
+// AVADO's own limits for an amount typed in the card, to catch typos. MEV-Boost
+// itself accepts more (0 to 1,000,000 ETH); a value outside these limits is
+// set in the advanced settings and the card leaves it as it is.
 export const MIN_BID_LOWEST = 0.001;
 export const MIN_BID_HIGHEST = 1;
 
@@ -129,6 +131,16 @@ export function listDate(value) {
   const date = new Date(value);
   if (typeof value !== "string" || isNaN(date.getTime())) return value == null ? "" : String(value);
   return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+}
+
+/**
+ * Whether two sets of settings mean the same to MEV-Boost: the same relays in
+ * any order, and the same minimum and other options however they are spelled.
+ */
+export function sameSettings(a, b) {
+  const relays = envs => [...new Set(parseRelays(envs.RELAYS).map(r => r.url))].sort().join(",");
+  const extra = envs => JSON.stringify(parseExtraOpts(envs.EXTRA_OPTS));
+  return relays(a) === relays(b) && extra(a) === extra(b);
 }
 
 // The card's rows for the package's settings: like mergeWithList, without the
