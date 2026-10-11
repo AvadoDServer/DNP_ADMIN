@@ -19,6 +19,30 @@ const mevBoostDefaultRelays = relayList.relays
   .map(r => r.url)
   .join(",");
 
+// Lost data: Rocket Pool came up after an update with empty storage while its
+// wallet is still in an old volume (DAPPMANAGER 10.0.51 listLostData /
+// findLostData). Served by pages/packages/lostDataApi.js in mock mode: Home
+// shows "Rocket Pool has data in an unused storage volume", and the Rocket
+// Pool app page shows the "Recover data" card (recovering succeeds after 2 s).
+// Needs the DAPPMANAGER 10.0.51 core package below.
+export const mockLostData = [
+  {
+    package: "rocketpool.avado.dnp.dappnode.eth",
+    title: "Rocket Pool",
+    live: [{ name: "rocketpoolavadodnpdappnodeeth_rocketpool", mountPath: "/rocketpool" }],
+    candidates: [
+      {
+        name: "rocketpool-avado-dnp-dappnode-eth_rocketpool",
+        anonymous: false,
+        createdAt: "2024-11-18T09:12:44Z",
+        entries: [".rocketpool", "data", "user-settings.yml"],
+        sizeKb: 1843200,
+        target: "rocketpoolavadodnpdappnodeeth_rocketpool",
+      },
+    ],
+  },
+];
+
 export const mockState = {
   /* chainData */
   [chainDataMountPoint]: [],
@@ -89,6 +113,27 @@ export const mockState = {
       name: "admin.dnp.dappnode.eth",
       isCore: true,
       state: "exited",
+    },
+    {
+      // 10.0.51: has the lost-data calls (see mockLostData above).
+      name: "dappmanager.dnp.dappnode.eth",
+      isCore: true,
+      isDnp: true,
+      version: "10.0.51",
+      state: "running",
+      running: true,
+    },
+    {
+      // Lost data: its wallet sits in an unused storage volume (mockLostData).
+      name: "rocketpool.avado.dnp.dappnode.eth",
+      isDnp: true,
+      isCore: false,
+      version: "1.0.4",
+      state: "running",
+      running: true,
+      ports: [],
+      volumes: [{ name: "rocketpoolavadodnpdappnodeeth_rocketpool", path: "/rocketpool", size: "0B" }],
+      manifest: { name: "rocketpool.avado.dnp.dappnode.eth", version: "1.0.4", title: "Rocket Pool" },
     },
     {
       name: "ln.dnp.dappnode.eth",
