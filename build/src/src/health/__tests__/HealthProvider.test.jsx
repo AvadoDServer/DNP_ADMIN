@@ -54,6 +54,9 @@ function Probe({ dismissId, withUndismissAll }) {
       <button data-testid="refresh-lost-data" onClick={() => refreshLostData()}>
         scan again
       </button>
+      <button data-testid="force-lost-data" onClick={() => refreshLostData({ force: true })}>
+        scan now
+      </button>
     </div>
   );
 }
@@ -665,4 +668,52 @@ describe("HealthProvider lost data", () => {
       now.mockRestore();
     }
   });
+
+  it("never runs two scans at once: the interval, Check again and Home wait for the running one", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const now = vi.spyOn(Date, "now");
+    let t = 1_000_000;
+    now.mockImplementation(() => t);
+    let finish;
+    const fetchLostDataImpl = vi.fn(() => new Promise(resolve => (finish = resolve)));
+    try {
+      renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.51"));
+      await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(1));
+      t += 11 * 60 * 1000;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+      });
+      fireEvent.click(screen.getByTestId("refresh-lost-data"));
+      await act(async () => {});
+      expect(fetchLostDataImpl).toHaveBeenCalledTimes(1);
+      await act(async () => finish(lost));
+      await waitFor(() => expect(screen.getByTestId("allids").textContent).toContain("lost-data:"));
+      fireEvent.click(screen.getByTestId("refresh-lost-data"));
+      await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(2));
+      await act(async () => finish([]));
+    } finally {
+      now.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("refreshLostData({ force: true }) scans at once, or right after the running scan", async () => {
+    let finish;
+    const fetchLostDataImpl = vi.fn(() => new Promise(resolve => (finish = resolve)));
+    renderWith({ ...base, fetchLostDataImpl }, {}, withDappmanager("10.0.51"));
+    await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(1));
+    // Within 30 s and while the first scan runs: queued, not run alongside it
+    fireEvent.click(screen.getByTestId("force-lost-data"));
+    await act(async () => {});
+    expect(fetchLostDataImpl).toHaveBeenCalledTimes(1);
+    await act(async () => finish(lost));
+    await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(2));
+    await act(async () => finish([]));
+    await waitFor(() => expect(screen.getByTestId("allids").textContent).not.toContain("lost-data:"));
+    // No scan running, last one a moment ago: runs at once
+    fireEvent.click(screen.getByTestId("force-lost-data"));
+    await waitFor(() => expect(fetchLostDataImpl).toHaveBeenCalledTimes(3));
+    await act(async () => finish([]));
+  });
 });
+

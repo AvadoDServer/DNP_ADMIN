@@ -1,8 +1,14 @@
 import { render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
 import { LostDataCardView } from "pages/packages/components/LostDataCard";
+import { STILL_COPYING_AFTER_MS } from "pages/packages/lostDataApi";
 
-const { mockConfirm } = vi.hoisted(() => ({ mockConfirm: vi.fn() }));
+const { mockConfirm, api } = vi.hoisted(() => ({
+  mockConfirm: vi.fn(),
+  api: { listLostData: vi.fn(), findLostData: vi.fn(), recoverLostData: vi.fn() },
+}));
 vi.mock("components/ConfirmDialog", () => ({ confirm: mockConfirm }));
+// Only the remount test goes through lostDataApi's own recoverLostData.
+vi.mock("API/rpcMethods", () => ({ default: api }));
 
 const RP = "rocketpool.avado.dnp.dappnode.eth";
 const DM = "dappmanager.dnp.dappnode.eth";
@@ -13,6 +19,13 @@ const OLD = packagesAt("10.0.50");
 
 const OLD_VOL = "rocketpool-avado-dnp-dappnode-eth_rocketpool";
 const ANON = "f".repeat(64);
+const SERVER_TIMEOUT =
+  "Recovering the data took longer than 10 minutes and was stopped. Files already copied were kept; contact AVADO support.";
+const SERVER_WARNING =
+  "Some files already existed in the app's storage and were kept; the copy from the old storage was not used for them.";
+const STILL_COPYING =
+  "Still copying. This can take a while for a lot of data. You can leave this page and come back later.";
+
 const candidate = (name, extra = {}) => ({
   name,
   anonymous: false,
@@ -22,7 +35,12 @@ const candidate = (name, extra = {}) => ({
   target: "rocketpoolavadodnpdappnodeeth_rocketpool",
   ...extra,
 });
-const entry = candidates => ({ package: RP, live: [{ name: "rocketpoolavadodnpdappnodeeth_rocketpool", mountPath: "/rocketpool" }], candidates });
+const entry = (candidates, recovered = []) => ({
+  package: RP,
+  live: [{ name: "rocketpoolavadodnpdappnodeeth_rocketpool", mountPath: "/rocketpool" }],
+  candidates,
+  recovered,
+});
 
 function deferred() {
   let resolve, reject;
@@ -33,12 +51,19 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-async function renderCard({ packages = NEW, found = entry([candidate(OLD_VOL)]), recover = vi.fn(), onRecovered } = {}) {
+async function renderCard({ packages = NEW, found = entry([candidate(OLD_VOL)]), recover = vi.fn(), onFinished, card = dnp } = {}) {
   const find = vi.fn(() => (found instanceof Error ? Promise.reject(found) : Promise.resolve(found)));
   let view;
   await act(async () => {
     view = render(
-      <LostDataCardView dnp={dnp} packages={packages} findLostDataImpl={find} recoverLostDataImpl={recover} onRecovered={onRecovered} />
+      <LostDataCardView
+        dnp={card}
+        packages={packages}
+        findLostDataImpl={find}
+        recoverLostDataImpl={recover}
+        recoveryInFlightImpl={() => null}
+        onFinished={onFinished}
+      />
     );
   });
   return { ...view, find, recover };
@@ -55,9 +80,11 @@ async function recoverRow(row) {
 }
 
 const rows = () => screen.getAllByRole("listitem");
+const statuses = () => screen.queryAllByRole("status").map(n => n.textContent);
 
 beforeEach(() => {
   mockConfirm.mockReset();
+  for (const f of Object.values(api)) f.mockReset();
 });
 
 describe("LostDataCard", () => {
@@ -74,17 +101,13 @@ describe("LostDataCard", () => {
   });
 
   it("renders nothing and makes no call on a core package", async () => {
-    const find = vi.fn(() => Promise.resolve(entry([candidate(OLD_VOL)])));
-    let view;
-    await act(async () => {
-      view = render(<LostDataCardView dnp={{ name: DM, isCore: true }} packages={NEW} findLostDataImpl={find} recoverLostDataImpl={vi.fn()} />);
-    });
-    expect(view.container).toBeEmptyDOMElement();
+    const { container, find } = await renderCard({ card: { name: DM, isCore: true } });
+    expect(container).toBeEmptyDOMElement();
     expect(find).not.toHaveBeenCalled();
   });
 
-  it("stays hidden when there is nothing to recover", async () => {
-    const { container, find } = await renderCard({ found: entry([]) });
+  it("stays hidden when there is nothing to recover, even with volumes recovered earlier", async () => {
+    const { container, find } = await renderCard({ found: entry([], [{ volume: "done", at: "2025-06-02T08:00:00Z" }]) });
     expect(find).toHaveBeenCalledTimes(1);
     expect(find).toHaveBeenCalledWith(RP);
     expect(container).toBeEmptyDOMElement();
@@ -101,21 +124,31 @@ describe("LostDataCard", () => {
     }
   });
 
-  it("lists every candidate: date, size and what is in it", async () => {
+  it("lists every candidate (date, size, contents) and, below, the volumes recovered earlier without a button", async () => {
     await renderCard({
-      found: entry([candidate(OLD_VOL), candidate(ANON, { anonymous: true, createdAt: null, entries: ["node", "wallet"], sizeKb: 1536000 })]),
+      found: entry(
+        [candidate(OLD_VOL), candidate(ANON, { anonymous: true, createdAt: null, entries: ["node", "wallet"], sizeKb: 1536000 })],
+        [
+          { volume: "done-1", at: "2025-06-02T08:00:00Z" },
+          { volume: "done-2", at: null },
+        ]
+      ),
     });
     expect(screen.getByRole("heading", { name: "Data found in an unused storage volume" })).toBeInTheDocument();
-    expect(rows()).toHaveLength(2);
+    expect(rows()).toHaveLength(4);
     expect(rows()[0]).toHaveTextContent("Created March 1, 2025");
     expect(rows()[0]).toHaveTextContent("2.1 MB (.rocketpool, data)");
     expect(rows()[1]).toHaveTextContent("Date unknown");
     expect(rows()[1]).toHaveTextContent("1.6 GB (node, wallet)");
+    expect(rows()[2]).toHaveTextContent("Recovered on June 2, 2025");
+    expect(within(rows()[2]).queryByRole("button")).toBeNull();
+    expect(rows()[3]).toHaveTextContent(/^Recovered/);
+    expect(within(rows()[3]).queryByRole("button")).toBeNull();
     expect(screen.getAllByRole("button", { name: "Recover data" })).toHaveLength(2);
   });
 
-  it("asks first, in plain words, and only then recovers that volume", async () => {
-    const recover = vi.fn(() => Promise.resolve({ files: 12, sizeKb: 2048 }));
+  it("asks first, in plain words and with a non-red button, and only then recovers that volume", async () => {
+    const recover = vi.fn(() => Promise.resolve({ files: 12, sizeKb: 2048, skipped: 0 }));
     await renderCard({ recover });
     fireEvent.click(screen.getByRole("button", { name: "Recover data" }));
     expect(recover).not.toHaveBeenCalled();
@@ -125,6 +158,7 @@ describe("LostDataCard", () => {
       "This copies the files from the old storage into the app's storage. Files that are already there are kept. The app restarts; this can take a few minutes. Nothing is deleted."
     );
     expect(opts.label).toBe("Recover data");
+    expect(opts.variant).toBe("primary");
     await act(async () => {
       opts.onClick();
     });
@@ -142,44 +176,116 @@ describe("LostDataCard", () => {
     for (const b of buttons) expect(b).toBeDisabled();
     expect(within(rows()[0]).getByRole("button")).toHaveAttribute("aria-busy", "true");
     await act(async () => {
-      pending.resolve({ files: 3, sizeKb: 10 });
+      pending.resolve({ files: 3, sizeKb: 10, skipped: 0 });
     });
   });
 
-  it("on success says how many files came back, marks the row Recovered and scans again", async () => {
-    const onRecovered = vi.fn();
-    const recover = vi.fn(() => Promise.resolve({ files: 1234, sizeKb: 2048 }));
-    const { find } = await renderCard({ recover, onRecovered, found: entry([candidate(OLD_VOL), candidate(ANON)]) });
+  it("on success says how many files came back, marks the row Recovered, scans again and tells Home", async () => {
+    const onFinished = vi.fn();
+    const recover = vi.fn(() => Promise.resolve({ files: 1234, sizeKb: 2048, skipped: 0 }));
+    const { find } = await renderCard({ recover, onFinished, found: entry([candidate(OLD_VOL), candidate(ANON)]) });
     await recoverRow(rows()[0]);
-    expect(screen.getByRole("status")).toHaveTextContent("Done: 1234 files recovered. The app is starting again.");
+    expect(statuses()).toEqual(["Done: 1234 files recovered. The app is starting again."]);
     await waitFor(() => expect(find).toHaveBeenCalledTimes(2));
-    // The DAPPMANAGER still lists the old volume (it stays unused): only the button goes
-    expect(within(rows()[0]).queryByRole("button")).toBeNull();
-    expect(rows()[0]).toHaveTextContent("Recovered");
-    expect(within(rows()[1]).getByRole("button", { name: "Recover data" })).toBeEnabled();
-    expect(onRecovered).toHaveBeenCalledWith(OLD_VOL);
+    // The candidate row became a recovered row (after the open ones)
+    expect(screen.getAllByRole("button", { name: "Recover data" })).toHaveLength(1);
+    const done = rows().find(r => /Recovered on/.test(r.textContent));
+    expect(done).toHaveTextContent("2.1 MB (.rocketpool, data)");
+    expect(within(done).queryByRole("button")).toBeNull();
+    expect(onFinished).toHaveBeenCalledWith(OLD_VOL);
   });
 
-  it("keeps a recovered row when the next scan no longer lists it", async () => {
-    const recover = vi.fn(() => Promise.resolve({ files: 5, sizeKb: 2048 }));
-    const found = entry([candidate(OLD_VOL)]);
-    const { find } = await renderCard({ recover, found });
-    find.mockImplementation(() => Promise.resolve(entry([])));
+  it("counts the files that were already there, and shows the wallet warning in amber", async () => {
+    const recover = vi.fn(() => Promise.resolve({ files: 100, sizeKb: 2048, skipped: 4, warning: SERVER_WARNING }));
+    await renderCard({ recover });
+    await recoverRow(rows()[0]);
+    expect(statuses()).toEqual([
+      "Done: 96 files recovered. 4 files were already in the app's storage and were kept. The app is starting again.",
+      `${SERVER_WARNING} If the app does not work as before, contact AVADO support.`,
+    ]);
+    const warning = screen.getByText(/If the app does not work as before/);
+    expect(warning.className).toContain("bg-warning-subtle");
+    expect(warning.className).not.toContain("success");
+  });
+
+  it("stays visible after a recovery even when the DAPPMANAGER lists no candidate any more; its row replaces the local one", async () => {
+    const recover = vi.fn(() => Promise.resolve({ files: 5, sizeKb: 2048, skipped: 0 }));
+    const { find } = await renderCard({ recover });
+    find.mockImplementation(() => Promise.resolve(entry([], [{ volume: OLD_VOL, at: "2026-10-11T10:00:00Z" }])));
     await recoverRow(rows()[0]);
     await waitFor(() => expect(find).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(rows()[0]).toHaveTextContent("Recovered on October 11, 2026"));
     expect(rows()).toHaveLength(1);
-    expect(rows()[0]).toHaveTextContent("Recovered");
-    expect(screen.getByRole("status")).toHaveTextContent("Done: 5 files recovered.");
+    expect(statuses()).toEqual(["Done: 5 files recovered. The app is starting again."]);
   });
 
-  it("on failure shows the DAPPMANAGER's message and lets the user try again", async () => {
-    const onRecovered = vi.fn();
-    const recover = vi.fn(() => Promise.reject(Error("That volume is not on the list any more. Reload the page and try again.")));
-    await renderCard({ recover, onRecovered });
+  it("on failure shows the DAPPMANAGER's message word for word, scans again and lets the user try again", async () => {
+    const onFinished = vi.fn();
+    const recover = vi.fn(() => Promise.reject(Error(SERVER_TIMEOUT)));
+    const { find } = await renderCard({ recover, onFinished });
     await recoverRow(rows()[0]);
-    expect(screen.getByRole("alert")).toHaveTextContent("That volume is not on the list any more. Reload the page and try again.");
+    expect(screen.getByRole("alert")).toHaveTextContent(SERVER_TIMEOUT);
+    await waitFor(() => expect(find).toHaveBeenCalledTimes(2));
     expect(screen.getByRole("button", { name: "Recover data" })).toBeEnabled();
     expect(rows()[0]).not.toHaveTextContent("Recovered");
-    expect(onRecovered).not.toHaveBeenCalled();
+    expect(onFinished).toHaveBeenCalledWith(OLD_VOL);
+  });
+
+  it("keeps waiting past 10 minutes: says it is still copying, keeps the buttons off, and a late success still shows Done", async () => {
+    vi.useFakeTimers();
+    try {
+      const pending = deferred();
+      const recover = vi.fn(() => pending.promise);
+      const { find } = await renderCard({ recover, found: entry([candidate(OLD_VOL), candidate(ANON)]) });
+      await recoverRow(rows()[0]);
+      expect(statuses()).toEqual([]);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STILL_COPYING_AFTER_MS);
+      });
+      expect(statuses()).toEqual([STILL_COPYING]);
+      expect(screen.queryByRole("alert")).toBeNull();
+      for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(STILL_COPYING_AFTER_MS);
+      });
+      for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
+      await act(async () => {
+        pending.resolve({ files: 7, sizeKb: 1, skipped: 0 });
+      });
+      expect(statuses()).toEqual(["Done: 7 files recovered. The app is starting again."]);
+      expect(find).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("button", { name: "Recover data" })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("coming back to the page during a recovery shows it running, with every button off, and then its outcome", async () => {
+    const call = deferred();
+    api.recoverLostData.mockReturnValue(call.promise);
+    const find = vi.fn(() => Promise.resolve(entry([candidate(OLD_VOL), candidate(ANON)])));
+    const mount = () => render(<LostDataCardView dnp={dnp} packages={NEW} findLostDataImpl={find} />);
+    let first;
+    await act(async () => {
+      first = mount();
+    });
+    await recoverRow(rows()[0]);
+    await waitFor(() => expect(api.recoverLostData).toHaveBeenCalledWith({ id: RP, volume: OLD_VOL }));
+    first.unmount();
+
+    await act(async () => {
+      mount();
+    });
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+    for (const b of buttons) expect(b).toBeDisabled();
+    expect(within(rows()[0]).getByRole("button")).toHaveAttribute("aria-busy", "true");
+
+    await act(async () => {
+      call.resolve({ files: 42, sizeKb: 1, skipped: 0 });
+    });
+    await waitFor(() => expect(statuses()).toEqual(["Done: 42 files recovered. The app is starting again."]));
+    expect(api.recoverLostData).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole("button", { name: "Recover data" })).toHaveLength(1);
   });
 });

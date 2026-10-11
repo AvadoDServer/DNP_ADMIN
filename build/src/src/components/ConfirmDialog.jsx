@@ -8,6 +8,8 @@ import { render, unmountComponentAtNode } from "react-dom";
  *
  * @param {string} title Important action
  * @param {string} text Are you sure you want to do this?
+ * @param {string} variant of the shorthand label/onClick button: "danger"
+ *   (default) or "primary" for an action that removes nothing
  * @param {array} buttons = [{
  *   label: "Cancel",
  *   onClick: () => null
@@ -16,7 +18,7 @@ import { render, unmountComponentAtNode } from "react-dom";
  *   onClick: () => doImportantAction()
  * }, ... ]
  */
-function Modal({ title, text, buttons = [], label, onClick, close }) {
+function Modal({ title, text, buttons = [], label, onClick, variant, close }) {
   // If user clicks the modal itself, do not close
   const modalEl = useRef(null);
   const titleId = useRef(`confirm-dialog-title-${Math.random().toString(36).slice(2)}`).current;
@@ -25,7 +27,7 @@ function Modal({ title, text, buttons = [], label, onClick, close }) {
   }
 
   // Add a button from the shorthand form
-  if (label && onClick) buttons.push({ label, onClick });
+  if (label && onClick) buttons.push({ label, onClick, variant });
 
   // If there is no "Cancel" option, add it as the first
   if (!buttons.find(({ label }) => (label || "").includes("Cancel")))
@@ -58,7 +60,7 @@ function Modal({ title, text, buttons = [], label, onClick, close }) {
           {buttons.map(({ label, variant, onClick }) => (
             <Button
               key={label}
-              variant={variant === "secondary" ? "secondary" : "danger"}
+              variant={variant === "secondary" || variant === "primary" ? variant : "danger"}
               pill
               onClick={() => {
                 if (onClick) onClick();
@@ -79,6 +81,7 @@ Modal.propTypes = {
   message: PropTypes.string,
   label: PropTypes.string,
   onClick: PropTypes.func,
+  variant: PropTypes.oneOf(["danger", "primary"]),
   buttons: PropTypes.arrayOf(
     PropTypes.shape({
       label: PropTypes.string.isRequired,

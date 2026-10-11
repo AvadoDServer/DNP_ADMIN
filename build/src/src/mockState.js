@@ -23,7 +23,9 @@ const mevBoostDefaultRelays = relayList.relays
 // wallet is still in an old volume (DAPPMANAGER 10.0.51 listLostData /
 // findLostData). Served by pages/packages/lostDataApi.js in mock mode: Home
 // shows "Rocket Pool has data in an unused storage volume", and the Rocket
-// Pool app page shows the "Recover data" card (recovering succeeds after 2 s).
+// Pool app page shows the "Recover data" card with one volume to recover and
+// one recovered earlier. Recovering succeeds after 2 s with 2 files kept and
+// the wallet warning; the volume then moves to `recovered` (until reload).
 // Needs the DAPPMANAGER 10.0.51 core package below.
 export const mockLostData = [
   {
@@ -40,6 +42,7 @@ export const mockLostData = [
         target: "rocketpoolavadodnpdappnodeeth_rocketpool",
       },
     ],
+    recovered: [{ volume: "3f9c2a7be14d" + "0".repeat(52), at: "2025-06-02T08:00:00Z" }],
   },
 ];
 

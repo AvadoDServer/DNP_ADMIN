@@ -5,60 +5,99 @@
  *
  *   listLostData()               -> LostDataEntry[]  (only packages with candidates)
  *   findLostData(id)             -> LostDataEntry    (candidates: [] when none)
- *   recoverLostData(id, volume)  -> { files, sizeKb } (copies, never deletes; restarts the app)
+ *   recoverLostData(id, volume)  -> { files, sizeKb, skipped, warning? }
+ *     Copies, never deletes; restarts the app. `files` counts the files in the
+ *     old volume, `skipped` the ones already in the app's storage (kept).
+ *     `warning` only when a skipped file looks like a wallet or password.
  *
  *   LostDataEntry = { package, title?, live: [{ name, mountPath }],
- *     candidates: [{ name, anonymous, createdAt|null, entries: string[], sizeKb, target }] }
+ *     candidates: [{ name, anonymous, createdAt|null, entries: string[], sizeKb, target }],
+ *     recovered: [{ volume, at|null }] }   // recovered volumes leave `candidates`
  *
  * Every call rejects on failure with the DAPPMANAGER's own message (no toast).
+ * A recovery is never given up on by the browser: it waits for the
+ * DAPPMANAGER's answer, however long the copy takes (see STILL_COPYING_AFTER_MS).
  *
  * In mock mode (`yarn dev`, REACT_APP_MOCK_DATA=true) the calls are served
  * from mockLostData in src/mockState.js, so the Home finding and the
  * "Recover data" card can be seen without a box.
  */
 
-export const MOCK = Boolean(import.meta.env.REACT_APP_MOCK_DATA);
-
-// Copying a large volume can take minutes. The Admin's WAMP calls have no
-// timeout of their own (autobahn waits for as long as the connection stays
-// open), so the card stops waiting after 10 minutes; the copy itself goes on.
-export const RECOVER_TIMEOUT_MS = 10 * 60 * 1000;
-export const RECOVER_TIMEOUT_MESSAGE =
-  "This is taking longer than expected. Your AVADO may still be copying the data. Reload this page in a few minutes to check.";
+// After this long the card says the copy is still running (it keeps waiting).
+export const STILL_COPYING_AFTER_MS = 10 * 60 * 1000;
 
 // Loaded on first use: API/rpcMethods brings the WAMP session and the whole
 // redux store with it, which HealthProvider (and its tests) must not import.
 const rpc = () => import("API/rpcMethods").then(m => m.default);
 
+/* ---------------- mock (dev only) ---------------- */
+// `import.meta.env.REACT_APP_MOCK_DATA` is tested right at each branch (as
+// index.jsx does) so the production build drops the mock chunk.
+let mockStore = null;
+const clone = v => JSON.parse(JSON.stringify(v));
 const delay = (value, ms) => new Promise(resolve => setTimeout(() => resolve(value), ms));
 const mockEntries = () =>
-  import("../../mockState").then(m => JSON.parse(JSON.stringify(m.mockLostData || [])));
+  mockStore
+    ? Promise.resolve(mockStore)
+    : import("../../mockState").then(m => (mockStore = mockStore || clone(m.mockLostData || [])));
+const mockRecover = (id, volume) =>
+  mockEntries().then(list => {
+    const entry = list.find(e => e.package === id);
+    const candidate = entry && entry.candidates.find(c => c.name === volume);
+    if (!candidate) throw Error("That volume is not on the list any more. Reload the page and try again.");
+    return delay(null, 2000).then(() => {
+      entry.candidates = entry.candidates.filter(c => c !== candidate);
+      entry.recovered = [...(entry.recovered || []), { volume, at: new Date().toISOString() }];
+      return {
+        files: candidate.entries.length * 120,
+        sizeKb: candidate.sizeKb,
+        skipped: 2,
+        warning:
+          "Some files already existed in the app's storage and were kept; the copy from the old storage was not used for them.",
+      };
+    });
+  });
+
+/* ---------------- calls ---------------- */
 
 export function listLostData() {
-  if (MOCK) return mockEntries().then(list => delay(list, 300));
+  if (import.meta.env.REACT_APP_MOCK_DATA)
+    return mockEntries().then(list => delay(clone(list.filter(e => e.candidates.length > 0)), 300));
   return rpc().then(api => api.listLostData({}));
 }
 
 export function findLostData(id) {
-  if (MOCK)
+  if (import.meta.env.REACT_APP_MOCK_DATA)
     return mockEntries().then(list =>
-      delay(list.find(e => e.package === id) || { package: id, live: [], candidates: [] }, 300)
+      delay(clone(list.find(e => e.package === id) || { package: id, live: [], candidates: [], recovered: [] }), 300)
     );
   return rpc().then(api => api.findLostData({ id }));
 }
 
-export function recoverLostData(id, volume, { timeoutMs = RECOVER_TIMEOUT_MS } = {}) {
-  const call = MOCK
-    ? mockEntries().then(list => {
-        const entry = list.find(e => e.package === id);
-        const candidate = entry && entry.candidates.find(c => c.name === volume);
-        if (!candidate) throw Error("That volume is not on the list any more. Reload the page and try again.");
-        return delay({ files: candidate.entries.length * 120, sizeKb: candidate.sizeKb }, 2000);
-      })
+// Recoveries still waiting for the DAPPMANAGER, kept here (not in the card)
+// so leaving the app page and coming back still shows them as running and
+// never offers a second, parallel recovery. key: "<package>\n<volume>"
+const inFlight = new Map();
+const keyOf = (id, volume) => `${id}\n${volume}`;
+
+/** This package's recovery still running, or null: { id, volume, promise, startedAt }. */
+export function recoveryInFlight(id) {
+  for (const r of inFlight.values()) if (r.id === id) return r;
+  return null;
+}
+
+/**
+ * Starts recovering `volume` into package `id`, or returns the recovery of it
+ * already running. Settles only with the DAPPMANAGER's own answer.
+ */
+export function recoverLostData(id, volume) {
+  const key = keyOf(id, volume);
+  const running = inFlight.get(key);
+  if (running) return running.promise;
+  const call = import.meta.env.REACT_APP_MOCK_DATA
+    ? mockRecover(id, volume)
     : rpc().then(api => api.recoverLostData({ id, volume }));
-  let timer;
-  const timeout = new Promise((_resolve, reject) => {
-    timer = setTimeout(() => reject(Error(RECOVER_TIMEOUT_MESSAGE)), timeoutMs);
-  });
-  return Promise.race([call, timeout]).finally(() => clearTimeout(timer));
+  const promise = call.finally(() => inFlight.delete(key));
+  inFlight.set(key, { id, volume, promise, startedAt: Date.now() });
+  return promise;
 }

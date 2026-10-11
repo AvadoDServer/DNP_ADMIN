@@ -11,14 +11,14 @@ import { MEVBOOST_PACKAGE } from "health/clients";
 const isLostData = f => typeof f.id === "string" && f.id.startsWith("lost-data:");
 
 export default function AppOverview({ dnp, isCore }) {
-  const { allFindings, dismiss } = useHealth();
+  const { allFindings, refreshLostData } = useHealth();
   const mine = allFindings.filter(f => f.appId === dnp.name && !isLostData(f));
-  // Once recovered, the old volume stays where it was (nothing is deleted), so
-  // the DAPPMANAGER keeps listing it: hide its Home finding.
-  const onRecovered = volume => dismiss && dismiss(`lost-data:${dnp.name}:${volume}`);
+  // After a recovery the DAPPMANAGER no longer lists that volume: scan again
+  // at once so its Home finding goes.
+  const onFinished = () => refreshLostData && refreshLostData({ force: true });
   return (
     <div className="flex flex-col gap-4">
-      <LostDataCard dnp={dnp} onRecovered={onRecovered} />
+      <LostDataCard dnp={dnp} onFinished={onFinished} />
       {dnp.name === MEVBOOST_PACKAGE && <RelaysCard dnp={dnp} />}
       {mine.length > 0 && (
         <section className="rounded-lg border border-border bg-surface px-4">

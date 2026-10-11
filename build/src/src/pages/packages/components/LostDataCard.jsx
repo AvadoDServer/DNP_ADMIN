@@ -12,18 +12,23 @@ import { confirm } from "components/ConfirmDialog";
 import { canFindLostData } from "health/clients";
 import { appTitle } from "health/rules/apps";
 import { formatDockerSize } from "health/rules/storage";
-import { findLostData, recoverLostData } from "../lostDataApi";
+import { findLostData, recoverLostData, recoveryInFlight, STILL_COPYING_AFTER_MS } from "../lostDataApi";
 
 const CONFIRM_TEXT =
   "This copies the files from the old storage into the app's storage. Files that are already there are kept. The app restarts; this can take a few minutes. Nothing is deleted.";
+const STILL_COPYING =
+  "Still copying. This can take a while for a lot of data. You can leave this page and come back later.";
+const WARNING_TAIL = "If the app does not work as before, contact AVADO support.";
 
 const NOTICE = {
   success: "border-success/40 bg-success-subtle text-success-text",
+  warning: "border-warning/40 bg-warning-subtle text-warning-text",
   danger: "border-danger/40 bg-danger-subtle text-danger-text",
+  neutral: "border-border bg-bg-subtle text-fg-muted",
 };
 
 // "March 1, 2025" (read as UTC, like the relay list date), or null.
-function createdOn(value) {
+function onDate(value) {
   const date = new Date(value);
   if (typeof value !== "string" || !value || isNaN(date.getTime())) return null;
   return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
@@ -36,12 +41,22 @@ function contents(candidate) {
   return entries ? `${size} (${entries})` : size;
 }
 
-// The candidates to show: the latest scan's, plus any recovered here that the
-// scan no longer lists (so "Recovered" does not vanish with the notice).
-function mergeRows(previous, next, recovered) {
-  const names = new Set(next.map(c => c.name));
-  const kept = previous.filter(c => recovered[c.name] !== undefined && !names.has(c.name));
-  return [...next, ...kept];
+// The notices for a finished recovery: { files, sizeKb, skipped, warning? }.
+function successNotices(result) {
+  const files = Number(result && result.files) || 0;
+  const skipped = Number(result && result.skipped) || 0;
+  const notices = [
+    {
+      variant: "success",
+      text:
+        skipped > 0
+          ? `Done: ${Math.max(files - skipped, 0)} files recovered. ${skipped} files were already in the app's storage and were kept. The app is starting again.`
+          : `Done: ${files} files recovered. The app is starting again.`,
+    },
+  ];
+  if (result && typeof result.warning === "string" && result.warning)
+    notices.push({ variant: "warning", text: `${result.warning} ${WARNING_TAIL}` });
+  return notices;
 }
 
 /**
@@ -49,47 +64,90 @@ function mergeRows(previous, next, recovered) {
  * app's data in a storage volume no container uses (left behind by an
  * update, say), and a one-click "Recover data" that copies it back.
  * DAPPMANAGER 10.0.51 and newer only; with an older one, or on a core
- * package, the card renders nothing and makes no call. Hidden until the scan
- * finds something.
+ * package, the card renders nothing and makes no call. Shown while there is
+ * something to recover, a recovery runs, or one finished on this page;
+ * volumes already recovered are listed only inside a card that shows.
+ *
+ * A recovery runs until the DAPPMANAGER answers, however long that takes
+ * (after 10 minutes the card says it is still copying). It lives in
+ * lostDataApi, not here: leaving the page and coming back shows it running.
  */
 export function LostDataCardView({
   dnp,
   packages,
-  onRecovered,
+  onFinished,
   findLostDataImpl = findLostData,
   recoverLostDataImpl = recoverLostData,
+  recoveryInFlightImpl = recoveryInFlight,
 }) {
   // Core packages are left out: listLostData skips them and recoverLostData refuses them.
   const allowed = canFindLostData(packages) && !(dnp && dnp.isCore);
   const id = dnp && dnp.name;
-  const [rows, setRows] = useState([]);
-  // volume -> files recovered, for the rows recovered on this page
-  const [recovered, setRecovered] = useState({});
+  // The last findLostData answer: { candidates, recovered }
+  const [entry, setEntry] = useState(null);
+  // volume -> when it was recovered here, until findLostData lists it as recovered
+  const [doneHere, setDoneHere] = useState({});
+  const [finishedHere, setFinishedHere] = useState(false);
+  // { volume, startedAt } while a recovery of this package runs
   const [running, setRunning] = useState(null);
-  const [notice, setNotice] = useState(null);
+  const [slow, setSlow] = useState(false);
+  const [notices, setNotices] = useState([]);
   const [scan, setScan] = useState(0);
-  const mounted = useRef(true);
-  const recoveredRef = useRef(recovered);
-  recoveredRef.current = recovered;
+  // Each volume's size and contents, kept for its row once it is recovered.
+  const known = useRef({});
+  const alive = useRef(false);
+
+  // Show a recovery: the one just started, or one still running from an
+  // earlier visit to this page. Only this card's own display depends on it.
+  function follow(recovery) {
+    setRunning({ volume: recovery.volume, startedAt: recovery.startedAt });
+    setNotices([]);
+    recovery.promise
+      .then(
+        result => {
+          if (!alive.current) return;
+          setDoneHere(d => ({ ...d, [recovery.volume]: new Date().toISOString() }));
+          setNotices(successNotices(result));
+        },
+        e => {
+          if (!alive.current) return;
+          setNotices([{ variant: "danger", text: (e && e.message) || "Recovering the data failed. Try again." }]);
+        }
+      )
+      .then(() => {
+        if (!alive.current) return;
+        setRunning(null);
+        setFinishedHere(true);
+        // After a failure too: the DAPPMANAGER may have copied the data and
+        // only failed to start the app again.
+        setScan(s => s + 1);
+      });
+  }
 
   useEffect(() => {
-    mounted.current = true;
+    alive.current = true;
+    const pending = allowed && id ? recoveryInFlightImpl(id) : null;
+    if (pending) follow(pending);
     return () => {
-      mounted.current = false;
+      alive.current = false;
     };
-  }, []);
+  }, [allowed, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!allowed || !id) return undefined;
     let cancelled = false;
     Promise.resolve()
       .then(() => findLostDataImpl(id))
-      .then(entry => {
+      .then(found => {
         if (cancelled) return;
-        const next = (entry && Array.isArray(entry.candidates) ? entry.candidates : []).filter(
+        const candidates = (found && Array.isArray(found.candidates) ? found.candidates : []).filter(
           c => c && typeof c.name === "string"
         );
-        setRows(prev => mergeRows(prev, next, recoveredRef.current));
+        const recovered = (found && Array.isArray(found.recovered) ? found.recovered : []).filter(
+          r => r && typeof r.volume === "string"
+        );
+        for (const c of candidates) known.current[c.name] = c;
+        setEntry({ candidates, recovered });
       })
       .catch(e => !cancelled && console.debug(`findLostData failed for ${id}: ${e && e.message}`));
     return () => {
@@ -97,36 +155,44 @@ export function LostDataCardView({
     };
   }, [allowed, id, scan]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!allowed || rows.length === 0) return null;
+  // "Still copying" once the recovery has run for 10 minutes.
+  useEffect(() => {
+    if (!running) {
+      setSlow(false);
+      return undefined;
+    }
+    const left = running.startedAt + STILL_COPYING_AFTER_MS - Date.now();
+    if (left <= 0) {
+      setSlow(true);
+      return undefined;
+    }
+    setSlow(false);
+    const t = setTimeout(() => setSlow(true), left);
+    return () => clearTimeout(t);
+  }, [running]);
 
-  function recover(volume) {
-    setRunning(volume);
-    setNotice(null);
-    Promise.resolve()
-      .then(() => recoverLostDataImpl(id, volume))
-      .then(
-        result => {
-          if (!mounted.current) return;
-          const files = result && Number.isFinite(Number(result.files)) ? Number(result.files) : 0;
-          setRecovered(r => ({ ...r, [volume]: files }));
-          setNotice({ variant: "success", text: `Done: ${files} files recovered. The app is starting again.` });
-          if (onRecovered) onRecovered(volume);
-          setScan(s => s + 1);
-        },
-        e => {
-          if (!mounted.current) return;
-          setNotice({ variant: "danger", text: (e && e.message) || "Recovering the data failed. Try again." });
-        }
-      )
-      .then(() => mounted.current && setRunning(null));
-  }
+  const candidates = entry ? entry.candidates : [];
+  // volume -> date recovered (null: unknown): the DAPPMANAGER's list first,
+  // then the ones recovered here that it does not list yet.
+  const recovered = new Map();
+  for (const r of entry ? entry.recovered : []) recovered.set(r.volume, r.at == null ? null : r.at);
+  for (const [volume, at] of Object.entries(doneHere)) if (!recovered.has(volume)) recovered.set(volume, at);
+  const open = candidates.filter(c => !recovered.has(c.name));
+
+  if (!allowed || !(candidates.length > 0 || running || finishedHere)) return null;
 
   function ask(volume) {
     confirm({
       title: "Recover the data?",
       text: CONFIRM_TEXT,
       label: "Recover data",
-      onClick: () => recover(volume),
+      variant: "primary",
+      onClick: () => {
+        const promise = recoverLostDataImpl(id, volume);
+        // Home looks again however this ends, even if the user has left this page by then.
+        if (onFinished) promise.then(() => onFinished(volume), () => onFinished(volume));
+        follow({ volume, promise, startedAt: Date.now() });
+      },
     });
   }
 
@@ -139,42 +205,56 @@ export function LostDataCardView({
           Recover data copies it back. Nothing is deleted.
         </p>
         <ul className="mb-0 divide-y divide-border pl-0">
-          {rows.map(c => {
-            const date = createdOn(c.createdAt);
-            const done = recovered[c.name] !== undefined;
+          {open.map(c => {
+            const date = onDate(c.createdAt);
             return (
               <li key={c.name} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="text-sm font-medium text-fg">{date ? `Created ${date}` : "Date unknown"}</span>
                   <span className="break-words text-sm text-fg-muted">{contents(c)}</span>
                 </span>
-                {done ? (
-                  <Badge variant="success" className="self-start sm:self-center">
-                    Recovered
-                  </Badge>
-                ) : (
-                  <Button
-                    variant="primary"
-                    className="shrink-0 self-start sm:self-center"
-                    loading={running === c.name}
-                    disabled={running !== null}
-                    onClick={() => ask(c.name)}
-                  >
-                    Recover data
-                  </Button>
-                )}
+                <Button
+                  variant="primary"
+                  className="shrink-0 self-start sm:self-center"
+                  loading={Boolean(running) && running.volume === c.name}
+                  disabled={Boolean(running)}
+                  onClick={() => ask(c.name)}
+                >
+                  Recover data
+                </Button>
+              </li>
+            );
+          })}
+          {[...recovered.entries()].map(([volume, at]) => {
+            const date = onDate(at);
+            const info = known.current[volume];
+            return (
+              <li key={volume} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="text-sm font-medium text-fg">{date ? `Recovered on ${date}` : "Recovered"}</span>
+                  {info && <span className="break-words text-sm text-fg-muted">{contents(info)}</span>}
+                </span>
+                <Badge variant="success" className="self-start sm:self-center">
+                  Recovered
+                </Badge>
               </li>
             );
           })}
         </ul>
-        {notice && (
-          <div
-            role={notice.variant === "danger" ? "alert" : "status"}
-            className={`rounded-md border px-3 py-2 text-sm ${NOTICE[notice.variant]}`}
-          >
-            {notice.text}
+        {running && slow && (
+          <div role="status" className={`rounded-md border px-3 py-2 text-sm ${NOTICE.neutral}`}>
+            {STILL_COPYING}
           </div>
         )}
+        {notices.map(n => (
+          <div
+            key={n.variant}
+            role={n.variant === "danger" ? "alert" : "status"}
+            className={`rounded-md border px-3 py-2 text-sm ${NOTICE[n.variant]}`}
+          >
+            {n.text}
+          </div>
+        ))}
       </Card>
     </section>
   );

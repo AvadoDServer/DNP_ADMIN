@@ -305,7 +305,9 @@ export default {
    *     entries: [".rocketpool", "data"], {array} top-level names in it
    *     sizeKb: 2048, {number}
    *     target: "rocketpoolavadodnpdappnodeeth_rocketpool" {string} where it is copied to
-   *   }, ... ]
+   *   }, ... ],
+   *   recovered: [{ volume, at }] {array} volumes already recovered (left out
+   *     of candidates); at = ISO date string or null
    * }, ... ]
    */
   listLostData: {},
@@ -316,6 +318,7 @@ export default {
    *
    * @param {string} id DNP .eth name
    * @returns {object} LostDataEntry, with candidates: [] when there are none
+   *   (recovered can still list volumes)
    */
   findLostData: {
     manadatoryKwargs: ["id"],
@@ -330,7 +333,10 @@ export default {
    *
    * @param {string} id DNP .eth name
    * @param {string} volume a candidate's name, from findLostData
-   * @returns {object} { files, sizeKb }
+   * @returns {object} { files, sizeKb, skipped, warning? }
+   *   files: files in the old volume (skipped ones included)
+   *   skipped: files already in the app's storage, which were kept
+   *   warning: only when a skipped file looks like a wallet or a password
    */
   recoverLostData: {
     manadatoryKwargs: ["id", "volume"],

@@ -35,11 +35,11 @@ describe("AppOverview", () => {
     expect(screen.getByText("controls")).toBeInTheDocument();
   });
 
-  it("leaves the lost-data findings to the card, and hides the Home finding once a volume is recovered", () => {
-    const dismiss = vi.fn();
+  it("leaves the lost-data findings to the card, and asks Home to scan again when a recovery ends", () => {
+    const refreshLostData = vi.fn();
     const RP = "rocketpool.avado.dnp.dappnode.eth";
     useHealthMock.mockReturnValue({
-      dismiss,
+      refreshLostData,
       allFindings: [
         { id: `lost-data:${RP}:old`, appId: RP },
         { id: `app-stopped:${RP}`, appId: RP },
@@ -48,7 +48,8 @@ describe("AppOverview", () => {
     render(<AppOverview dnp={{ name: RP }} isCore={false} />);
     expect(screen.queryByText(`finding lost-data:${RP}:old`)).toBeNull();
     expect(screen.getByText(`finding app-stopped:${RP}`)).toBeInTheDocument();
-    lostDataCardMock.mock.calls[0][0].onRecovered("old");
-    expect(dismiss).toHaveBeenCalledWith(`lost-data:${RP}:old`);
+    expect(lostDataCardMock.mock.calls[0][0].onRecovered).toBeUndefined();
+    lostDataCardMock.mock.calls[0][0].onFinished("old");
+    expect(refreshLostData).toHaveBeenCalledWith({ force: true });
   });
 });

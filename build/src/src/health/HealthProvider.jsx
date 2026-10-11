@@ -113,8 +113,13 @@ export function HealthProvider({
   // volume. null until read, and while the DAPPMANAGER is older than 10.0.51
   // (the lostData rule is then skipped).
   const [lostData, setLostData] = useState(null);
-  const [lostDataTick, setLostDataTick] = useState(0);
-  const lostDataStartedAt = useRef(0);
+  // The scan in progress: never two at once (a DAPPMANAGER scan probes
+  // volumes one by one and can take minutes on a box with big ones).
+  // `again`: a forced scan asked for while one ran; it runs right after.
+  const lostDataScan = useRef({ pending: false, again: false, startedAt: 0 });
+  const lostDataAllowedRef = useRef(false);
+  const fetchLostDataRef = useRef(fetchLostDataImpl);
+  fetchLostDataRef.current = fetchLostDataImpl;
 
   // A string derived from installed name@version pairs. Used as an effect
   // dependency instead of the `packages` array itself, whose identity changes
@@ -270,35 +275,51 @@ export function HealthProvider({
   }, [careRunning, tick]);
 
   // Lost data (DAPPMANAGER 10.0.51 and newer only: an older core never gets
-  // the call). Every 10 minutes, and on each Home visit (refreshLostData).
-  // A failed read keeps the last answer and leaves one debug line.
+  // the call). Every 10 minutes, on "Check again", on each Home visit and
+  // after a recovery (refreshLostData). A scan is skipped while another one
+  // runs. A failed read keeps the last answer and leaves one debug line.
   const lostDataAllowed = canFindLostData(packages);
+  lostDataAllowedRef.current = lostDataAllowed;
+  const scanLostData = useCallback(function scan(force) {
+    const state = lostDataScan.current;
+    if (!lostDataAllowedRef.current) return;
+    if (state.pending) {
+      if (force) state.again = true;
+      return;
+    }
+    state.pending = true;
+    state.again = false;
+    state.startedAt = Date.now();
+    Promise.resolve()
+      .then(() => fetchLostDataRef.current())
+      .then(
+        list => lostDataAllowedRef.current && setLostData(Array.isArray(list) ? list : []),
+        e => console.debug(`listLostData failed: ${e && e.message}`)
+      )
+      .then(() => {
+        state.pending = false;
+        if (state.again) scan(true);
+      });
+  }, []);
   useEffect(() => {
     if (!lostDataAllowed) {
       setLostData(null);
       return undefined;
     }
-    let cancelled = false;
-    const load = () => {
-      lostDataStartedAt.current = Date.now();
-      Promise.resolve()
-        .then(() => fetchLostDataImpl())
-        .then(list => !cancelled && setLostData(Array.isArray(list) ? list : []))
-        .catch(e => !cancelled && console.debug(`listLostData failed: ${e && e.message}`));
-    };
-    load();
-    const t = setInterval(load, LOST_DATA_INTERVAL);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [lostDataAllowed, tick, lostDataTick]);
-  // Nothing to do before the first scan: the effect above runs it as soon as
-  // the DAPPMANAGER is known to have the call.
-  const refreshLostData = useCallback(() => {
-    const started = lostDataStartedAt.current;
-    if (started && Date.now() - started >= LOST_DATA_MIN_GAP_MS) setLostDataTick(t => t + 1);
-  }, []);
+    scanLostData(false);
+    const t = setInterval(() => scanLostData(false), LOST_DATA_INTERVAL);
+    return () => clearInterval(t);
+  }, [lostDataAllowed, tick, scanLostData]);
+  // Home: nothing to do before the first scan (the effect above runs it as
+  // soon as the DAPPMANAGER is known to have the call), nor within 30 s of
+  // the last one. `force` (after a recovery) skips both checks.
+  const refreshLostData = useCallback(
+    ({ force = false } = {}) => {
+      const started = lostDataScan.current.startedAt;
+      if (force || (started && Date.now() - started >= LOST_DATA_MIN_GAP_MS)) scanLostData(force);
+    },
+    [scanLostData]
+  );
 
   const updates = useMemo(
     () => (store.packages ? computeUpdates(store.packages, packages) : null),
@@ -374,9 +395,9 @@ export function HealthProvider({
       checksPassed,
       checksTotal,
       refresh: () => setTick(t => t + 1),
-      // Home calls this on each visit: scans for lost data again (DAPPMANAGER
-      // 10.0.51 and newer) unless a scan started in the last 30 seconds or
-      // none has run yet.
+      // Scans for lost data again (DAPPMANAGER 10.0.51 and newer). Home calls
+      // it on each visit (skipped within 30 s of the last scan or before the
+      // first one); the Recover data card with { force: true } when done.
       refreshLostData,
       dismiss: id => {
         persistDismiss(id);

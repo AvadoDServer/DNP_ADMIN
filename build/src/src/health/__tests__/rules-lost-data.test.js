@@ -86,6 +86,12 @@ describe("lostData rule", () => {
     expect(run([entry(RP, [candidate("v1")])], [])[0].title).toBe("rocketpool has data in an unused storage volume");
   });
 
+  it("makes findings only for candidates, not for volumes already recovered", () => {
+    const withRecovered = { ...entry(RP, [candidate("still-there")]), recovered: [{ volume: "done", at: "2025-06-02T08:00:00Z" }] };
+    expect(run([withRecovered]).map(f => f.id)).toEqual([`lost-data:${RP}:still-there`]);
+    expect(run([{ ...entry(RP, []), recovered: [{ volume: "done", at: null }] }])).toEqual([]);
+  });
+
   it("skips malformed entries and candidates", () => {
     expect(run([null, { candidates: [candidate("v1")] }, entry(RP, [null, { sizeKb: 1 }, candidate("ok")])]).map(f => f.id)).toEqual([
       `lost-data:${RP}:ok`,
