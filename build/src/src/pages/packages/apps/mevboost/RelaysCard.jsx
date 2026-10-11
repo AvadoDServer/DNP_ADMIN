@@ -58,13 +58,18 @@ function RelayRow({ row, onToggle }) {
     <li className="flex items-start justify-between gap-3 py-3">
       <label className="mb-0 flex min-w-0 flex-1 cursor-pointer items-start gap-3">
         <input type="checkbox" className={checkboxClass} checked={row.checked} onChange={onToggle} />
-        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="break-all text-sm font-medium text-fg">{row.name}</span>
-          {row.filtering === "none" && <Badge>No filtering</Badge>}
-          {row.filtering === "sanctions" && <Badge>Filters sanctioned transactions</Badge>}
-          {row.status === "retired" && <Badge variant="warning">No longer running</Badge>}
-          {row.custom && <Badge variant="accent">Custom relay</Badge>}
-          {row.pubkeyMismatch && <Badge variant="warning">Key differs from the known one</Badge>}
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="break-all text-sm font-medium text-fg">{row.name}</span>
+            {row.filtering === "none" && <Badge>No filtering</Badge>}
+            {row.filtering === "sanctions" && <Badge>Filters sanctioned transactions</Badge>}
+            {row.status === "retired" && <Badge variant="warning">No longer running</Badge>}
+            {row.custom && <Badge variant="accent">Custom relay</Badge>}
+            {row.pubkeyMismatch && <Badge variant="warning">Key differs from the known one</Badge>}
+          </span>
+          {row.status === "retired" && row.checked && (
+            <span className="text-xs text-fg-muted">Untick it, or press Use recommended.</span>
+          )}
         </span>
       </label>
       {about && (
@@ -109,21 +114,26 @@ export function RelaysCardView({ dnp, updateEnvs }) {
   const update = patch => setForm(f => ({ ...f, ...patch, touched: true }));
 
   const ticked = form ? form.rows.filter(r => r.checked).length : 0;
+  // Ticked relays that still run: a retired one never answers.
+  const running = form ? form.rows.filter(r => r.checked && r.status !== "retired").length : 0;
   const amountOk = !form || form.mode !== "above" || readMinBid(form.amount) !== null;
   // What Save would write; Save is on only when that differs from what the box has.
   const payload = form && toEnvs(form.rows, { minBid: minBidOf(form), rest: form.rest }, envs);
   const dirty = Boolean(payload) && !sameSettings(payload, envs);
-  const canSave = dirty && ticked > 0 && amountOk && !saving;
+  const canSave = dirty && running > 0 && amountOk && !saving;
 
   function toggle(url) {
     update({ rows: form.rows.map(r => (r.url === url ? { ...r, checked: !r.checked } : r)) });
   }
 
   function useRecommended() {
+    // Takes every bid, keeping the other options, unless the minimum can't be
+    // read at all (then EXTRA_OPTS stays as it is). A readable minimum outside
+    // the card's range is dropped too.
+    const { minBid, rest } = parseExtraOpts(envs.EXTRA_OPTS);
     update({
       rows: applyRecommended(form.rows, list.relays),
-      // Takes every bid, unless the minimum is one the card can't read.
-      mode: form.mode === null ? null : "every",
+      ...(minBid === null ? {} : { mode: "every", rest }),
     });
   }
 
@@ -149,7 +159,7 @@ export function RelaysCardView({ dnp, updateEnvs }) {
         </p>
 
         {loaded && loaded.stale && (
-          <p className="mb-0 text-sm text-warning-text">
+          <p className="mb-0 text-sm text-fg-muted">
             Showing the relay list from {listDate(list.updatedAt)}. Your AVADO could not check for a newer one.
           </p>
         )}
@@ -162,21 +172,24 @@ export function RelaysCardView({ dnp, updateEnvs }) {
           </div>
         ) : (
           <>
-            <div>
+            <fieldset className="min-w-0">
+              <legend className="sr-only">Relays</legend>
               <ul className="mb-0 divide-y divide-border pl-0">
                 {form.rows.map(row => (
                   <RelayRow key={row.url} row={row} onToggle={() => toggle(row.url)} />
                 ))}
               </ul>
-              {ticked === 0 && form.touched && (
+              {running === 0 && (form.touched || ticked > 0) && (
                 <p role="status" className="mb-0 mt-2 text-sm font-medium text-danger-text">
-                  Tick at least one relay.
+                  Tick at least one relay that is still running.
                 </p>
               )}
               {ticked === 0 && !form.touched && (
-                <p className="mb-0 mt-2 text-sm text-fg-muted">No relays are set yet. Use recommended picks a good set.</p>
+                <p className="mb-0 mt-2 text-sm text-fg-muted">
+                  No relays are set yet. Press &quot;Use recommended&quot; to pick a good set.
+                </p>
               )}
-            </div>
+            </fieldset>
 
             <fieldset className="flex min-w-0 flex-col gap-3">
               <legend className="mb-2 text-sm font-semibold text-fg">Minimum bid</legend>

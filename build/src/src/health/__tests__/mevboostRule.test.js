@@ -10,6 +10,7 @@ const CUSTOM = `https://0x${"ab".repeat(48)}@relay.example.org`;
 const RETIRED_WHY = "At least one of its relays is no longer running, so it waits on an answer that never comes.";
 const ONE_WHY = "It uses only one relay, so it gets few bids for your blocks.";
 const NONE_WHY = "None of its relays is on AVADO's list, so AVADO cannot tell whether they work.";
+const EMPTY_WHY = "It has no relays set, so it gets no bids for your blocks.";
 
 const mev = (relays, extra = {}) => ({
   name: MEVBOOST_PACKAGE,
@@ -33,23 +34,24 @@ describe("mevboostRelays", () => {
   it("warns when a relay is retired, with a link to the app page", () => {
     expect(run(mev([live[0].url, live[1].url, retired.url].join(",")))).toEqual([
       {
-        id: "mevboost-relays",
+        id: "mevboost-relays:retired",
         severity: "warning",
         topic: "setup",
         appId: MEVBOOST_PACKAGE,
         title: "MEV-Boost relays need a look",
         why: RETIRED_WHY,
         fix: { kind: "link", to: `/packages/${MEVBOOST_PACKAGE}?tab=overview`, label: "Check relays" },
+        dismissable: true,
       },
     ]);
   });
 
   it("says retired before one relay", () => {
-    expect(run(mev(retired.url))[0].why).toBe(RETIRED_WHY);
+    expect(run(mev(retired.url))[0]).toMatchObject({ id: "mevboost-relays:retired", why: RETIRED_WHY });
   });
 
   it("warns when it uses only one relay", () => {
-    expect(run(mev(live[0].url))[0].why).toBe(ONE_WHY);
+    expect(run(mev(live[0].url))[0]).toMatchObject({ id: "mevboost-relays:one", why: ONE_WHY, dismissable: true });
   });
 
   it("says one relay before none known", () => {
@@ -58,7 +60,7 @@ describe("mevboostRelays", () => {
 
   it("warns when none of its relays is on the list", () => {
     const other = `https://0x${"cd".repeat(48)}@other.example.org`;
-    expect(run(mev(`${CUSTOM},${other}`))[0].why).toBe(NONE_WHY);
+    expect(run(mev(`${CUSTOM},${other}`))[0]).toMatchObject({ id: "mevboost-relays:none", why: NONE_WHY, dismissable: true });
   });
 
   it("counts a list relay with a different key as unknown", () => {
@@ -67,8 +69,10 @@ describe("mevboostRelays", () => {
     expect(run(mev(`${wrongKey},${other}`))[0].why).toBe(NONE_WHY);
   });
 
-  it("warns with the none-known sentence when RELAYS is empty", () => {
-    expect(run(mev(""))[0].why).toBe(NONE_WHY);
+  it("warns with its own sentence when RELAYS is empty", () => {
+    for (const value of ["", " , "]) {
+      expect(run(mev(value))[0]).toMatchObject({ id: "mevboost-relays:empty", why: EMPTY_WHY, dismissable: true });
+    }
   });
 
   it("reads the manifest default when the box has no value", () => {
@@ -90,6 +94,11 @@ describe("mevboostRelays", () => {
 
   it("finds nothing when MEV-Boost is stopped", () => {
     expect(run(mev(retired.url, { state: "exited" }))).toEqual([]);
-    expect(run(mev("", { state: "restarting" }))).toEqual([]);
+    expect(run(mev(retired.url, { state: "dead" }))).toEqual([]);
+  });
+
+  it("still warns when MEV-Boost is restarting over and over", () => {
+    expect(run(mev("", { state: "restarting" }))[0].id).toBe("mevboost-relays:empty");
+    expect(run(mev(retired.url, { state: "restarting" }))[0].id).toBe("mevboost-relays:retired");
   });
 });

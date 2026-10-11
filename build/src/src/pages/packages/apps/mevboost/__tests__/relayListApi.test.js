@@ -73,6 +73,31 @@ describe("parseRelayList", () => {
     expect(parseRelayList(doc({ relays: [first, other, second] })).relays).toEqual([first, other]);
   });
 
+  it("gives null when a relay address is not https://0x<key>@host", () => {
+    const key = "0x" + "a".repeat(96);
+    const bad = [
+      `https://${key}@relay.one,https://${key}@relay.two`,
+      `https://${key}@relay one.org`,
+      " https://" + key + "@relay.ultrasound.money",
+      "https://relay.ultrasound.money",
+      `http://${key}@relay.ultrasound.money`,
+      `https://0x${"a".repeat(95)}@relay.ultrasound.money`,
+      `https://${key}@relay.ultrasound.money/path`,
+    ];
+    for (const url of bad) expect(parseRelayList(doc({ relays: [relay({ url })] }))).toBeNull();
+    for (const url of [`https://${key}@relay.ultrasound.money/`, `https://0x${"A".repeat(96)}@relay.example.org:8443`]) {
+      expect(parseRelayList(doc({ relays: [relay({ url })] }))).not.toBeNull();
+    }
+  });
+
+  it("gives null when no relay is both recommended and live", () => {
+    expect(parseRelayList(doc({ relays: [] }))).toBeNull();
+    expect(parseRelayList(doc({ relays: [relay({ recommended: false })] }))).toBeNull();
+    expect(parseRelayList(doc({ relays: [relay({ status: "retired" })] }))).toBeNull();
+    const other = relay({ id: "other", url: "https://0x" + "b".repeat(96) + "@agnostic-relay.net", recommended: false });
+    expect(parseRelayList(doc({ relays: [other, relay()] }))).not.toBeNull();
+  });
+
   it("gives null when a relay lacks id, name, url or status", () => {
     for (const key of ["id", "name", "url", "status"]) {
       expect(parseRelayList(doc({ relays: [relay({ [key]: undefined })] }))).toBeNull();
@@ -138,6 +163,11 @@ describe("loadRelayList", () => {
       () => Promise.resolve({ data: "<!doctype html><html><body>Bad gateway</body></html>" }),
       () => Promise.resolve({ data: doc({ schema: 2 }) }),
       () => Promise.resolve(undefined),
+      // A relay address with a comma, a space or no key, and a list with no relays.
+      () => Promise.resolve({ data: doc({ relays: [relay({ url: relay().url + ",https://0x" + "b".repeat(96) + "@evil.example" })] }) }),
+      () => Promise.resolve({ data: doc({ relays: [relay({ url: relay().url.replace("@", "@ ") })] }) }),
+      () => Promise.resolve({ data: doc({ relays: [relay({ url: "https://relay.ultrasound.money" })] }) }),
+      () => Promise.resolve({ data: doc({ relays: [] }) }),
     ];
     for (const get of failures) {
       resetRelayListCache();

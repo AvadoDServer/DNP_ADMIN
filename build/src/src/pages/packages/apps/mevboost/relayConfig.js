@@ -7,14 +7,15 @@ const PUBKEY = /^0x[0-9a-f]{96}$/;
 const MIN_BID_FLAG = /^--?min-bid(?:=(.*))?$/;
 const NUMBER = /^(?:\d+\.?\d*|\.\d+)$/;
 
-// Same rules as relayHost / relayPubkey in AVADO-DNP-MEV-Boost scripts/lib/relays.mjs.
+// Same rules as relayHost / relayPubkey in AVADO-DNP-MEV-Boost scripts/lib/relays.mjs,
+// except that here the scheme is optional (a box's RELAYS may leave it out).
 function relayHost(url) {
   const after = String(url).split("@").pop().replace(/^https?:\/\//i, "");
   return after.replace(/\/+$/, "").toLowerCase();
 }
 
 function relayPubkey(url) {
-  const m = /^https?:\/\/(0x[0-9a-fA-F]+)@/i.exec(String(url));
+  const m = /^(?:https?:\/\/)?(0x[0-9a-fA-F]+)@/i.exec(String(url));
   if (!m) return null;
   const k = m[1].toLowerCase();
   return PUBKEY.test(k) ? k : null;
@@ -153,9 +154,16 @@ export function recommendedSelection(list) {
   return new Set(list.filter(r => r.recommended && r.status === "live").map(r => r.id));
 }
 
+// Ticks exactly the recommended live relays. Custom rows stay ticked, except
+// a known host with another key when that relay is recommended: the list's
+// current address replaces it.
 export function applyRecommended(rows, list) {
   const selected = recommendedSelection(list);
-  return rows.map(r => (r.custom ? r : { ...r, checked: selected.has(r.id) }));
+  const replaced = new Set(list.filter(r => selected.has(r.id)).map(r => relayHost(r.url)));
+  return rows.map(r => {
+    if (!r.custom) return { ...r, checked: selected.has(r.id) };
+    return r.pubkeyMismatch && replaced.has(r.host) ? { ...r, checked: false } : r;
+  });
 }
 
 export function toEnvs(rows, extra, currentEnvs) {

@@ -24,11 +24,16 @@ const TIMEOUT_MS = 8000;
 
 const isObject = v => typeof v === "object" && v !== null && !Array.isArray(v);
 const isText = v => typeof v === "string" && v.length > 0;
+// One relay address as MEV-Boost takes it: no commas, spaces or anything else
+// that would change the RELAYS value it is written into.
+const RELAY_URL = /^https:\/\/0x[0-9a-fA-F]{96}@[A-Za-z0-9.-]+(:\d+)?\/?$/;
 
 /**
  * A relay list document, checked, or null. Takes a JSON string (encoded once
- * or twice) or an object. Every relay needs id, name, url and status as text
- * and recommended as true/false; a repeated url keeps only its first entry.
+ * or twice) or an object. Every relay needs id, name and status as text, a
+ * url of the form https://0x<key>@host, and recommended as true/false; at
+ * least one relay must be recommended and live (or Use recommended would pick
+ * nothing). A repeated url keeps only its first entry.
  */
 export function parseRelayList(body) {
   let doc = body;
@@ -42,9 +47,17 @@ export function parseRelayList(body) {
   }
   if (!isObject(doc) || doc.schema !== 1 || !Array.isArray(doc.relays)) return null;
   const valid = doc.relays.every(
-    r => isObject(r) && isText(r.id) && isText(r.name) && isText(r.url) && isText(r.status) && typeof r.recommended === "boolean"
+    r =>
+      isObject(r) &&
+      isText(r.id) &&
+      isText(r.name) &&
+      isText(r.url) &&
+      RELAY_URL.test(r.url) &&
+      isText(r.status) &&
+      typeof r.recommended === "boolean"
   );
   if (!valid) return null;
+  if (!doc.relays.some(r => r.recommended === true && r.status === "live")) return null;
   // One row per address: a repeated url keeps its first entry.
   const seen = new Set();
   const relays = doc.relays.filter(r => !seen.has(r.url) && seen.add(r.url));

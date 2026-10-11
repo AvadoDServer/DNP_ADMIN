@@ -198,6 +198,15 @@ describe("mergeWithList", () => {
     });
   });
 
+  it("matches a list relay written without https://", () => {
+    const bare = `${key("a")}@relay.ultrasound.money`;
+    expect(parseRelays(bare)[0].pubkey).toBe(key("a"));
+    const rows = mergeWithList(parseRelays(bare), list);
+    expect(rows.find(r => r.id === "ultrasound").checked).toBe(true);
+    expect(rows.some(r => r.custom)).toBe(false);
+    expect(toEnvs(rows, { minBid: 0, rest: "" }, {}).RELAYS).toBe(url("a", "relay.ultrasound.money"));
+  });
+
   it("keeps custom rows in the box's order and shows a repeated entry once", () => {
     const one = url("e", "one.custom.relay");
     const two = url("e", "two.custom.relay");
@@ -223,6 +232,21 @@ describe("recommendedSelection and applyRecommended", () => {
       ["bloxroute-ethical", false],
       ["custom:my.custom.relay", true],
     ]);
+  });
+
+  it("swaps a rotated key on a recommended relay for the list's address", () => {
+    const rotated = url("9", "relay.ultrasound.money");
+    const custom = url("e", "my.custom.relay");
+    const rows = applyRecommended(mergeWithList(parseRelays([rotated, custom].join(",")), list), list);
+    expect(toEnvs(rows, { minBid: 0, rest: "" }, {}).RELAYS).toBe(
+      [url("a", "relay.ultrasound.money"), url("b", "agnostic-relay.net"), custom].join(",")
+    );
+  });
+
+  it("keeps a different key on a relay that is not recommended", () => {
+    const rotated = url("9", "regional.titanrelay.xyz");
+    const rows = applyRecommended(mergeWithList(parseRelays(rotated), list), list);
+    expect(rows.find(r => r.url === rotated)).toMatchObject({ custom: true, pubkeyMismatch: true, checked: true });
   });
 });
 

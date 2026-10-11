@@ -71,6 +71,8 @@ describe("RelaysCard", () => {
     expect(box("my.custom.relay")).toBeChecked();
     // A retired relay the box does not have is not offered.
     expect(screen.queryByRole("checkbox", { name: /Manifold/ })).toBeNull();
+    // The checkboxes are one named group.
+    expect(within(screen.getByRole("group", { name: "Relays" })).getAllByRole("checkbox")).toHaveLength(5);
   });
 
   it("labels each row: filtering, retired, custom and the about link", async () => {
@@ -79,6 +81,8 @@ describe("RelaysCard", () => {
     expect(within(row("Titan Relay Regional")).getByText("Filters sanctioned transactions")).toBeInTheDocument();
     expect(within(row("bloXroute Ethical")).getByText("No longer running")).toBeInTheDocument();
     expect(within(row("Ultra Sound")).queryByText("No longer running")).toBeNull();
+    expect(within(row("bloXroute Ethical")).getByText("Untick it, or press Use recommended.")).toBeInTheDocument();
+    expect(within(row("Ultra Sound")).queryByText("Untick it, or press Use recommended.")).toBeNull();
 
     const custom = row("my.custom.relay");
     expect(within(custom).getByText("Custom relay")).toBeInTheDocument();
@@ -101,6 +105,16 @@ describe("RelaysCard", () => {
     expect(within(other).getByText("Key differs from the known one")).toBeInTheDocument();
     expect(within(other).getByText("Custom relay")).toBeInTheDocument();
     expect(box("Ultra Sound")).not.toBeChecked();
+  });
+
+  it("Use recommended swaps a rotated key on a recommended relay for the list's address", async () => {
+    const rotated = url("9", "relay.ultrasound.money");
+    const { updateEnvs } = await renderCard({ dnp: dnpWith({ RELAYS: [rotated, CUSTOM].join(","), EXTRA_OPTS: "" }) });
+    fireEvent.click(useRecommended());
+    expect(box("relay.ultrasound.money")).not.toBeChecked();
+    expect(box("my.custom.relay")).toBeChecked();
+    await clickSave();
+    expect(updateEnvs.mock.calls[0][1].RELAYS).toBe([ULTRA, AGNOSTIC, CUSTOM].join(","));
   });
 
   it("shows the box's minimum bid", async () => {
@@ -191,14 +205,37 @@ describe("RelaysCard", () => {
       await clickSave();
       expect(updateEnvs).toHaveBeenCalledWith(MEVBOOST_PACKAGE, { NETWORK: "mainnet", RELAYS: [ULTRA, AGNOSTIC].join(","), EXTRA_OPTS: value });
     });
+
+    it(`Use recommended takes every bid over a readable minimum outside the card's range, keeping other options (${value})`, async () => {
+      const { updateEnvs } = await renderCard({ dnp: dnpWith({ RELAYS: ULTRA, EXTRA_OPTS: `-json ${value}` }) });
+      fireEvent.click(useRecommended());
+      expect(screen.getByRole("radio", { name: "Take every bid (recommended)" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "Only bids above" })).toBeEnabled();
+      expect(screen.queryByText(/A custom value is set/)).toBeNull();
+      expect(screen.getByText("Other options are set and are kept as they are: -json")).toBeInTheDocument();
+      await clickSave();
+      expect(updateEnvs.mock.calls[0][1].EXTRA_OPTS).toBe("-json");
+    });
   }
 
   it("unticking every relay turns Save off and says why", async () => {
     await renderCard();
-    expect(screen.queryByText("Tick at least one relay.")).toBeNull();
+    expect(screen.queryByText("Tick at least one relay that is still running.")).toBeNull();
     for (const name of ["Ultra Sound", "bloXroute Ethical", "my.custom.relay"]) fireEvent.click(box(name));
-    expect(screen.getByRole("status")).toHaveTextContent("Tick at least one relay.");
+    expect(screen.getByRole("status")).toHaveTextContent("Tick at least one relay that is still running.");
     expect(save()).toBeDisabled();
+  });
+
+  it("keeps Save off when only a retired relay is ticked", async () => {
+    await renderCard({ dnp: dnpWith({ RELAYS: [ULTRA, ETHICAL].join(","), EXTRA_OPTS: "" }) });
+    expect(screen.queryByRole("status")).toBeNull();
+    fireEvent.click(box("Ultra Sound"));
+    expect(box("bloXroute Ethical")).toBeChecked();
+    expect(screen.getByRole("status")).toHaveTextContent("Tick at least one relay that is still running.");
+    expect(save()).toBeDisabled();
+    fireEvent.click(box("Agnostic Gnosis"));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(save()).toBeEnabled();
   });
 
   it("on a box with no relays, points to Use recommended and saves the recommended set", async () => {
@@ -206,8 +243,8 @@ describe("RelaysCard", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(3);
     for (const name of ["Ultra Sound", "Agnostic Gnosis", "Titan Relay Regional"]) expect(box(name)).not.toBeChecked();
     expect(screen.queryByRole("checkbox", { name: /bloXroute Ethical/ })).toBeNull();
-    expect(screen.getByText("No relays are set yet. Use recommended picks a good set.")).toBeInTheDocument();
-    expect(screen.queryByText("Tick at least one relay.")).toBeNull();
+    expect(screen.getByText('No relays are set yet. Press "Use recommended" to pick a good set.')).toBeInTheDocument();
+    expect(screen.queryByRole("status")).toBeNull();
     expect(save()).toBeDisabled();
     fireEvent.click(useRecommended());
     expect(screen.queryByText(/No relays are set yet/)).toBeNull();
@@ -266,9 +303,9 @@ describe("RelaysCard", () => {
 
   it("says when it shows the bundled list because it could not check for a newer one", async () => {
     await renderCard({ stale: true });
-    expect(
-      screen.getByText("Showing the relay list from October 11, 2026. Your AVADO could not check for a newer one.")
-    ).toBeInTheDocument();
+    const note = screen.getByText("Showing the relay list from October 11, 2026. Your AVADO could not check for a newer one.");
+    expect(note).toHaveClass("text-fg-muted");
+    expect(note).not.toHaveClass("text-warning-text");
   });
 
   it("shows no such note when the list is current", async () => {
