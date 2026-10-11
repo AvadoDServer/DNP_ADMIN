@@ -14,7 +14,7 @@ export function stakingSteps(packages, manual = {}) {
       state: manual.keys ? "done" : "todo", action: ccSetup },
     { id: "feeRecipient", title: "Set your fee recipient", why: "The address that receives transaction tips from the blocks you propose.", auto: false,
       state: manual.feeRecipient ? "done" : "todo", action: ccSetup },
-    { id: "mev", title: "Add MEV-Boost", why: "Optional. Earns more from the blocks you propose.", auto: true,
+    { id: "mev", title: "Add MEV-Boost", why: "Optional. Earns more from the blocks you propose. Once installed, check its relays on the app page.", auto: true,
       state: installed(MEVBOOST_PACKAGE) ? "done" : "optional", action: { label: "Install MEV-Boost", to: `/installer/${MEVBOOST_PACKAGE}` } },
     { id: "monitoring", title: "Add monitoring", why: "Optional. Dashboards, and warnings about missed attestations on Home.", auto: true,
       state: installed(GRAFANA_PACKAGE) ? "done" : "optional", action: { label: "Install monitoring", to: `/installer/${GRAFANA_PACKAGE}` } },
