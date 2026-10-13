@@ -27,6 +27,10 @@ import { formatDockerSize } from "health/rules/storage";
 
 export const RESET_LABEL = "Reset IPFS storage";
 export const PROGRESS_TEXT = "Resetting IPFS storage…";
+export const STILL_RESETTING_TEXT = "Still resetting…";
+export const DONE_UNKNOWN_SIZE_TEXT = "Done: IPFS is running again";
+export const LOST_TEXT =
+  "The connection to your AVADO was lost during the reset. Reload the page; if IPFS is not running, press Reset IPFS storage again.";
 const NOT_SURE =
   "Could not tell whether the reset finished. Reload the page; if IPFS still keeps restarting, contact AVADO support.";
 
@@ -98,13 +102,54 @@ export function subscribeIpfsReset(listener) {
   return () => listeners.delete(listener);
 }
 
+// The call failed in transport, not in the DAPPMANAGER: the DAPPMANAGER
+// restarted or the connection dropped, so the reset's outcome is unknown.
+const TRANSPORT_ERROR =
+  /callee disconnected|wamp\.error\.(canceled|cancelled|timeout)|connection (is )?(not open|lost|closed)|session (object )?is not defined|timed? ?out/i;
+export const isTransportError = e => TRANSPORT_ERROR.test(String((e && e.message) || e || ""));
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * After a transport failure: reads getIpfsHealth until it answers (the
+ * connection is back) and says how the reset ended. Up to `attempts` failed
+ * reads, `delayMs` apart (about a minute); while the DAPPMANAGER still runs
+ * the reset it keeps asking.
+ * @returns {Promise<{ status, text }>} text never holds the raw error
+ */
+export async function outcomeFromHealth({ healthImpl = getIpfsHealth, delayMs = 5000, attempts = 12, onRunning = () => {} } = {}) {
+  let failures = 0;
+  while (failures < attempts) {
+    await sleep(delayMs);
+    let health;
+    try {
+      health = await healthImpl();
+    } catch (e) {
+      failures++;
+      console.debug(`getIpfsHealth after a lost reset answer failed: ${e && e.message}`);
+      continue;
+    }
+    if (!health || typeof health !== "object") {
+      failures++;
+      continue;
+    }
+    if (health.resetRunning) {
+      onRunning();
+      continue;
+    }
+    if (health.exists && health.running && !health.restarting) return { status: "done", text: DONE_UNKNOWN_SIZE_TEXT };
+    return { status: "error", text: LOST_TEXT };
+  }
+  return { status: "error", text: LOST_TEXT };
+}
+
 /**
  * Starts the reset, or returns the one already running. Settles with the
  * DAPPMANAGER's own answer; never rejects (the outcome is in the state).
  * origin: "finding" (Home) or "storage" (System > Storage)
  * toast: shows the progress and the result as a toast too
  */
-export function startIpfsReset({ origin = "storage", resetImpl = callReset, toastImpl = null } = {}) {
+export function startIpfsReset({ origin = "storage", resetImpl = callReset, toastImpl = null, followUp = {} } = {}) {
   const running = inFlight.get(KEY);
   if (running) return running.promise;
   const toast = toastImpl ? toastImpl(PROGRESS_TEXT) : null;
@@ -121,7 +166,21 @@ export function startIpfsReset({ origin = "storage", resetImpl = callReset, toas
     .then(() => resetImpl())
     .then(
       result => settle("done", resultText(result)),
-      e => settle("error", (e && e.message) || "Resetting the IPFS storage failed. Try again.")
+      e => {
+        if (!isTransportError(e)) {
+          settle("error", (e && e.message) || "Resetting the IPFS storage failed. Try again.");
+          return undefined;
+        }
+        // Never shown: the outcome is read from the health instead
+        console.debug(`resetIpfsData lost its answer: ${e && e.message}`);
+        return outcomeFromHealth({
+          ...followUp,
+          onRunning: () => {
+            if (inFlight.get(KEY) === entry && state && state.text !== STILL_RESETTING_TEXT)
+              setState({ status: "running", text: STILL_RESETTING_TEXT, origin });
+          },
+        }).then(({ status, text }) => settle(status, text));
+      }
     );
   inFlight.set(KEY, entry);
   return entry.promise;
