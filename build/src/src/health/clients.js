@@ -78,6 +78,19 @@ export function canFindLostData(packages) {
   return dappmanagerAtLeast(packages, LOST_DATA_SINCE);
 }
 
+// The DAPPMANAGER that has getIpfsHealth and resetIpfsData.
+export const IPFS_RESET_SINCE = "10.0.52";
+export const IPFS_PACKAGE = "ipfs.dnp.dappnode.eth";
+
+/**
+ * True when the installed DAPPMANAGER is 10.0.52 or newer, the first one that
+ * reports IPFS's restarts and can reset its storage. An older or unreadable
+ * version is false, so those calls are never sent to a core without them.
+ */
+export function canResetIpfsData(packages) {
+  return dappmanagerAtLeast(packages, IPFS_RESET_SINCE);
+}
+
 // The installed DAPPMANAGER (a core package in `packages`) is `since` or newer.
 function dappmanagerAtLeast(packages, since) {
   const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);

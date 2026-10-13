@@ -12,8 +12,9 @@ import { fetchMetrics, fetchDiskTrend } from "./prometheus";
 import { fetchFeeRecipients, VALIDATOR_CLIENTS } from "./feeRecipients";
 import { trackUpdateAges } from "./updateAges";
 import { CARE_PACKAGE, careFindingsFromStatus, fetchCareStatus, mergeCareFindings } from "./careFindings";
-import { PROMETHEUS_PACKAGE, canFindLostData } from "./clients";
+import { PROMETHEUS_PACKAGE, canFindLostData, canResetIpfsData } from "./clients";
 import { listLostData } from "pages/packages/lostDataApi";
+import { getIpfsHealth, noteIpfsHealth, ipfsResetState, subscribeIpfsReset } from "pages/system/ipfsResetApi";
 import { runChecksDetailed, verdictOf, SEVERITIES, TOPICS } from "./engine";
 import { diskForecast } from "./rules/storage";
 
@@ -41,6 +42,9 @@ const LOST_DATA_INTERVAL = 10 * 60 * 1000;
 // Home asks again on every visit, but not when the last scan started less
 // than this long ago (opening the Admin on Home would otherwise scan twice).
 const LOST_DATA_MIN_GAP_MS = 30 * 1000;
+// getIpfsHealth is one `docker inspect`; often enough that a crash loop
+// shows within minutes and the DAPPMANAGER can count restarts per hour.
+const IPFS_HEALTH_INTERVAL = 2 * 60 * 1000;
 const UPDATE_AGES_KEY = "avado.updateAges";
 
 // When each pending update was first seen, kept in this browser so the
@@ -79,6 +83,7 @@ export function HealthProvider({
   fetchFeeRecipientsImpl = fetchFeeRecipients,
   fetchCareStatusImpl = fetchCareStatus,
   fetchLostDataImpl = listLostData,
+  fetchIpfsHealthImpl = getIpfsHealth,
 }) {
   const packages = useSelector(getDnpInstalled) || [];
   const stats = useSelector(getDappnodeStats) || {};
@@ -120,6 +125,14 @@ export function HealthProvider({
   const lostDataAllowedRef = useRef(false);
   const fetchLostDataRef = useRef(fetchLostDataImpl);
   fetchLostDataRef.current = fetchLostDataImpl;
+  // DAPPMANAGER getIpfsHealth (10.0.52 and newer): null until read, and with
+  // an older DAPPMANAGER (the ipfsRestarting rule is then skipped).
+  const [ipfsHealth, setIpfsHealth] = useState(null);
+  // This page's IPFS reset (pages/system/ipfsResetApi): running, done, error.
+  const [ipfsReset, setIpfsReset] = useState(ipfsResetState);
+  const [ipfsTick, setIpfsTick] = useState(0);
+  const fetchIpfsHealthRef = useRef(fetchIpfsHealthImpl);
+  fetchIpfsHealthRef.current = fetchIpfsHealthImpl;
 
   // A string derived from installed name@version pairs. Used as an effect
   // dependency instead of the `packages` array itself, whose identity changes
@@ -321,6 +334,40 @@ export function HealthProvider({
     [scanLostData]
   );
 
+  // IPFS health, every 2 minutes while the tab is shown, and again as soon as
+  // a reset ends. A failed read keeps the last answer and leaves a debug line.
+  const ipfsAllowed = canResetIpfsData(packages);
+  useEffect(() => subscribeIpfsReset(next => {
+    setIpfsReset(next);
+    if (next && next.status !== "running") setIpfsTick(t => t + 1);
+  }), []);
+  useEffect(() => {
+    if (!ipfsAllowed) {
+      setIpfsHealth(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const load = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      Promise.resolve()
+        .then(() => fetchIpfsHealthRef.current())
+        .then(
+          health => {
+            if (cancelled || !health || typeof health !== "object") return;
+            setIpfsHealth(health);
+            noteIpfsHealth(health);
+          },
+          e => console.debug(`getIpfsHealth failed: ${e && e.message}`)
+        );
+    };
+    load();
+    const t = setInterval(load, IPFS_HEALTH_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [ipfsAllowed, tick, ipfsTick]);
+
   const updates = useMemo(
     () => (store.packages ? computeUpdates(store.packages, packages) : null),
     [store.packages, packageKey]
@@ -350,6 +397,8 @@ export function HealthProvider({
       feeRecipients,
       updateAges,
       lostData,
+      ipfsHealth,
+      ipfsReset,
       sources: { updates: store.status, metrics: metrics.status },
       // Recomputed whenever this memo re-runs, which includes every metrics
       // poll (`metrics` is a dep below). head-behind is the only rule that
@@ -410,7 +459,7 @@ export function HealthProvider({
         setDismissVersion(v => v + 1);
       },
     };
-  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, lostData, refreshLostData, coreAvailable, metrics, diskTrend, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, lostData, ipfsHealth, ipfsReset, refreshLostData, coreAvailable, metrics, diskTrend, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }

@@ -11,6 +11,7 @@ import { careFindingsFromStatus } from "health/careFindings";
 import { diskHigh, diskFillingUp } from "health/rules/storage";
 import { appStopped } from "health/rules/apps";
 import { pkg, snapshot } from "health/__tests__/fixtures";
+import { ipfsRestarting } from "health/rules/ipfs";
 
 const { dismissSpy, modeState, healthState } = vi.hoisted(() => ({
   dismissSpy: vi.fn(),
@@ -30,6 +31,9 @@ vi.mock("health/fixActions", () => ({ runFixAction: vi.fn() }));
 // settings/__tests__/ModeProvider.test.jsx for the mode system itself) —
 // stubbed here so each test controls it directly via `modeState`.
 vi.mock("settings/ModeProvider", () => ({ useMode: () => modeState }));
+// Reset IPFS storage opens this confirm itself (not through runFixAction)
+const { mockConfirm } = vi.hoisted(() => ({ mockConfirm: vi.fn() }));
+vi.mock("components/ConfirmDialog", () => ({ confirm: mockConfirm }));
 
 beforeEach(() => {
   dismissSpy.mockClear();
@@ -448,3 +452,28 @@ describe("FindingRow Free up space (resetBeaconData)", () => {
     expect(screen.queryByText("Starting…")).not.toBeInTheDocument();
   });
 });
+
+describe("FindingRow: IPFS keeps restarting", () => {
+  const finding = ipfsRestarting({
+    ipfsHealth: { exists: true, running: false, restarting: true, restartsLastHour: 5, lastLogLines: ["Error: corrupted"] },
+  })[0];
+
+  it("the fix is 'Reset IPFS storage' (primary), which asks first, and no Hide while IPFS restarts", () => {
+    mockConfirm.mockClear();
+    renderRow(finding, { canHide: true });
+    const button = screen.getByRole("button", { name: "Reset IPFS storage" });
+    expect(button.className).toContain("bg-accent");
+    expect(screen.queryByRole("button", { name: "Hide" })).not.toBeInTheDocument();
+    fireEvent.click(button);
+    expect(mockConfirm).toHaveBeenCalledTimes(1);
+    expect(mockConfirm.mock.calls[0][0]).toMatchObject({ title: "Reset IPFS storage?", label: "Reset IPFS storage", variant: "primary" });
+    // Not the generic "Starting…" of other action fixes
+    expect(screen.queryByText("Starting…")).not.toBeInTheDocument();
+  });
+
+  it("the last log line only in Advanced", () => {
+    renderRow(finding);
+    expect(screen.queryByText(/Last log line/)).not.toBeInTheDocument();
+  });
+});
+

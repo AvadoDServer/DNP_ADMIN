@@ -58,6 +58,46 @@ export const mockLostData = [
   },
 ];
 
+// Scenarios for `yarn dev`: open the Admin with ?mock=<name> (in the address
+// before the #, or after it). Known: "ipfs-restarting".
+export function mockScenario() {
+  if (typeof window === "undefined" || !window.location) return null;
+  const { search = "", hash = "" } = window.location;
+  const fromHash = hash.includes("?") ? hash.slice(hash.indexOf("?")) : "";
+  return new URLSearchParams(search).get("mock") || new URLSearchParams(fromHash).get("mock") || null;
+}
+
+// IPFS health (DAPPMANAGER 10.0.52 getIpfsHealth), served by
+// pages/system/ipfsResetApi.js in mock mode. "ipfs-restarting": IPFS is in a
+// crash loop on a damaged repo, so Home shows "IPFS keeps restarting" with
+// "Reset IPFS storage"; the reset succeeds after 3 s (1.3 GB removed) and IPFS
+// is healthy until reload. Otherwise IPFS is healthy; System > Storage always
+// has the button.
+export function mockIpfsHealth(scenario) {
+  if (scenario === "ipfs-restarting")
+    return {
+      exists: true,
+      running: false,
+      restarting: true,
+      restartCount: 41,
+      restartsLastHour: 6,
+      startedAt: "2026-10-13T08:00:00Z",
+      lastLogLines: [
+        "Found IPFS fs-repo at /data/ipfs",
+        "Error: failed to open datastore: leveldb: manifest corrupted (field 'comparer'): missing [file=MANIFEST-000123]",
+      ],
+    };
+  return {
+    exists: true,
+    running: true,
+    restarting: false,
+    restartCount: 0,
+    restartsLastHour: 0,
+    startedAt: "2026-10-13T08:00:00Z",
+    lastLogLines: [],
+  };
+}
+
 export const mockState = {
   /* chainData */
   [chainDataMountPoint]: [],
@@ -130,13 +170,24 @@ export const mockState = {
       state: "exited",
     },
     {
-      // 10.0.51: has the lost-data calls (see mockLostData above).
+      // 10.0.52: has the lost-data calls (see mockLostData above) and the
+      // IPFS reset (mockIpfsHealth).
       name: "dappmanager.dnp.dappnode.eth",
       isCore: true,
       isDnp: true,
-      version: "10.0.51",
+      version: "10.0.52",
       state: "running",
       running: true,
+    },
+    {
+      // IPFS: its health comes from mockIpfsHealth (?mock=ipfs-restarting).
+      name: "ipfs.dnp.dappnode.eth",
+      isCore: true,
+      version: "10.0.7",
+      state: "running",
+      running: true,
+      volumes: [{ name: "dncore_ipfsdnpdappnodeeth_data", path: "/data/ipfs", size: "1.3GB" }],
+      manifest: { name: "ipfs.dnp.dappnode.eth", version: "10.0.7", title: "AVADO IPFS node" },
     },
     {
       // Lost data: its wallet sits in an unused storage volume (mockLostData).

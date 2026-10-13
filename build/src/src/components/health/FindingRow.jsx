@@ -8,6 +8,7 @@ import { findingChartUrl } from "health/grafanaLinks";
 import { kitFindingLink } from "health/diskUpgrade";
 import { useHealth } from "health/HealthProvider";
 import { useMode } from "settings/ModeProvider";
+import { IpfsResetButton, IpfsResetStatus } from "pages/system/components/IpfsReset";
 
 const ICON = {
   critical: { glyph: "M18 6 6 18M6 6l12 12", cls: "bg-danger/15 text-danger-text", label: "Action required" },
@@ -66,8 +67,13 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
     runFixAction(finding, dispatch, packages);
   };
 
-  const fixButton =
-    fix && fix.kind === "link" ? (
+  // Reset IPFS storage: its own button and progress (pages/system/ipfsResetApi),
+  // the same as on System > Storage.
+  const ipfsReset = Boolean(fix && fix.kind === "action" && fix.action === "resetIpfsData");
+
+  const fixButton = ipfsReset ? (
+    <IpfsResetButton origin="finding" variant="primary" size="sm" />
+  ) : fix && fix.kind === "link" ? (
       <Button as={Link} to={fix.to} size="sm" variant={finding.severity === "info" ? "secondary" : "primary"}>
         {fix.label}
       </Button>
@@ -150,6 +156,7 @@ export default function FindingRow({ finding, compact = false, hideTitle = false
             )}
           </div>
         </div>
+        {ipfsReset && !compact && <IpfsResetStatus className="mt-3" />}
         {stepsOpen && hasSteps && (
           <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-fg-muted">
             {finding.steps.map((s, i) => <li key={i}>{s}</li>)}

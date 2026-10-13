@@ -1,8 +1,10 @@
 import { runFixAction } from "health/fixActions";
 import { togglePackage, restartPackage, resetBeaconData } from "pages/packages/actions";
 import confirmResetBeaconData from "pages/packages/components/confirmResetBeaconData";
+import { confirmIpfsReset } from "pages/system/components/IpfsReset";
 
 vi.mock("pages/packages/components/confirmResetBeaconData", () => ({ default: vi.fn() }));
+vi.mock("pages/system/components/IpfsReset", () => ({ confirmIpfsReset: vi.fn() }));
 vi.mock("pages/packages/actions", () => ({
   resetBeaconData: vi.fn(id => ({ __thunk: "resetBeaconData", id })),
   togglePackage: vi.fn(id => ({ __thunk: "toggle", id })),
@@ -85,6 +87,15 @@ describe("runFixAction", () => {
       runFixAction(finding, dispatch, []);
       runFixAction(finding, dispatch);
       expect(confirmResetBeaconData).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("resetIpfsData", () => {
+    it("opens the confirm (origin: the finding) and dispatches nothing", () => {
+      confirmIpfsReset.mockClear();
+      runFixAction({ fix: { kind: "action", action: "resetIpfsData" }, appId: "ipfs.dnp.dappnode.eth" }, dispatch, []);
+      expect(confirmIpfsReset).toHaveBeenCalledWith({ origin: "finding" });
       expect(dispatch).not.toHaveBeenCalled();
     });
   });

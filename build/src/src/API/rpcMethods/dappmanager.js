@@ -474,6 +474,42 @@ export default {
   },
 
   /**
+   * [getIpfsHealth]
+   * State of the IPFS core container, for the "IPFS keeps restarting" check.
+   * Read-only and cheap. DAPPMANAGER 10.0.52 and newer.
+   *
+   * @returns {object} {
+   *   exists: true, {bool} false when there is no IPFS container
+   *   running: false, {bool} running and not restarting
+   *   restarting: true, {bool}
+   *   restartCount: 41, {number} Docker's count since the container was created
+   *   restartsLastHour: 6, {number} 0 until the DAPPMANAGER has asked twice
+   *   startedAt: "2026-10-13T08:00:00Z", {string|null}
+   *   lastLogLines: ["Error: ..."], {array} <= 10 lines, [] while healthy
+   *   resetRunning: false {bool} resetIpfsData is running
+   * }
+   */
+  getIpfsHealth: {},
+
+  /**
+   * [resetIpfsData]
+   * Stops IPFS, empties its data volume (a cache of downloaded app packages;
+   * the volume itself, the export volume, every app and its data stay) and
+   * starts IPFS again; waits up to 2 minutes for it and reconnects to the
+   * AVADO store. Refused while an install, update, Free up space, a data
+   * recovery or another reset runs. Can take several minutes. DAPPMANAGER
+   * 10.0.52 and newer.
+   *
+   * @returns {object} {
+   *   removedKb: 1258291, {number|null} null when it could not be measured
+   *   restarted: true, {bool} false: IPFS runs but is still starting
+   *   peersConnected: 14, {number|null}
+   *   storePeersConnected: 1 {number}
+   * }
+   */
+  resetIpfsData: {},
+
+  /**
    * [restartPackageVolumes]
    * Removes a package volumes. The re-ups the package
    *
