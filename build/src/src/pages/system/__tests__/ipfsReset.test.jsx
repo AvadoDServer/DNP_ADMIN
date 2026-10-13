@@ -11,6 +11,10 @@ import {
   getIpfsHealth,
   _resetIpfsResetState,
   PROGRESS_TEXT,
+  STILL_RESETTING_TEXT,
+  DONE_UNKNOWN_SIZE_TEXT,
+  LOST_TEXT,
+  isTransportError,
 } from "pages/system/ipfsResetApi";
 
 const { mockConfirm, api, session, toasts } = vi.hoisted(() => ({
@@ -140,6 +144,98 @@ describe("Reset IPFS storage button", () => {
       call.resolve(RESULT);
       await call.promise;
     });
+  });
+});
+
+describe("the DAPPMANAGER restarts or the connection drops during the reset", () => {
+  const RAW = "callee disconnected from in-flight request";
+  const healthy = { exists: true, running: true, restarting: false, resetRunning: false };
+
+  it("never shows the raw error: waits for the connection, reads the health, then Done (no size)", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      api.resetIpfsData.mockRejectedValue(Error(RAW));
+      const answers = [Error("Connection is not open"), { ...healthy, running: false, resetRunning: true }, healthy];
+      const healthImpl = vi.fn(async () => {
+        const a = answers.shift();
+        if (a instanceof Error) throw a;
+        return a;
+      });
+      renderControls();
+      const seen = [];
+      const promise = startIpfsReset({ origin: "storage", toastImpl: m => ({ resolve: vi.fn(), m }), followUp: { healthImpl, delayMs: 1 } });
+      await act(async () => {
+        await new Promise(r => setTimeout(r, 0));
+      });
+      seen.push(screen.getByRole("status").textContent);
+      await act(async () => {
+        await promise;
+      });
+      expect(healthImpl).toHaveBeenCalledTimes(3);
+      expect(screen.getByRole("status")).toHaveTextContent(DONE_UNKNOWN_SIZE_TEXT);
+      expect(ipfsResetState()).toMatchObject({ status: "done", text: DONE_UNKNOWN_SIZE_TEXT });
+      expect(document.body.textContent).not.toContain(RAW);
+      expect(seen.join(" ")).not.toContain(RAW);
+      expect(debug.mock.calls.map(c => c[0]).join(" ")).toContain(RAW);
+    } finally {
+      debug.mockRestore();
+    }
+  });
+
+  it("shows 'Still resetting…' while the DAPPMANAGER reports the reset running", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      api.resetIpfsData.mockRejectedValue(Error(RAW));
+      let release;
+      const gate = new Promise(r => (release = r));
+      let calls = 0;
+      const healthImpl = vi.fn(async () => {
+        calls++;
+        if (calls === 1) return { ...healthy, running: false, resetRunning: true };
+        await gate;
+        return healthy;
+      });
+      renderControls();
+      const promise = startIpfsReset({ origin: "finding", followUp: { healthImpl, delayMs: 1 } });
+      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(STILL_RESETTING_TEXT));
+      release();
+      await act(async () => {
+        await promise;
+      });
+      expect(ipfsResetState().text).toBe(DONE_UNKNOWN_SIZE_TEXT);
+    } finally {
+      debug.mockRestore();
+    }
+  });
+
+  it("IPFS not running afterwards, or no answer for a minute: the plain 'connection lost' message", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      for (const healthImpl of [
+        async () => ({ exists: true, running: false, restarting: true, resetRunning: false }),
+        async () => {
+          throw Error("Connection is not open");
+        },
+      ]) {
+        _resetIpfsResetState();
+        api.resetIpfsData.mockRejectedValue(Error("wamp.error.canceled"));
+        await startIpfsReset({ followUp: { healthImpl, delayMs: 1, attempts: 3 } });
+        expect(ipfsResetState()).toMatchObject({ status: "error", text: LOST_TEXT });
+      }
+    } finally {
+      debug.mockRestore();
+    }
+  });
+
+  it("tells transport failures from the DAPPMANAGER's own errors", () => {
+    for (const m of [RAW, "wamp.error.canceled", "Connection is not open", "Session object is not defined", "wamp.error.timeout"])
+      expect(isTransportError(Error(m))).toBe(true);
+    for (const m of [
+      "IPFS storage was emptied but IPFS did not start again. Restart your AVADO or contact AVADO support.",
+      "Resetting the IPFS storage is already running.",
+      "Could not prepare the reset. Nothing was changed.",
+    ])
+      expect(isTransportError(Error(m))).toBe(false);
   });
 });
 
