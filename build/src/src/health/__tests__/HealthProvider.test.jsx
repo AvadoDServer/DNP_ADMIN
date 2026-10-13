@@ -750,8 +750,9 @@ describe("HealthProvider IPFS health", () => {
     expect(screen.getByTestId("allids").textContent).not.toContain("ipfs-restarting");
   });
 
-  it("no IPFS container at all: the finding still shows (IPFS is missing)", async () => {
-    const fetchIpfsHealthImpl = vi.fn(async () => ({ ...restarting, exists: false, running: false, restarting: false, lastLogLines: [] }));
+  it("no IPFS container for over a minute: the finding still shows (IPFS is missing)", async () => {
+    const missingSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const fetchIpfsHealthImpl = vi.fn(async () => ({ ...restarting, exists: false, running: false, restarting: false, lastLogLines: [], missingSince }));
     renderWith({ ...base, fetchIpfsHealthImpl }, {}, withDappmanager("10.0.52"));
     await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("ipfs-restarting"));
   });

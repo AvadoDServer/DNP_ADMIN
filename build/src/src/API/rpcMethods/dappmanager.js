@@ -486,6 +486,8 @@ export default {
    *   restartsLastHour: 6, {number} 0 until the DAPPMANAGER has asked twice
    *   startedAt: "2026-10-13T08:00:00Z", {string|null}
    *   lastLogLines: ["Error: ..."], {array} <= 10 lines, [] while healthy
+   *   missingSince: null, {string|null} ISO date the DAPPMANAGER first found
+   *     no IPFS container; the finding waits a minute (updates remove it briefly)
    *   resetRunning: false {bool} resetIpfsData is running
    * }
    */

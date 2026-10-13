@@ -8,6 +8,10 @@ export const IPFS_MISSING_WHY =
 // Restarts in the last hour that count as "keeps restarting" when IPFS is
 // up at the moment of the check.
 export const IPFS_RESTARTS_PER_HOUR = 3;
+// An update or restart of IPFS leaves its container absent for a few
+// seconds: IPFS counts as missing only once the DAPPMANAGER has seen it
+// absent for this long (getIpfsHealth missingSince).
+export const IPFS_MISSING_AFTER_MS = 60 * 1000;
 // How long the result of a reset started from the finding stays on Home
 export const IPFS_RESULT_NOTE_MS = 60 * 1000;
 
@@ -16,7 +20,8 @@ const FIX = { kind: "action", action: "resetIpfsData", label: "Reset IPFS storag
 /**
  * IPFS keeps restarting, or is missing (DAPPMANAGER 10.0.52 getIpfsHealth,
  * fetched by HealthProvider as `ipfsHealth`): restarting right now,
- * restarted at least 3 times in the last hour, or no IPFS container at all.
+ * restarted at least 3 times in the last hour, or no IPFS container for at
+ * least a minute (`missingSince`).
  * One click resets its storage (which also sets a missing IPFS up again).
  *
  * `ipfsReset` is this page's own reset (pages/system/ipfsResetApi). While one
@@ -38,7 +43,9 @@ export function ipfsRestarting({ ipfsHealth: h, ipfsReset, now = Date.now() }) {
     now - ipfsReset.endedAt < IPFS_RESULT_NOTE_MS;
 
   const restartsLastHour = Number(h.restartsLastHour) || 0;
-  const missing = h.exists === false && !resetting;
+  const missingSince = typeof h.missingSince === "string" ? Date.parse(h.missingSince) : NaN;
+  const missing =
+    h.exists === false && !resetting && Number.isFinite(missingSince) && now - missingSince >= IPFS_MISSING_AFTER_MS;
   const unhealthy = h.exists === true && (h.restarting === true || restartsLastHour >= IPFS_RESTARTS_PER_HOUR);
 
   if (missing || unhealthy || (fromHere && status === "running") || (ended && status === "error")) {

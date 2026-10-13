@@ -1,4 +1,4 @@
-import { ipfsRestarting, IPFS_RESTARTING_WHY, IPFS_MISSING_WHY, IPFS_RESULT_NOTE_MS } from "health/rules/ipfs";
+import { ipfsRestarting, IPFS_RESTARTING_WHY, IPFS_MISSING_WHY, IPFS_RESULT_NOTE_MS, IPFS_MISSING_AFTER_MS } from "health/rules/ipfs";
 import { appRestarting } from "health/rules/apps";
 import { canResetIpfsData, IPFS_RESET_SINCE } from "health/clients";
 import { runChecksDetailed } from "health/engine";
@@ -34,8 +34,9 @@ describe("ipfsRestarting rule", () => {
   });
 
   it("no IPFS container (DAPPMANAGER 10.0.52 says exists: false): 'IPFS is missing', same button, not hideable", () => {
-    const missing = { ...healthy, exists: false, running: false };
-    const [f, ...rest] = ipfsRestarting({ ipfsHealth: missing });
+    const now = Date.parse("2026-10-13T08:05:00Z");
+    const missing = { ...healthy, exists: false, running: false, missingSince: "2026-10-13T08:00:00Z" };
+    const [f, ...rest] = ipfsRestarting({ ipfsHealth: missing, now });
     expect(rest).toEqual([]);
     expect(f).toMatchObject({
       id: "ipfs-restarting",
@@ -47,8 +48,17 @@ describe("ipfsRestarting rule", () => {
     });
     expect(f.why).not.toMatch(/container|volume|docker/i);
     // but not while a reset runs (the DAPPMANAGER's or this page's)
-    expect(ipfsRestarting({ ipfsHealth: { ...missing, resetRunning: true } })).toEqual([]);
-    expect(ipfsRestarting({ ipfsHealth: missing, ipfsReset: { status: "running", origin: "storage" } })).toEqual([]);
+    expect(ipfsRestarting({ ipfsHealth: { ...missing, resetRunning: true }, now })).toEqual([]);
+    expect(ipfsRestarting({ ipfsHealth: missing, ipfsReset: { status: "running", origin: "storage" }, now })).toEqual([]);
+  });
+
+  it("missing for less than a minute (an update or restart of IPFS) or without missingSince: no finding yet", () => {
+    const since = Date.parse("2026-10-13T08:00:00Z");
+    const missing = { ...healthy, exists: false, running: false, missingSince: "2026-10-13T08:00:00Z" };
+    expect(ipfsRestarting({ ipfsHealth: missing, now: since + 5000 })).toEqual([]);
+    expect(ipfsRestarting({ ipfsHealth: missing, now: since + IPFS_MISSING_AFTER_MS - 1 })).toEqual([]);
+    expect(ipfsRestarting({ ipfsHealth: missing, now: since + IPFS_MISSING_AFTER_MS })).toHaveLength(1);
+    expect(ipfsRestarting({ ipfsHealth: { ...missing, missingSince: null }, now: since + 600000 })).toEqual([]);
   });
 
   it("a restarting IPFS: one critical finding with the reset button, not hideable", () => {
