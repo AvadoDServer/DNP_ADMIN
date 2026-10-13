@@ -188,6 +188,44 @@ describe("noteIpfsHealth: a reset whose answer was lost with the connection", ()
   });
 });
 
+describe("noteIpfsHealth: unknown session, and a reset this page did not start", () => {
+  it("a reset sent while the session was unknown is settled from the health, but not in its first 30 s", async () => {
+    session.current = null;
+    api.resetIpfsData.mockReturnValue(new Promise(() => {}));
+    startIpfsReset({ origin: "finding" });
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+    const ok = { exists: true, running: true, restarting: false, resetRunning: false };
+    await noteIpfsHealth(ok, { sessionImpl: () => null, now: Date.now() + 5000 });
+    expect(ipfsResetState().status).toBe("running");
+    await noteIpfsHealth(ok, { sessionImpl: () => null, now: Date.now() + 31 * 1000 });
+    expect(ipfsResetState()).toMatchObject({ status: "done", origin: "finding" });
+    expect(typeof ipfsResetState().endedAt).toBe("number");
+  });
+
+  it("after a reload: resetRunning shows the reset as running (button busy) until it ends", async () => {
+    renderControls();
+    await act(async () => {
+      await noteIpfsHealth({ exists: true, running: false, restarting: false, resetRunning: true });
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(PROGRESS_TEXT);
+    expect(screen.getByRole("button", { name: /Reset IPFS storage/ })).toBeDisabled();
+    await act(async () => {
+      await noteIpfsHealth({ exists: true, running: true, restarting: false, resetRunning: false });
+    });
+    expect(ipfsResetState()).toMatchObject({ status: "done" });
+    expect(screen.getByRole("button", { name: "Reset IPFS storage" })).not.toBeDisabled();
+  });
+
+  it("a finished reset records when it ended", async () => {
+    api.resetIpfsData.mockResolvedValue(RESULT);
+    await startIpfsReset({ origin: "finding" });
+    expect(ipfsResetState()).toMatchObject({ status: "done", origin: "finding" });
+    expect(Date.now() - ipfsResetState().endedAt).toBeLessThan(5000);
+  });
+});
+
 describe("getIpfsHealth", () => {
   it("asks the DAPPMANAGER", async () => {
     api.getIpfsHealth.mockResolvedValue({ exists: true });

@@ -1,4 +1,4 @@
-import { ipfsRestarting, IPFS_RESTARTING_WHY } from "health/rules/ipfs";
+import { ipfsRestarting, IPFS_RESTARTING_WHY, IPFS_MISSING_WHY, IPFS_RESULT_NOTE_MS } from "health/rules/ipfs";
 import { appRestarting } from "health/rules/apps";
 import { canResetIpfsData, IPFS_RESET_SINCE } from "health/clients";
 import { runChecksDetailed } from "health/engine";
@@ -29,9 +29,26 @@ describe("ipfsRestarting rule", () => {
     expect(ipfsRestarting({ ipfsHealth: { ...healthy, restartsLastHour: 2, restartCount: 50 } })).toEqual([]);
   });
 
-  it("finds nothing without an IPFS container, or with an unreadable answer", () => {
-    expect(ipfsRestarting({ ipfsHealth: { ...restarting, exists: false } })).toEqual([]);
+  it("finds nothing with an unreadable answer", () => {
     expect(ipfsRestarting({ ipfsHealth: "nonsense" })).toEqual([]);
+  });
+
+  it("no IPFS container (DAPPMANAGER 10.0.52 says exists: false): 'IPFS is missing', same button, not hideable", () => {
+    const missing = { ...healthy, exists: false, running: false };
+    const [f, ...rest] = ipfsRestarting({ ipfsHealth: missing });
+    expect(rest).toEqual([]);
+    expect(f).toMatchObject({
+      id: "ipfs-restarting",
+      severity: "critical",
+      title: "IPFS is missing",
+      why: IPFS_MISSING_WHY,
+      fix: { kind: "action", action: "resetIpfsData", label: "Reset IPFS storage" },
+      dismissable: false,
+    });
+    expect(f.why).not.toMatch(/container|volume|docker/i);
+    // but not while a reset runs (the DAPPMANAGER's or this page's)
+    expect(ipfsRestarting({ ipfsHealth: { ...missing, resetRunning: true } })).toEqual([]);
+    expect(ipfsRestarting({ ipfsHealth: missing, ipfsReset: { status: "running", origin: "storage" } })).toEqual([]);
   });
 
   it("a restarting IPFS: one critical finding with the reset button, not hideable", () => {
@@ -69,7 +86,24 @@ describe("ipfsRestarting rule", () => {
     const during = { ...healthy, exists: false, running: false, resetRunning: true };
     expect(ipfsRestarting({ ipfsHealth: during, ipfsReset: { status: "running", origin: "finding" } })).toHaveLength(1);
     expect(ipfsRestarting({ ipfsHealth: during, ipfsReset: { status: "running", origin: "storage" } })).toEqual([]);
+    // done, but without an end time: no note
     expect(ipfsRestarting({ ipfsHealth: healthy, ipfsReset: { status: "done", origin: "finding" } })).toEqual([]);
+  });
+
+  it("for a minute after a reset from the finding ended: 'Done: …' as a note, or the error on the finding", () => {
+    const now = 1_000_000;
+    const done = { status: "done", origin: "finding", text: "Done: 1.3 GB removed, IPFS is running again", endedAt: now - 5000 };
+    const [note, ...rest] = ipfsRestarting({ ipfsHealth: healthy, ipfsReset: done, now });
+    expect(rest).toEqual([]);
+    expect(note).toMatchObject({ id: "ipfs-reset-done", severity: "info", title: done.text, dismissable: false });
+    expect(note.fix).toBeUndefined();
+    // gone after a minute, and never for a reset started on System > Storage
+    expect(ipfsRestarting({ ipfsHealth: healthy, ipfsReset: done, now: done.endedAt + IPFS_RESULT_NOTE_MS + 1 })).toEqual([]);
+    expect(ipfsRestarting({ ipfsHealth: healthy, ipfsReset: { ...done, origin: "storage" }, now })).toEqual([]);
+
+    const failed = { status: "error", origin: "finding", text: "IPFS did not start again.", endedAt: now - 5000 };
+    const [f] = ipfsRestarting({ ipfsHealth: healthy, ipfsReset: failed, now });
+    expect(f).toMatchObject({ id: "ipfs-restarting", severity: "critical", dismissable: false });
   });
 
   it("is skipped (not counted) without ipfsHealth, i.e. with a DAPPMANAGER before 10.0.52", () => {

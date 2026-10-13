@@ -17,7 +17,8 @@ import { formatDockerSize } from "health/rules/storage";
  * second click never starts a second reset, and leaving the page keeps it.
  * A reset sent before the WAMP connection dropped never gets its answer
  * (autobahn does not settle it); getIpfsHealth's resetRunning settles it
- * instead (noteIpfsHealth).
+ * instead (noteIpfsHealth). A reset this page did not start (another tab,
+ * or before a reload) shows as running while resetRunning says so.
  *
  * In mock mode (`yarn dev`, REACT_APP_MOCK_DATA=true) both calls are served
  * from mockIpfsHealth in src/mockState.js; open the Admin with
@@ -79,7 +80,8 @@ export function resultText(result) {
 const KEY = "resetIpfsData";
 // KEY -> { promise, startedAt, session, origin }
 const inFlight = new Map();
-// The last reset of this page: { status: "running"|"done"|"error", text, origin }
+// The last reset of this page: { status: "running"|"done"|"error", text,
+// origin, endedAt (ms, once ended), remote (seen only in getIpfsHealth) }
 let state = null;
 const listeners = new Set();
 const setState = next => {
@@ -111,7 +113,7 @@ export function startIpfsReset({ origin = "storage", resetImpl = callReset, toas
   const settle = (status, text) => {
     if (inFlight.get(KEY) !== entry) return;
     inFlight.delete(KEY);
-    setState({ status, text, origin });
+    setState({ status, text, origin, endedAt: Date.now() });
     if (toast) toast.resolve({ success: status === "done", message: text });
   };
   if (!import.meta.env.REACT_APP_MOCK_DATA) currentSession().then(s => (entry.session = s));
@@ -125,23 +127,39 @@ export function startIpfsReset({ origin = "storage", resetImpl = callReset, toas
   return entry.promise;
 }
 
+// A health answer that started before the DAPPMANAGER registered the reset
+// can say resetRunning: false; a reset younger than this is never settled
+// from the health when the session it was sent on is unknown.
+const SETTLE_GRACE_MS = 30 * 1000;
+const ipfsOk = health => Boolean(health.exists && health.running && !health.restarting);
+const endedText = health =>
+  ipfsOk(health) ? "The reset finished while this page was not connected. IPFS is running again." : NOT_SURE;
+
 /**
- * Every getIpfsHealth answer: a reset sent on an earlier WAMP session that
- * the DAPPMANAGER no longer runs is over, but its answer is lost. The
- * health says how it ended.
+ * Every getIpfsHealth answer:
+ * - a reset sent on an earlier WAMP session (or on an unknown one, after a
+ *   grace period) that the DAPPMANAGER no longer runs is over, but its
+ *   answer is lost: the health says how it ended;
+ * - a reset this page did not send but the DAPPMANAGER runs shows as
+ *   running (the button stays busy), and ends when resetRunning does.
  */
-export function noteIpfsHealth(health, { sessionImpl = currentSession } = {}) {
+export function noteIpfsHealth(health, { sessionImpl = currentSession, now = Date.now() } = {}) {
+  if (!health || typeof health !== "object") return Promise.resolve();
   const entry = inFlight.get(KEY);
-  if (!entry || !health || health.resetRunning) return Promise.resolve();
+  if (!entry) {
+    if (health.resetRunning && !(state && state.status === "running")) {
+      setState({ status: "running", text: PROGRESS_TEXT, origin: "finding", remote: true });
+    } else if (!health.resetRunning && state && state.remote && state.status === "running") {
+      setState({ status: ipfsOk(health) ? "done" : "error", text: endedText(health), origin: "finding", endedAt: now });
+    }
+    return Promise.resolve();
+  }
+  if (health.resetRunning) return Promise.resolve();
   return Promise.resolve(sessionImpl()).then(session => {
-    if (inFlight.get(KEY) !== entry || !entry.session || entry.session === session) return;
+    if (inFlight.get(KEY) !== entry) return;
+    if (entry.session ? entry.session === session : now - entry.startedAt < SETTLE_GRACE_MS) return;
     inFlight.delete(KEY);
-    const ok = health.exists && health.running && !health.restarting;
-    setState({
-      status: ok ? "done" : "error",
-      text: ok ? "The reset finished while this page was not connected. IPFS is running again." : NOT_SURE,
-      origin: entry.origin,
-    });
+    setState({ status: ipfsOk(health) ? "done" : "error", text: endedText(health), origin: entry.origin, endedAt: now });
   });
 }
 

@@ -17,6 +17,7 @@ import { listLostData } from "pages/packages/lostDataApi";
 import { getIpfsHealth, noteIpfsHealth, ipfsResetState, subscribeIpfsReset } from "pages/system/ipfsResetApi";
 import { runChecksDetailed, verdictOf, SEVERITIES, TOPICS } from "./engine";
 import { diskForecast } from "./rules/storage";
+import { IPFS_RESULT_NOTE_MS } from "./rules/ipfs";
 
 const rankOf = (list, v) => (list.indexOf(v) === -1 ? list.length : list.indexOf(v));
 // Same order as the engine's own list, for findings merged in from AVADO Care.
@@ -337,10 +338,23 @@ export function HealthProvider({
   // IPFS health, every 2 minutes while the tab is shown, and again as soon as
   // a reset ends. A failed read keeps the last answer and leaves a debug line.
   const ipfsAllowed = canResetIpfsData(packages);
-  useEffect(() => subscribeIpfsReset(next => {
-    setIpfsReset(next);
-    if (next && next.status !== "running") setIpfsTick(t => t + 1);
-  }), []);
+  // When a reset ends: read the health again at once, and again once its
+  // result note on Home has run out (the rule reads `now`).
+  useEffect(() => {
+    let noteTimer = null;
+    const unsubscribe = subscribeIpfsReset(next => {
+      setIpfsReset(next);
+      if (next && next.status !== "running") {
+        setIpfsTick(t => t + 1);
+        clearTimeout(noteTimer);
+        noteTimer = setTimeout(() => setIpfsTick(t => t + 1), IPFS_RESULT_NOTE_MS + 1000);
+      }
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(noteTimer);
+    };
+  }, []);
   useEffect(() => {
     if (!ipfsAllowed) {
       setIpfsHealth(null);
