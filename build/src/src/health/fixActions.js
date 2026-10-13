@@ -1,5 +1,6 @@
 import { restartPackage, resetBeaconData } from "pages/packages/actions";
 import confirmResetBeaconData from "pages/packages/components/confirmResetBeaconData";
+import { confirmIpfsReset } from "pages/system/components/IpfsReset";
 
 // Note: findings never use "startPackage" (which dispatches togglePackage and
 // stops a running container / throws on state "dead"). appStopped's fix uses
@@ -8,10 +9,12 @@ import confirmResetBeaconData from "pages/packages/components/confirmResetBeacon
 //
 // "resetBeaconData" deletes data, so it never dispatches without the confirm
 // dialog; it needs the package (for its name and size), found in `packages`.
+// "resetIpfsData" too (no redux: its progress lives in pages/system/ipfsResetApi).
 export function runFixAction(finding, dispatch, packages) {
   const { fix, appId } = finding || {};
   if (!fix || fix.kind !== "action" || !appId) return;
   if (fix.action === "restartPackage") dispatch(restartPackage(appId));
+  if (fix.action === "resetIpfsData") confirmIpfsReset({ origin: "finding" });
   if (fix.action === "resetBeaconData") {
     const pkg = (packages || []).find(p => p && p.name === appId);
     if (pkg) confirmResetBeaconData(pkg, id => dispatch(resetBeaconData(id)));

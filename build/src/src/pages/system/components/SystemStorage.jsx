@@ -23,6 +23,8 @@ import confirmResetBeaconData from "pages/packages/components/confirmResetBeacon
 import {
   getClient,
   canResetBeaconData,
+  canResetIpfsData,
+  IPFS_PACKAGE,
   storageMode,
   ROLES,
   CONSENSUS_ADVICE_UPDATE_NEEDED,
@@ -43,6 +45,7 @@ import ProgressBar from "components/ui/ProgressBar";
 import AppAvatar from "components/ui/AppAvatar";
 import { SectionHeader } from "components/ui/PageHeader";
 import { confirmSignedCmd } from "./SystemPresentation";
+import { IpfsResetButton, IpfsResetStatus } from "./IpfsReset";
 
 /**
  * Sorts installed packages by disk use (sum of `volumes[].size`, the same
@@ -115,6 +118,28 @@ function StorageRow({ pkg, size, share, canFreeUp, resetBeaconData, isAdvanced }
 export const MONITORING_INSTALL_PATH = `/installer/${GRAFANA_PACKAGE}`;
 const monitoringInstalled = packages =>
   [PROMETHEUS_PACKAGE, NODE_EXPORTER_PACKAGE].every(name => (packages || []).some(p => p && p.name === name));
+
+/**
+ * "Reset IPFS storage", for a box whose IPFS keeps restarting without the
+ * Home finding having caught it (DAPPMANAGER 10.0.52 and newer, IPFS installed).
+ */
+export function IpfsStorageCard() {
+  return (
+    <>
+      <SectionHeader title="IPFS storage" />
+      <Card padding="lg" className="flex flex-col gap-3">
+        <p className="mb-0 text-sm text-fg-muted">
+          IPFS stores the app packages your AVADO downloads. If installs or updates keep failing because IPFS keeps
+          restarting, resetting its storage fixes it. Your apps and their data are not touched.
+        </p>
+        <div>
+          <IpfsResetButton origin="storage" variant="secondary" size="sm" />
+        </div>
+        <IpfsResetStatus />
+      </Card>
+    </>
+  );
+}
 
 /**
  * One line under the disk bar: when the disk is full at the pace it has
@@ -225,6 +250,8 @@ function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedC
   const { diskForecast, diskTrendStatus } = useHealth();
   const { isAdvanced } = useMode();
   const canFreeUp = canResetBeaconData(dnpInstalled);
+  const canResetIpfs =
+    canResetIpfsData(dnpInstalled) && (dnpInstalled || []).some(p => p && p.name === IPFS_PACKAGE);
   const showKit = showKitOffer(dappnodeStats, diskForecast);
   // "Get more space" on a disk finding links here with ?kit=1: bring the card into view.
   const location = useLocation();
@@ -297,6 +324,8 @@ function SystemStorage({ dnpInstalled, dappnodeStats, dappnodeParams, runSignedC
           </ul>
         )}
       </Card>
+
+      {canResetIpfs && <IpfsStorageCard />}
     </div>
   );
 }

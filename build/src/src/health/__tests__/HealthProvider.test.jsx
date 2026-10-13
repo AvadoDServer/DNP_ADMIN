@@ -9,6 +9,7 @@ import { feeRecipientMissing } from "health/rules/validators";
 import { headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { diskFillingUp } from "health/rules/storage";
 import { lostData } from "health/rules/lostData";
+import { ipfsRestarting } from "health/rules/ipfs";
 import { fetchDiskTrend, DISK_QUERIES, resetPrometheusBase } from "health/prometheus";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
@@ -165,8 +166,9 @@ describe("HealthProvider", () => {
     // Nothing checked for a system update, Prometheus isn't installed (no
     // chain metrics, no disk forecast), and no validator client is readable
     // from the browser: these never count.
-    // Nor can the DAPPMANAGER (none in this list) look for lost data.
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp, lostData];
+    // Nor can the DAPPMANAGER (none in this list) look for lost data or
+    // report on IPFS.
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp, lostData, ipfsRestarting];
     const total = Number(screen.getByTestId("checksTotal").textContent);
     const passed = Number(screen.getByTestId("checksPassed").textContent);
     expect(total).toBe(ALL_RULES.length - skipped.length);
@@ -198,7 +200,7 @@ describe("HealthProvider", () => {
     expect(screen.getByTestId("allids").textContent).not.toContain("metrics-unavailable");
     // headBehind runs (it has samples); lowPeers (failed) and missedAttestations (no samples) don't,
     // nor the disk forecast (no disk trend).
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp, lostData];
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp, lostData, ipfsRestarting];
     expect(Number(screen.getByTestId("checksTotal").textContent)).toBe(ALL_RULES.length - skipped.length);
   });
 
@@ -717,3 +719,53 @@ describe("HealthProvider lost data", () => {
   });
 });
 
+
+describe("HealthProvider IPFS health", () => {
+  const IPFS = "ipfs.dnp.dappnode.eth";
+  const withDappmanager = version => ({
+    ...state,
+    packages: [
+      ...state.packages,
+      { name: "dappmanager.dnp.dappnode.eth", isCore: true, version, state: "running", running: true },
+      { name: IPFS, isCore: true, version: "10.0.7", state: "restarting", running: true, manifest: { title: "AVADO IPFS node" } },
+    ],
+  });
+  const restarting = { exists: true, running: false, restarting: true, restartCount: 9, restartsLastHour: 5, startedAt: null, lastLogLines: ["Error: corrupted"], resetRunning: false };
+  const base = { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null };
+
+  it("asks a DAPPMANAGER of 10.0.52 and shows 'IPFS keeps restarting' instead of the generic finding", async () => {
+    const fetchIpfsHealthImpl = vi.fn(async () => restarting);
+    renderWith({ ...base, fetchIpfsHealthImpl }, {}, withDappmanager("10.0.52"));
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("ipfs-restarting"));
+    expect(screen.getByTestId("ids").textContent).not.toContain(`app-restarting:${IPFS}`);
+    expect(fetchIpfsHealthImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("never asks an older DAPPMANAGER: the generic 'keeps restarting' finding stays", async () => {
+    const fetchIpfsHealthImpl = vi.fn(async () => restarting);
+    renderWith({ ...base, fetchIpfsHealthImpl }, {}, withDappmanager("10.0.51"));
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(fetchIpfsHealthImpl).not.toHaveBeenCalled();
+    expect(screen.getByTestId("allids").textContent).toContain(`app-restarting:${IPFS}`);
+    expect(screen.getByTestId("allids").textContent).not.toContain("ipfs-restarting");
+  });
+
+  it("no IPFS container for over a minute: the finding still shows (IPFS is missing)", async () => {
+    const missingSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const fetchIpfsHealthImpl = vi.fn(async () => ({ ...restarting, exists: false, running: false, restarting: false, lastLogLines: [], missingSince }));
+    renderWith({ ...base, fetchIpfsHealthImpl }, {}, withDappmanager("10.0.52"));
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain("ipfs-restarting"));
+  });
+
+  it("a failed read leaves a debug line and no finding", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      renderWith({ ...base, fetchIpfsHealthImpl: async () => { throw Error("wamp.error.no_such_procedure"); } }, {}, withDappmanager("10.0.52"));
+      await waitFor(() => expect(debug).toHaveBeenCalled());
+      expect(debug.mock.calls.map(c => c[0]).join(" ")).toContain("getIpfsHealth failed");
+      expect(screen.getByTestId("allids").textContent).not.toContain("ipfs-restarting");
+    } finally {
+      debug.mockRestore();
+    }
+  });
+});

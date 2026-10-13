@@ -1,4 +1,4 @@
-import { getClient, keyHolders, ROLES, PROMETHEUS_PACKAGE } from "health/clients";
+import { getClient, keyHolders, ROLES, PROMETHEUS_PACKAGE, IPFS_PACKAGE } from "health/clients";
 
 const shortName = (name = "") => name.split(".")[0];
 export const appTitle = pkg => (pkg && pkg.manifest && pkg.manifest.title) || shortName(pkg && pkg.name);
@@ -53,9 +53,12 @@ export function appStopped({ packages }) {
     });
 }
 
-export function appRestarting({ packages }) {
+// IPFS is left to ipfsRestarting (health/rules/ipfs.js) once the DAPPMANAGER
+// reports on it (`ipfsHealth`, 10.0.52 and newer): that one can fix it.
+export function appRestarting({ packages, ipfsHealth }) {
   return (packages || [])
     .filter(p => p && p.state === "restarting")
+    .filter(p => !(ipfsHealth && p.name === IPFS_PACKAGE))
     .map(p => ({
       id: `app-restarting:${p.name}`,
       severity: "critical",
