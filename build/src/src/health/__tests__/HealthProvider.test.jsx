@@ -10,6 +10,7 @@ import { headBehind, lowPeers, missedAttestations } from "health/rules/chain";
 import { diskFillingUp } from "health/rules/storage";
 import { lostData } from "health/rules/lostData";
 import { ipfsRestarting } from "health/rules/ipfs";
+import { processDown, appOomKilled, appCrashLooping } from "health/rules/processes";
 import { fetchDiskTrend, DISK_QUERIES, resetPrometheusBase } from "health/prometheus";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
@@ -166,9 +167,9 @@ describe("HealthProvider", () => {
     // Nothing checked for a system update, Prometheus isn't installed (no
     // chain metrics, no disk forecast), and no validator client is readable
     // from the browser: these never count.
-    // Nor can the DAPPMANAGER (none in this list) look for lost data or
-    // report on IPFS.
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp, lostData, ipfsRestarting];
+    // Nor can the DAPPMANAGER (none in this list) look for lost data,
+    // report on IPFS or on the programs inside the containers.
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, headBehind, lowPeers, missedAttestations, diskFillingUp, lostData, ipfsRestarting, processDown, appOomKilled, appCrashLooping];
     const total = Number(screen.getByTestId("checksTotal").textContent);
     const passed = Number(screen.getByTestId("checksPassed").textContent);
     expect(total).toBe(ALL_RULES.length - skipped.length);
@@ -200,7 +201,7 @@ describe("HealthProvider", () => {
     expect(screen.getByTestId("allids").textContent).not.toContain("metrics-unavailable");
     // headBehind runs (it has samples); lowPeers (failed) and missedAttestations (no samples) don't,
     // nor the disk forecast (no disk trend).
-    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp, lostData, ipfsRestarting];
+    const skipped = [coreUpdateAvailable, feeRecipientMissing, lowPeers, missedAttestations, diskFillingUp, lostData, ipfsRestarting, processDown, appOomKilled, appCrashLooping];
     expect(Number(screen.getByTestId("checksTotal").textContent)).toBe(ALL_RULES.length - skipped.length);
   });
 
@@ -764,6 +765,67 @@ describe("HealthProvider IPFS health", () => {
       await waitFor(() => expect(debug).toHaveBeenCalled());
       expect(debug.mock.calls.map(c => c[0]).join(" ")).toContain("getIpfsHealth failed");
       expect(screen.getByTestId("allids").textContent).not.toContain("ipfs-restarting");
+    } finally {
+      debug.mockRestore();
+    }
+  });
+});
+
+describe("HealthProvider diagnostics (programs inside the containers)", () => {
+  const TEKU = "teku.avado.dnp.dappnode.eth";
+  const withDappmanager = version => ({
+    ...state,
+    packages: [
+      ...state.packages,
+      { name: "dappmanager.dnp.dappnode.eth", isCore: true, version, state: "running", running: true },
+      { name: TEKU, version: "0.0.77", state: "running", running: true, manifest: { title: "Teku" } },
+    ],
+  });
+  const tekuDown = {
+    collectedAt: "2026-10-14T11:45:31.880Z",
+    errors: [],
+    host: null,
+    network: null,
+    clients: [],
+    containers: [
+      {
+        id: TEKU,
+        name: `DAppNodePackage-${TEKU}`,
+        isCore: false,
+        state: "running",
+        restartCount: 0,
+        uptimeSeconds: 4000,
+        oomKilled: false,
+        processes: [{ name: "teku", state: "FATAL", description: "Exited too quickly (process log may have details)" }],
+        log: null,
+        settings: null,
+      },
+    ],
+  };
+  const base = { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null, fetchIpfsHealthImpl: async () => null };
+
+  it("asks a DAPPMANAGER of 10.0.53 for containers and programs only, and shows the stopped program", async () => {
+    const fetchDiagnosticsImpl = vi.fn(async () => tekuDown);
+    renderWith({ ...base, fetchDiagnosticsImpl }, {}, withDappmanager("10.0.53"));
+    await waitFor(() => expect(screen.getByTestId("ids").textContent).toContain(`process-down:${TEKU}`));
+    expect(fetchDiagnosticsImpl).toHaveBeenCalledTimes(1);
+    expect(fetchDiagnosticsImpl).toHaveBeenCalledWith({ host: false, network: false, logs: false, clients: false });
+  });
+
+  it("never asks an older DAPPMANAGER, and the process checks are not counted", async () => {
+    const fetchDiagnosticsImpl = vi.fn(async () => tekuDown);
+    renderWith({ ...base, fetchDiagnosticsImpl }, {}, withDappmanager("10.0.52"));
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(fetchDiagnosticsImpl).not.toHaveBeenCalled();
+    expect(screen.getByTestId("allids").textContent).not.toContain("process-down");
+  });
+
+  it("a failed read leaves a debug line and no finding", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    try {
+      renderWith({ ...base, fetchDiagnosticsImpl: async () => { throw Error("wamp.error.no_such_procedure"); } }, {}, withDappmanager("10.0.53"));
+      await waitFor(() => expect(debug.mock.calls.map(c => c[0]).join(" ")).toContain("getDiagnostics failed"));
+      expect(screen.getByTestId("allids").textContent).not.toContain("process-down");
     } finally {
       debug.mockRestore();
     }

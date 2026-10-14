@@ -12,9 +12,10 @@ import { fetchMetrics, fetchDiskTrend } from "./prometheus";
 import { fetchFeeRecipients, VALIDATOR_CLIENTS } from "./feeRecipients";
 import { trackUpdateAges } from "./updateAges";
 import { CARE_PACKAGE, careFindingsFromStatus, fetchCareStatus, mergeCareFindings } from "./careFindings";
-import { PROMETHEUS_PACKAGE, canFindLostData, canResetIpfsData } from "./clients";
+import { PROMETHEUS_PACKAGE, canFindLostData, canResetIpfsData, canGetDiagnostics } from "./clients";
 import { listLostData } from "pages/packages/lostDataApi";
 import { getIpfsHealth, noteIpfsHealth, ipfsResetState, subscribeIpfsReset } from "pages/system/ipfsResetApi";
+import { getDiagnostics, LIGHT as LIGHT_DIAGNOSTICS } from "pages/troubleshoot/diagnosticsApi";
 import { runChecksDetailed, verdictOf, SEVERITIES, TOPICS } from "./engine";
 import { diskForecast } from "./rules/storage";
 import { IPFS_RESULT_NOTE_MS } from "./rules/ipfs";
@@ -46,6 +47,10 @@ const LOST_DATA_MIN_GAP_MS = 30 * 1000;
 // getIpfsHealth is one `docker inspect`; often enough that a crash loop
 // shows within minutes and the DAPPMANAGER can count restarts per hour.
 const IPFS_HEALTH_INTERVAL = 2 * 60 * 1000;
+// getDiagnostics with containers and their programs only (one docker inspect
+// and a supervisorctl status per app): often enough that a program that
+// stopped inside a running container shows within a minute or two.
+const DIAGNOSTICS_INTERVAL = 60 * 1000;
 const UPDATE_AGES_KEY = "avado.updateAges";
 
 // When each pending update was first seen, kept in this browser so the
@@ -85,6 +90,7 @@ export function HealthProvider({
   fetchCareStatusImpl = fetchCareStatus,
   fetchLostDataImpl = listLostData,
   fetchIpfsHealthImpl = getIpfsHealth,
+  fetchDiagnosticsImpl = getDiagnostics,
 }) {
   const packages = useSelector(getDnpInstalled) || [];
   const stats = useSelector(getDappnodeStats) || {};
@@ -134,6 +140,12 @@ export function HealthProvider({
   const [ipfsTick, setIpfsTick] = useState(0);
   const fetchIpfsHealthRef = useRef(fetchIpfsHealthImpl);
   fetchIpfsHealthRef.current = fetchIpfsHealthImpl;
+  // DAPPMANAGER getDiagnostics (10.0.53 and newer), containers and their
+  // programs only: null until read, and with an older DAPPMANAGER (the
+  // process rules are then skipped).
+  const [diagnostics, setDiagnostics] = useState(null);
+  const fetchDiagnosticsRef = useRef(fetchDiagnosticsImpl);
+  fetchDiagnosticsRef.current = fetchDiagnosticsImpl;
 
   // A string derived from installed name@version pairs. Used as an effect
   // dependency instead of the `packages` array itself, whose identity changes
@@ -382,6 +394,34 @@ export function HealthProvider({
     };
   }, [ipfsAllowed, tick, ipfsTick]);
 
+  // What runs inside each container, every minute while the tab is shown. A
+  // failed read keeps the last answer and leaves a debug line.
+  const diagnosticsAllowed = canGetDiagnostics(packages);
+  useEffect(() => {
+    if (!diagnosticsAllowed) {
+      setDiagnostics(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const load = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      Promise.resolve()
+        .then(() => fetchDiagnosticsRef.current(LIGHT_DIAGNOSTICS))
+        .then(
+          d => {
+            if (!cancelled && d && typeof d === "object") setDiagnostics(d);
+          },
+          e => console.debug(`getDiagnostics failed: ${e && e.message}`)
+        );
+    };
+    load();
+    const t = setInterval(load, DIAGNOSTICS_INTERVAL);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [diagnosticsAllowed, tick]);
+
   const updates = useMemo(
     () => (store.packages ? computeUpdates(store.packages, packages) : null),
     [store.packages, packageKey]
@@ -413,6 +453,7 @@ export function HealthProvider({
       lostData,
       ipfsHealth,
       ipfsReset,
+      diagnostics,
       sources: { updates: store.status, metrics: metrics.status },
       // Recomputed whenever this memo re-runs, which includes every metrics
       // poll (`metrics` is a dep below). head-behind is the only rule that
@@ -473,7 +514,7 @@ export function HealthProvider({
         setDismissVersion(v => v + 1);
       },
     };
-  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, lostData, ipfsHealth, ipfsReset, refreshLostData, coreAvailable, metrics, diskTrend, store, dismissVersion]);
+  }, [ready, packages, stats, params, diagnoses, chainData, updates, updateAges, feeRecipients, careFindings, lostData, ipfsHealth, ipfsReset, diagnostics, refreshLostData, coreAvailable, metrics, diskTrend, store, dismissVersion]);
 
   return <HealthContext.Provider value={value}>{children}</HealthContext.Provider>;
 }
