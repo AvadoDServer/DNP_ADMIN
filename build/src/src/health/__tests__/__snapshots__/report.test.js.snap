@@ -14,7 +14,7 @@ Health: Needs attention
 
 What we found
 - [critical] Teku Consensus Client: the teku process is not running (FATAL: Exited too quickly (process log may have details)). Last error: "FATAL - Exiting due to fatal error in BeaconChainController: Failed to load init…nc-mainnet.beaconcha.in/eth/v2/debug/beacon/states/finalized: Connect timed out". Checkpoint URL in use: https://sync-mainnet.beaconcha.in
-- [warning] Can't check for updates because IPFS is not connected to the AVADO store nodes (peers: 3)
+- [warning] Can't check for updates because IPFS could not fetch the catalogue (timed out after 8000 ms); IPFS is not connected to the AVADO store nodes (peers: 3)
 - [warning] The box uses Wi-Fi (wlan0) for its internet connection; the Ethernet port has no link
 
 Versions
@@ -38,7 +38,7 @@ Box
 - kernel log, network: 2 lines
     [Tue Oct 14 07:58:40 2026] wlan0: disconnect from AP 5c:a6:e6:11:22:33 for new auth to 5c:a6:e6:11:22:33
     [Tue Oct 14 07:58:41 2026] wlan0: associated
-- could not read: temperatures: no hwmon sensor for the NVMe
+- could not read: validators teku.avado.dnp.dappnode.eth: connect ECONNREFUSED 127.0.0.1:5052
 - collected at 2026-10-14T11:45:31.880Z in 8360 ms
 
 Network
@@ -50,7 +50,7 @@ Network
 - DNS: bo.ava.do ok 38 ms, iso.ava.do ok 41 ms
 - internet https://bo.ava.do/: ok (200, 412 ms)
 - IPFS running, restarts 0 (0 in the last hour), peers 3, AVADO store nodes 0 of 2
-- store catalogue: failed after 8003 ms (ipfs cat timed out after 8000 ms)
+- store catalogue: failed after 8003 ms (IPFS: timed out after 8000 ms)
 
 Apps
 - Teku Consensus Client (teku.avado.dnp.dappnode.eth) 0.0.77 running, Up About an hour, restarts 0, exit 0, disk 1.0 GB

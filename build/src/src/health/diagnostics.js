@@ -107,22 +107,37 @@ const isChainClient = id => {
 };
 
 /** supervisord programs that should run but don't. A program never started
- * (autostart=false, "Not started") is meant to be stopped. */
+ * (autostart=false, "Not started") is meant to be stopped; one being stopped
+ * right now comes as UNKNOWN with "STOPPING …" (the DAPPMANAGER maps
+ * supervisord's STOPPING to UNKNOWN) and is not counted either. */
 export function processesDown(container) {
   if (!container || container.state !== "running") return [];
-  return (container.processes || []).filter(
-    p => p && !PROCESS_OK.has(p.state) && !(p.state === "STOPPED" && /^not started$/i.test(String(p.description || "").trim()))
-  );
+  return (container.processes || []).filter(p => {
+    if (!p || PROCESS_OK.has(p.state)) return false;
+    const description = String(p.description || "").trim();
+    if (p.state === "STOPPED" && /^not started$/i.test(description)) return false;
+    if (p.state === "UNKNOWN" && /^STOPPING\b/.test(description)) return false;
+    return true;
+  });
 }
 
-// "Can't check for updates" — the first failing link of DNS → internet → IPFS → store nodes
+// The DAPPMANAGER's catalogue error names the step that failed first:
+// "rpc.ava.do: …" (the AVADO update server) or "IPFS: …".
+const CATALOGUE_STEP = /^\s*(rpc\.ava\.do|IPFS)\s*:\s*/i;
+
+/**
+ * "Can't check for updates" — the first failing link of DNS → internet →
+ * IPFS → the step the catalogue error names (the update server, or IPFS
+ * fetching it) → store nodes. `internet.ok` is true for any HTTP answer
+ * (even a 404): only no answer at all is "no internet".
+ */
 export function storeCause(network) {
   const store = (network && network.store) || {};
   const dns = Object.values((network && network.dns && network.dns.resolves) || {});
   if (dns.some(r => r && r.ok === false)) return "the box cannot resolve internet names (DNS)";
   const web = Object.values((network && network.internet) || {});
   const offline = web.find(r => r && r.ok === false);
-  if (offline) return `the box has no internet connection (${scrub(offline.error || `status ${offline.status}`)})`;
+  if (offline) return `the box has no internet connection (${scrub(offline.error || "no answer")})`;
   const ipfs = store.ipfs;
   if (ipfs && (ipfs.restarting || ipfs.running === false)) {
     const lines = Array.isArray(ipfs.lastLogLines) ? ipfs.lastLogLines.filter(Boolean) : [];
@@ -131,8 +146,15 @@ export function storeCause(network) {
       ? `IPFS is restarting (${num(ipfs.restartCount) ?? "?"} restarts${last})`
       : `IPFS is not running${last ? ` (${last.slice(2)})` : ""}`;
   }
-  if (ipfs && ipfs.storePeersConnected === 0) return `IPFS is not connected to the AVADO store nodes (peers: ${num(ipfs.peers) ?? "?"})`;
-  return scrub((store.catalogue && store.catalogue.error) || "the store did not answer");
+  const noStorePeers = ipfs && ipfs.storePeersConnected === 0;
+  const storePeersText = () => `IPFS is not connected to the AVADO store nodes (peers: ${num(ipfs.peers) ?? "?"})`;
+  const error = String((store.catalogue && store.catalogue.error) || "");
+  const step = error.match(CATALOGUE_STEP);
+  const detail = scrub(error.replace(CATALOGUE_STEP, "")) || "no answer";
+  if (step && step[1].toLowerCase() === "rpc.ava.do") return `the AVADO update server did not answer (${detail})`;
+  if (step) return `IPFS could not fetch the catalogue (${detail})${noStorePeers ? `; ${storePeersText()}` : ""}`;
+  if (noStorePeers) return storePeersText();
+  return scrub(error || "the store did not answer");
 }
 
 const isWifi = (name, interfaces) => {
@@ -230,7 +252,8 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
     const container = byId[c.id];
     const running = container ? container.state === "running" && !processesDown(container).length : true;
     if (api.reachable === false) {
-      if (running) add("critical", `${title}'s API does not answer${api.error ? ` (${scrub(api.error)})` : ""}`, c.id);
+      const what = c.role === "validator" ? "key manager" : "API";
+      if (running) add("critical", `${title}'s ${what} does not answer${api.error ? ` (${scrub(api.error)})` : ""}`, c.id);
       continue;
     }
     const s = api.syncing || {};
@@ -241,7 +264,9 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
     if (c.role === "execution" && s.synced === false)
       add("warning", `${title} is syncing (block ${num(s.currentBlock) ?? "?"} of ${num(s.highestBlock) ?? "?"})`, c.id);
     if (num(api.peers) != null && api.peers < 10) add("warning", `${title} has only ${api.peers} peers`, c.id);
-    if (c.role === "validator" && c.validators && c.validators.count === 0) add("warning", `${title} has no validator keys`, c.id);
+    // Any role: Teku, Nimbus and Lighthouse are beacon + validator in one
+    // package and report their keys too.
+    if (c.validators && c.validators.count === 0) add("warning", `${title} has no validator keys`, c.id);
   }
 
   const rank = s => (SEVERITY_ORDER.indexOf(s) === -1 ? SEVERITY_ORDER.length : SEVERITY_ORDER.indexOf(s));

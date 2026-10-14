@@ -106,7 +106,9 @@ describe("buildReport with diagnostics (DAPPMANAGER 10.0.53)", () => {
     const found = ticket.slice(ticket.indexOf("What we found"), ticket.indexOf("\nVersions"));
     expect(found).toContain("- [critical] Teku Consensus Client: the teku process is not running (FATAL: Exited too quickly");
     expect(found).toContain("Checkpoint URL in use: https://sync-mainnet.beaconcha.in");
-    expect(found).toContain("- [warning] Can't check for updates because IPFS is not connected to the AVADO store nodes (peers: 3)");
+    expect(found).toContain(
+      "- [warning] Can't check for updates because IPFS could not fetch the catalogue (timed out after 8000 ms); IPFS is not connected to the AVADO store nodes (peers: 3)"
+    );
     expect(found).toContain("- [warning] The box uses Wi-Fi (wlan0) for its internet connection; the Ethernet port has no link");
   });
 
@@ -116,13 +118,13 @@ describe("buildReport with diagnostics (DAPPMANAGER 10.0.53)", () => {
     expect(ticket).toContain("- memory 14.0 GB used of 31.1 GB, swap 12 MB used of 976 MB");
     expect(ticket).toContain("- system disk 1577 GB used of 3667 GB (1904 GB free)");
     expect(ticket).toContain("- temperatures: k10temp Tctl 61.4 °C");
-    expect(ticket).toContain("- could not read: temperatures: no hwmon sensor for the NVMe");
+    expect(ticket).toContain("- could not read: validators teku.avado.dnp.dappnode.eth: connect ECONNREFUSED 127.0.0.1:5052");
     expect(ticket).toContain("- wlan0 wifi up link 192.168.20.2/24");
     expect(ticket).toContain("- enp2s0 ethernet down no link");
     expect(ticket).not.toContain("veth8c2d1e4");
     expect(ticket).toContain("- default route via wlan0 (gateway 192.168.20.1)");
     expect(ticket).toContain("- IPFS running, restarts 0 (0 in the last hour), peers 3, AVADO store nodes 0 of 2");
-    expect(ticket).toContain("- store catalogue: failed after 8003 ms (ipfs cat timed out after 8000 ms)");
+    expect(ticket).toContain("- store catalogue: failed after 8003 ms (IPFS: timed out after 8000 ms)");
     expect(ticket).toContain("- Teku Consensus Client (teku.avado.dnp.dappnode.eth) 0.0.77 running, Up About an hour, restarts 0, exit 0, disk 1.0 GB");
     expect(ticket).toContain("    teku FATAL Exited too quickly (process log may have details)");
     expect(ticket).toContain("- Teku Consensus Client: beacon (teku, mainnet), API not answering (connect ECONNREFUSED 172.33.0.7:5051)");
@@ -197,3 +199,42 @@ describe("buildReport snapshots", () => {
     expect(buildReport({ ...ticket0928, packages, diagnostics: null, ready: true })).toMatchSnapshot();
   });
 });
+
+describe("buildReport, client lines", () => {
+  const withClients = (clients, containers = []) => {
+    const d = JSON.parse(JSON.stringify(healthy.diagnostics));
+    d.clients.push(...clients);
+    d.containers.push(...containers);
+    return buildReport({ ...healthy, diagnostics: d });
+  };
+  const PRYSM_VC = "eth2validator.avado.dnp.dappnode.eth";
+
+  it("Prysm's validator: its key manager answering or not, its keys and its settings", () => {
+    const r = withClients(
+      [{ id: PRYSM_VC, role: "validator", client: "prysm", network: "mainnet", api: { reachable: true }, validators: { count: 2 } }],
+      [{ id: PRYSM_VC, state: "running", processes: [], log: null, settings: { mev_boost: true, fee_recipient: "0x4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f70" } }]
+    );
+    expect(r).toContain("- eth2validator: validator (prysm, mainnet), key manager answering\n    validator keys: 2");
+    expect(r).toContain("    fee recipient (fee_recipient): 0x4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f70");
+    const down = withClients([{ id: PRYSM_VC, role: "validator", client: "prysm", network: "mainnet", api: { reachable: false, error: "timeout" }, validators: null }]);
+    expect(down).toContain("- eth2validator: validator (prysm, mainnet), key manager not answering (timeout)");
+    expect(down).toContain("- [critical] eth2validator's key manager does not answer (timeout)");
+  });
+
+  it("a client without settings, and an app without a client entry, still print", () => {
+    const r = withClients([], [{ id: "ethchain-geth.public.dappnode.eth", version: "0.1.0", state: "running", status: "Up 2 hours", restartCount: 0, exitCode: 0, processes: [{ name: "geth", state: "RUNNING", description: "pid 7, uptime 2:00:01" }], log: { lines: ["INFO Imported new chain segment"], errors: [], errorCount: 0 }, settings: null }]);
+    expect(r).toContain("- Nethermind Execution Client: execution (nethermind, mainnet), Nethermind/v1.33.1, synced");
+    expect(r).toContain("- ethchain-geth (ethchain-geth.public.dappnode.eth) 0.1.0 running, Up 2 hours, restarts 0, exit 0");
+    expect(r).toContain("    geth RUNNING pid 7, uptime 2:00:01");
+    expect(r).toContain("- ethchain-geth (ethchain-geth.public.dappnode.eth): 0 error lines in the last 500");
+  });
+
+  it("an HTTP answer of any status is internet", () => {
+    const d = JSON.parse(JSON.stringify(healthy.diagnostics));
+    d.network.internet["https://bo.ava.do/"] = { ok: true, status: 404, ms: 90 };
+    const r = buildReport({ ...healthy, diagnostics: d });
+    expect(r).toContain("- internet https://bo.ava.do/: ok (404, 90 ms)");
+    expect(r).toContain("What we found\n- nothing beyond the health findings");
+  });
+});
+

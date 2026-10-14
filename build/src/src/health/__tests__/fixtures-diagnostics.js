@@ -11,6 +11,14 @@
 //
 // healthy: a Nimbus + Nethermind box on Ethernet where everything works.
 //
+// The DAPPMANAGER side (10.0.53): `status` is docker ps's text; supervisord's
+// STOPPING comes as state UNKNOWN with "STOPPING …"; Teku, Nimbus and
+// Lighthouse are role "beacon" with `validators: { count }` (beacon and
+// validator in one package); Prysm's eth2validator is role "validator" with
+// `api: { reachable }` only; a package without an AVADO settings file has
+// `settings: null`; a package outside the client table (Geth today) has no
+// `clients` entry but still its container, programs and logs.
+//
 // Both plant secrets (a password in a log line, a password key in settings,
 // a mnemonic) that must never reach the report.
 
@@ -76,7 +84,9 @@ const ticketPackages = [
 const ticketDiagnostics = {
   collectedAt: "2026-10-14T11:45:31.880Z",
   durationMs: 8360,
-  errors: ["temperatures: no hwmon sensor for the NVMe"],
+  // Named by probe: host, dns, internet, ipfs, "ipfs peers", catalogue,
+  // containers, and per package "processes|logs|settings|client|validators <id>"
+  errors: ["validators teku.avado.dnp.dappnode.eth: connect ECONNREFUSED 127.0.0.1:5052"],
   host: {
     uptimeSeconds: 444217,
     bootedAt: "2026-10-09T08:22:14.000Z",
@@ -123,7 +133,8 @@ const ticketDiagnostics = {
         storePeersTotal: 2,
         lastLogLines: [],
       },
-      catalogue: { ok: false, ms: 8003, error: "ipfs cat timed out after 8000 ms" },
+      // The catalogue error starts with the step that failed: "rpc.ava.do: …" or "IPFS: …"
+      catalogue: { ok: false, ms: 8003, error: "IPFS: timed out after 8000 ms" },
     },
   },
   containers: [
@@ -212,7 +223,8 @@ const ticketDiagnostics = {
         errors: [],
         errorCount: 0,
       },
-      settings: { network: "mainnet", sync_mode: "snap" },
+      // Not an AVADO client package with /data/settings.json
+      settings: null,
     }),
     container("wifi.dnp.dappnode.eth", { isCore: true, version: "10.0.1" }),
     container("ipfs.dnp.dappnode.eth", {
@@ -346,7 +358,7 @@ const healthyDiagnostics = {
       version: "0.0.72",
       processes: [{ name: "nethermind", state: "RUNNING", description: "pid 12, uptime 21 days, 23:46:12" }],
       log: { lines: [], errors: [], errorCount: 0 },
-      settings: { network: "mainnet" },
+      settings: null,
     }),
     container("dappmanager.dnp.dappnode.eth", { isCore: true, version: "10.0.53" }),
     container("ipfs.dnp.dappnode.eth", { isCore: true, version: "10.0.7" }),

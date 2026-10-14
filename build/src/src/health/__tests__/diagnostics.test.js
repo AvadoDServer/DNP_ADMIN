@@ -19,7 +19,9 @@ describe("deriveProblems on ticket-0928", () => {
   });
 
   it("explains 'Can't check for updates': IPFS reaches none of the AVADO store nodes", () => {
-    expect(texts(found)).toContain("Can't check for updates because IPFS is not connected to the AVADO store nodes (peers: 3)");
+    expect(texts(found)).toContain(
+      "Can't check for updates because IPFS could not fetch the catalogue (timed out after 8000 ms); IPFS is not connected to the AVADO store nodes (peers: 3)"
+    );
   });
 
   it("says the box is on Wi-Fi with no Ethernet link, as a warning", () => {
@@ -71,14 +73,24 @@ describe("deriveProblems, one rule at a time", () => {
     expect(texts(problems(d, [], pkgs))[0]).toContain("the qtum2 process is not running (STOPPED: Oct 14 10:00 AM)");
   });
 
-  it("the store chain: DNS, then internet, then IPFS, then store nodes, then the error", () => {
+  it("the store chain: DNS, then internet, then IPFS, then the step the catalogue error names, then store nodes", () => {
     const d = box();
     d.network.store.catalogue = { ok: false, ms: 8000, error: "boom" };
     expect(storeCause(d.network)).toBe("boom");
+    d.network.store.catalogue.error = "rpc.ava.do: request timed out after 5000 ms";
+    expect(storeCause(d.network)).toBe("the AVADO update server did not answer (request timed out after 5000 ms)");
+    d.network.store.catalogue.error = "IPFS: no providers found";
+    expect(storeCause(d.network)).toBe("IPFS could not fetch the catalogue (no providers found)");
     d.network.store.ipfs.storePeersConnected = 0;
+    expect(storeCause(d.network)).toBe("IPFS could not fetch the catalogue (no providers found); IPFS is not connected to the AVADO store nodes (peers: 41)");
+    d.network.store.catalogue.error = "rpc.ava.do: 502 Bad Gateway";
+    expect(storeCause(d.network)).toBe("the AVADO update server did not answer (502 Bad Gateway)");
+    d.network.store.catalogue.error = "boom";
     expect(storeCause(d.network)).toBe("IPFS is not connected to the AVADO store nodes (peers: 41)");
     Object.assign(d.network.store.ipfs, { restarting: true, restartCount: 9, lastLogLines: ["Error: repo corrupted"] });
     expect(storeCause(d.network)).toBe("IPFS is restarting (9 restarts, last line: Error: repo corrupted)");
+    d.network.internet["https://bo.ava.do/"] = { ok: true, status: 404, ms: 90 };
+    expect(storeCause(d.network)).toMatch(/^IPFS is restarting/);
     d.network.internet["https://bo.ava.do/"] = { ok: false, error: "ETIMEDOUT" };
     expect(storeCause(d.network)).toBe("the box has no internet connection (ETIMEDOUT)");
     d.network.dns.resolves["bo.ava.do"] = { ok: false, error: "EAI_AGAIN" };
@@ -133,6 +145,31 @@ describe("deriveProblems, one rule at a time", () => {
     expect(t).toContain("Nimbus has only 4 peers");
     expect(t).toContain("Nethermind Execution Client is syncing (block 100 of 200)");
     expect(t).toContain("eth2validator has no validator keys");
+  });
+
+  it("no validator keys in a combined beacon package too", () => {
+    const d = box();
+    d.clients[0].validators = { count: 0 };
+    expect(texts(problems(d, [], pkgs))).toEqual(["Nimbus has no validator keys"]);
+    d.clients[0].validators = null;
+    expect(problems(d, [], pkgs)).toEqual([]);
+  });
+
+  it("Prysm's validator has only `reachable`: nothing when it answers, its key manager when it does not", () => {
+    const d = box();
+    const vc = { id: "eth2validator.avado.dnp.dappnode.eth", role: "validator", client: "prysm", network: "mainnet", api: { reachable: true }, validators: { count: 3 } };
+    d.clients.push(vc);
+    expect(problems(d, [], pkgs)).toEqual([]);
+    vc.api = { reachable: false, error: "timeout" };
+    expect(texts(problems(d, [], pkgs))).toEqual(["eth2validator's key manager does not answer (timeout)"]);
+  });
+
+  it("a program being stopped right now (UNKNOWN \"STOPPING …\") is not down; another UNKNOWN is", () => {
+    const d = box();
+    nimbus(d).processes[0] = { name: "nimbus", state: "UNKNOWN", description: "STOPPING Oct 14 11:45 AM" };
+    expect(problems(d, [], pkgs)).toEqual([]);
+    nimbus(d).processes[0] = { name: "nimbus", state: "UNKNOWN", description: "unknown state" };
+    expect(texts(problems(d, [], pkgs))[0]).toContain("the nimbus process is not running (UNKNOWN: unknown state)");
   });
 
   it("an API that does not answer while its program runs", () => {

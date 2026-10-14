@@ -126,8 +126,11 @@ function processLines(d, packages) {
 
 function syncLine(c) {
   const api = c.api || {};
-  if (api.reachable === false) return `API not answering (${scrub(api.error || "no answer")})`;
-  if (!api.reachable) return "API not checked";
+  // A validator client (Prysm's eth2validator) is read through its key manager only
+  const what = c.role === "validator" ? "key manager" : "API";
+  if (api.reachable === false) return `${what} not answering (${scrub(api.error || "no answer")})`;
+  if (!api.reachable) return `${what} not checked`;
+  if (c.role === "validator" && !api.version && !api.syncing && typeof api.peers !== "number") return "key manager answering";
   const parts = [api.version ? scrub(api.version) : "version unknown"];
   const s = api.syncing;
   if (s && "syncDistance" in s)
