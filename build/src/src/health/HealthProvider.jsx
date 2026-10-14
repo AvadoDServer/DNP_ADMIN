@@ -79,6 +79,17 @@ function metricsStatus(data) {
   return Object.values(data).some(v => v == null) ? "partial" : "ok";
 }
 
+// Runs `load` as soon as the tab is shown again: a poll skipped while the
+// tab was hidden does not wait for its next tick. Returns the remover.
+function whenShown(load) {
+  if (typeof document === "undefined") return () => {};
+  const onChange = () => {
+    if (!document.hidden) load();
+  };
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
+
 const HealthContext = createContext(null);
 
 export function HealthProvider({
@@ -347,8 +358,8 @@ export function HealthProvider({
     [scanLostData]
   );
 
-  // IPFS health, every 2 minutes while the tab is shown, and again as soon as
-  // a reset ends. A failed read keeps the last answer and leaves a debug line.
+  // IPFS health, every 2 minutes while the tab is shown (and at once when it
+  // is shown again), and again as soon as a reset ends. A failed read keeps the last answer and leaves a debug line.
   const ipfsAllowed = canResetIpfsData(packages);
   // When a reset ends: read the health again at once, and again once its
   // result note on Home has run out (the rule reads `now`).
@@ -388,13 +399,16 @@ export function HealthProvider({
     };
     load();
     const t = setInterval(load, IPFS_HEALTH_INTERVAL);
+    const stopWatching = whenShown(load);
     return () => {
       cancelled = true;
       clearInterval(t);
+      stopWatching();
     };
   }, [ipfsAllowed, tick, ipfsTick]);
 
-  // What runs inside each container, every minute while the tab is shown. A
+  // What runs inside each container, every minute while the tab is shown, and
+  // at once when it is shown again (a background tab skips its reads). A
   // failed read keeps the last answer and leaves a debug line.
   // The DAPPMANAGER's own version too: see canGetDiagnostics
   const dappmanagerVersionData = useSelector(getDappmanagerVersionData);
@@ -418,9 +432,11 @@ export function HealthProvider({
     };
     load();
     const t = setInterval(load, DIAGNOSTICS_INTERVAL);
+    const stopWatching = whenShown(load);
     return () => {
       cancelled = true;
       clearInterval(t);
+      stopWatching();
     };
   }, [diagnosticsAllowed, tick]);
 

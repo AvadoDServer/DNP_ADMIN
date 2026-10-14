@@ -875,3 +875,51 @@ describe("HealthProvider with the test box's light getDiagnostics (2026-10-14)",
     expect(fetchDiagnosticsImpl).not.toHaveBeenCalled();
   });
 });
+
+describe("HealthProvider in a background tab", () => {
+  const setHidden = hidden => Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+  afterEach(() => {
+    delete document.hidden;
+  });
+  const packages = [
+    ...state.packages,
+    { name: "dappmanager.dnp.dappnode.eth", isCore: true, version: "10.0.53", state: "running", running: true },
+    { name: "teku.avado.dnp.dappnode.eth", version: "0.0.79", state: "running", running: true, manifest: { title: "Teku" } },
+  ];
+  const tekuFatal = {
+    containers: [
+      { id: "teku.avado.dnp.dappnode.eth", isCore: false, state: "running", processes: [{ name: "teku", state: "FATAL", description: "Exited too quickly" }], log: null, settings: null },
+    ],
+  };
+
+  it("skips the light diagnostics and IPFS health reads while hidden, and reads both at once when shown", async () => {
+    setHidden(true);
+    const fetchDiagnosticsImpl = vi.fn(async () => tekuFatal);
+    const fetchIpfsHealthImpl = vi.fn(async () => ({ exists: true, running: true, restarting: false, restartsLastHour: 0 }));
+    renderWith(
+      { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null, fetchDiagnosticsImpl, fetchIpfsHealthImpl },
+      {},
+      { ...state, packages }
+    );
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(fetchDiagnosticsImpl).not.toHaveBeenCalled();
+    expect(fetchIpfsHealthImpl).not.toHaveBeenCalled();
+    expect(screen.getByTestId("allids").textContent).not.toContain("process-down");
+
+    setHidden(false);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() => expect(screen.getByTestId("allids").textContent).toContain("process-down:teku.avado.dnp.dappnode.eth"));
+    expect(fetchDiagnosticsImpl).toHaveBeenCalledTimes(1);
+    expect(fetchIpfsHealthImpl).toHaveBeenCalledTimes(1);
+
+    // Hidden again: nothing new is read
+    setHidden(true);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(fetchDiagnosticsImpl).toHaveBeenCalledTimes(1);
+  });
+});
+
