@@ -238,3 +238,17 @@ describe("buildReport, client lines", () => {
   });
 });
 
+describe("buildReport on the light variant", () => {
+  it("containers with programs [] and log null, no host, network or clients: no crash, no process line", () => {
+    const d = JSON.parse(JSON.stringify(ticket0928.diagnostics));
+    for (const c of d.containers) Object.assign(c, { processes: [], log: null, settings: null });
+    Object.assign(d, { host: null, network: null, clients: null });
+    const r = buildReport({ ...ticket0928, diagnostics: d });
+    expect(r).toContain("What we found\n- nothing beyond the health findings");
+    expect(r).toContain("- no app reports the programs inside it");
+    expect(r).toContain("- host details not collected");
+    expect(r).toContain("Clients\n- none found");
+    expect(r).toContain("Logs\n- not collected");
+  });
+});
+

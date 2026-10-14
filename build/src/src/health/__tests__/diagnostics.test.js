@@ -65,12 +65,23 @@ describe("deriveProblems, one rule at a time", () => {
     expect(t).toContain("Nethermind Execution Client restarted 5 times recently");
   });
 
-  it("a program that was never meant to start (autostart=false) is not a problem", () => {
+  it("a program stopped from the app's page is only info; FATAL, BACKOFF and EXITED are not running", () => {
     const d = box();
-    nimbus(d).processes.push({ name: "qtum", state: "STOPPED", description: "Not started" });
+    nimbus(d).processes[0] = { name: "nimbus", state: "STOPPED", description: "Oct 14 10:00 AM" };
+    expect(problems(d, [], pkgs)).toEqual([
+      { severity: "info", text: "Nimbus: the nimbus process is stopped (stopped from the app)", appId: "nimbus.avado.dnp.dappnode.eth" },
+    ]);
+    for (const state of ["FATAL", "BACKOFF", "EXITED"]) {
+      nimbus(d).processes[0] = { name: "nimbus", state, description: "Exited too quickly" };
+      expect(problems(d, [], pkgs)[0]).toMatchObject({ severity: "critical", text: expect.stringContaining(`the nimbus process is not running (${state}: Exited too quickly)`) });
+    }
+  });
+
+  it("the light variant (no programs, no log) finds nothing and does not crash", () => {
+    const d = box();
+    for (const c of d.containers) Object.assign(c, { processes: [], log: null, settings: null });
+    Object.assign(d, { host: null, network: null, clients: null });
     expect(problems(d, [], pkgs)).toEqual([]);
-    nimbus(d).processes.push({ name: "qtum2", state: "STOPPED", description: "Oct 14 10:00 AM" });
-    expect(texts(problems(d, [], pkgs))[0]).toContain("the qtum2 process is not running (STOPPED: Oct 14 10:00 AM)");
   });
 
   it("the store chain: DNS, then internet, then IPFS, then the step the catalogue error names, then store nodes", () => {
@@ -85,8 +96,9 @@ describe("deriveProblems, one rule at a time", () => {
     expect(storeCause(d.network)).toBe("IPFS could not fetch the catalogue (no providers found); IPFS is not connected to the AVADO store nodes (peers: 41)");
     d.network.store.catalogue.error = "rpc.ava.do: 502 Bad Gateway";
     expect(storeCause(d.network)).toBe("the AVADO update server did not answer (502 Bad Gateway)");
+    // No step named: the error as it came
     d.network.store.catalogue.error = "boom";
-    expect(storeCause(d.network)).toBe("IPFS is not connected to the AVADO store nodes (peers: 41)");
+    expect(storeCause(d.network)).toBe("boom");
     Object.assign(d.network.store.ipfs, { restarting: true, restartCount: 9, lastLogLines: ["Error: repo corrupted"] });
     expect(storeCause(d.network)).toBe("IPFS is restarting (9 restarts, last line: Error: repo corrupted)");
     d.network.internet["https://bo.ava.do/"] = { ok: true, status: 404, ms: 90 };
@@ -104,15 +116,27 @@ describe("deriveProblems, one rule at a time", () => {
     expect(problems(d, [], pkgs)).toEqual([{ severity: "info", text: "The box uses Wi-Fi (wlp3s0) for its internet connection", appId: undefined }]);
   });
 
-  it("a restart nobody asked for, unless the Admin's Restart was just before the boot", () => {
-    const d = box();
-    d.host.uptimeSeconds = 3 * 3600;
-    d.host.bootedAt = new Date(NOW.getTime() - 3 * 3600 * 1000).toISOString();
-    expect(texts(problems(d, [], pkgs))).toEqual(["The box restarted by itself 3 h ago (power loss or crash)"]);
-    const asked = [{ timestamp: new Date(NOW.getTime() - 3 * 3600 * 1000 - 60 * 1000).toISOString(), event: "rebootHost.dappmanager.dnp.dappnode.eth", level: "info" }];
-    expect(problems(d, asked, pkgs)).toEqual([]);
-    const longBefore = [{ ...asked[0], timestamp: "2026-10-01T00:00:00Z" }];
-    expect(problems(d, longBefore, pkgs)).toHaveLength(1);
+  it("a restart without a reboot from the dashboard: a warning under 6 h, info under 24 h", () => {
+    const booted = hours => {
+      const d = box();
+      d.host.uptimeSeconds = hours * 3600;
+      d.host.bootedAt = new Date(NOW.getTime() - hours * 3600 * 1000).toISOString();
+      return d;
+    };
+    expect(problems(booted(3), [], pkgs)).toEqual([
+      {
+        severity: "warning",
+        text: "The box restarted 3 h ago without a reboot from the AVADO dashboard (power loss, crash or a reboot from the terminal)",
+        appId: undefined,
+      },
+    ]);
+    expect(problems(booted(10), [], pkgs)[0].severity).toBe("info");
+    expect(problems(booted(25), [], pkgs)).toEqual([]);
+    // rebootHost (DAPPMANAGER 10.0.53 logs it) up to 15 min before the boot explains it
+    const at = minutes => [{ timestamp: new Date(NOW.getTime() - 3 * 3600 * 1000 - minutes * 60 * 1000).toISOString(), event: "rebootHost", level: "info" }];
+    expect(problems(booted(3), at(1), pkgs)).toEqual([]);
+    expect(problems(booted(3), [{ ...at(1)[0], event: "rebootHost.dappmanager.dnp.dappnode.eth" }], pkgs)).toEqual([]);
+    expect(problems(booted(3), at(20), pkgs)).toHaveLength(1);
   });
 
   it("kernel log, temperatures and memory", () => {
@@ -147,11 +171,9 @@ describe("deriveProblems, one rule at a time", () => {
     expect(t).toContain("eth2validator has no validator keys");
   });
 
-  it("no validator keys in a combined beacon package too", () => {
+  it("no validator keys is said only for a validator client, not for a beacon node without keys", () => {
     const d = box();
     d.clients[0].validators = { count: 0 };
-    expect(texts(problems(d, [], pkgs))).toEqual(["Nimbus has no validator keys"]);
-    d.clients[0].validators = null;
     expect(problems(d, [], pkgs)).toEqual([]);
   });
 
@@ -164,12 +186,15 @@ describe("deriveProblems, one rule at a time", () => {
     expect(texts(problems(d, [], pkgs))).toEqual(["eth2validator's key manager does not answer (timeout)"]);
   });
 
-  it("a program being stopped right now (UNKNOWN \"STOPPING …\") is not down; another UNKNOWN is", () => {
+  it("a program being stopped (UNKNOWN \"STOPPING …\") is only info, and its API is not blamed", () => {
     const d = box();
     nimbus(d).processes[0] = { name: "nimbus", state: "UNKNOWN", description: "STOPPING Oct 14 11:45 AM" };
-    expect(problems(d, [], pkgs)).toEqual([]);
+    d.clients[0].api = { reachable: false, error: "connect ECONNREFUSED" };
+    expect(problems(d, [], pkgs)).toEqual([
+      { severity: "info", text: "Nimbus: the nimbus process is stopping (stopped from the app)", appId: "nimbus.avado.dnp.dappnode.eth" },
+    ]);
     nimbus(d).processes[0] = { name: "nimbus", state: "UNKNOWN", description: "unknown state" };
-    expect(texts(problems(d, [], pkgs))[0]).toContain("the nimbus process is not running (UNKNOWN: unknown state)");
+    expect(texts(problems(d, [], pkgs))).not.toContain(expect.stringContaining("process is not running"));
   });
 
   it("an API that does not answer while its program runs", () => {

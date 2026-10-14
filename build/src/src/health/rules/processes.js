@@ -6,7 +6,9 @@ import { lastError, processesDown, titleOf } from "health/diagnostics";
  * getDiagnostics, fetched by HealthProvider as `diagnostics` every minute,
  * containers and their programs only). A container can be "running" while
  * the program that does the work has stopped: the app list then says
- * running and nothing else would notice.
+ * running and nothing else would notice. Only a program that failed counts
+ * (health/diagnostics.js processesDown): one stopped from the app's own page
+ * is never a finding, and never gets a Restart (its keys may run elsewhere).
  */
 
 const isChainClient = id => {
@@ -37,7 +39,7 @@ export function processDown({ diagnostics, packages }) {
       appId: c.id,
       title: `${title} is not running inside its container`,
       why:
-        `${title} shows as running, but the program that does its work has stopped and is not being started again.` +
+        `${title} shows as running, but the program that does its work failed and is not being started again.` +
         (client ? " Until it runs, your validators miss attestations and rewards." : " Anything that depends on it does not work meanwhile.") +
         " A restart often fixes it; if it stops again, the reason is in its logs.",
       // Advanced mode only (FindingRow): the program and what it last said

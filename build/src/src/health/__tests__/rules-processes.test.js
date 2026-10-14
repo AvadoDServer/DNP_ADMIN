@@ -45,6 +45,32 @@ describe("processDown", () => {
     expect(wifi).toMatchObject({ severity: "warning", topic: "core", fix: { kind: "link", to: "/system" } });
   });
 
+  it("a validator the owner stopped from its page: no finding, so never a Restart (its keys may run elsewhere)", () => {
+    const s = ticketSnapshot();
+    s.diagnostics.containers[0].processes[0] = { name: "teku", state: "STOPPED", description: "Oct 14 10:36 AM" };
+    expect(processDown(s)).toEqual([]);
+    s.diagnostics.containers[0].processes[0] = { name: "teku", state: "UNKNOWN", description: "STOPPING Oct 14 10:36 AM" };
+    expect(processDown(s)).toEqual([]);
+    const all = runChecksDetailed(snapshot({ ...s }), ALL_RULES).findings;
+    expect(all.filter(f => f.appId === TEKU && f.fix && f.fix.action === "restartPackage")).toEqual([]);
+  });
+
+  it("BACKOFF and EXITED count like FATAL", () => {
+    for (const state of ["BACKOFF", "EXITED"]) {
+      const s = ticketSnapshot();
+      s.diagnostics.containers[0].processes[0].state = state;
+      expect(processDown(s)).toHaveLength(1);
+    }
+  });
+
+  it("the light variant (programs [] and log null) gives no process finding", () => {
+    const s = ticketSnapshot();
+    for (const c of s.diagnostics.containers) Object.assign(c, { processes: [], log: null, settings: null });
+    expect(processDown(s)).toEqual([]);
+    expect(appOomKilled(s)).toEqual([]);
+    expect(appCrashLooping(s)).toEqual([]);
+  });
+
   it("nothing on a healthy box, nor for a program never meant to start", () => {
     const s = healthySnapshot();
     s.diagnostics.containers[0].processes.push({ name: "qtum", state: "STOPPED", description: "Not started" });

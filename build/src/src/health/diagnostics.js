@@ -9,7 +9,12 @@ import { getClient, ROLES } from "./clients";
 
 const SEVERITY_ORDER = ["critical", "warning", "info"];
 // supervisord states that mean "the program runs, or is about to"
-const PROCESS_OK = new Set(["RUNNING", "STARTING"]);
+// supervisord states a program only reaches by failing: a crash that gave up
+// (FATAL), one that is being retried (BACKOFF), or an exit it did not expect
+// (EXITED). STOPPED is only ever reached through a stop request (the Stop
+// button on the app's own page, or its restart in progress), so it is never
+// "down": restarting a validator the owner stopped could get it slashed.
+const PROCESS_FAILED = new Set(["FATAL", "BACKOFF", "EXITED"]);
 // The box restarting this long after a "Restart" from the Admin was that restart
 export const REBOOT_EXPLAINS_MS = 15 * 60 * 1000;
 export const LAST_ERROR_MAX = 160;
@@ -106,19 +111,22 @@ const isChainClient = id => {
   return Boolean(c && (c.role === ROLES.EXECUTION || c.role === ROLES.CONSENSUS));
 };
 
-/** supervisord programs that should run but don't. A program never started
- * (autostart=false, "Not started") is meant to be stopped; one being stopped
- * right now comes as UNKNOWN with "STOPPING …" (the DAPPMANAGER maps
- * supervisord's STOPPING to UNKNOWN) and is not counted either. */
+/** supervisord programs that failed (FATAL, BACKOFF, EXITED) inside a running container. */
 export function processesDown(container) {
   if (!container || container.state !== "running") return [];
-  return (container.processes || []).filter(p => {
-    if (!p || PROCESS_OK.has(p.state)) return false;
-    const description = String(p.description || "").trim();
-    if (p.state === "STOPPED" && /^not started$/i.test(description)) return false;
-    if (p.state === "UNKNOWN" && /^STOPPING\b/.test(description)) return false;
-    return true;
-  });
+  return (container.processes || []).filter(p => p && PROCESS_FAILED.has(p.state));
+}
+
+/**
+ * Programs stopped on purpose inside a running container: STOPPED, and
+ * STOPPING (which the DAPPMANAGER sends as UNKNOWN "STOPPING …"). Never a
+ * finding, only an info line in the report.
+ */
+export function processesStopped(container) {
+  if (!container || container.state !== "running") return [];
+  return (container.processes || []).filter(
+    p => p && (p.state === "STOPPED" || (p.state === "UNKNOWN" && /^STOPPING\b/.test(String(p.description || "").trim())))
+  );
 }
 
 // The DAPPMANAGER's catalogue error names the step that failed first:
@@ -153,7 +161,7 @@ export function storeCause(network) {
   const detail = scrub(error.replace(CATALOGUE_STEP, "")) || "no answer";
   if (step && step[1].toLowerCase() === "rpc.ava.do") return `the AVADO update server did not answer (${detail})`;
   if (step) return `IPFS could not fetch the catalogue (${detail})${noStorePeers ? `; ${storePeersText()}` : ""}`;
-  if (noStorePeers) return storePeersText();
+  // No step named: the DAPPMANAGER's error as it came
   return scrub(error || "the store did not answer");
 }
 
@@ -194,6 +202,8 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
         c.id
       );
     }
+    for (const p of processesStopped(c))
+      add("info", `${title}: the ${p.name} process is ${p.state === "STOPPED" ? "stopped" : "stopping"} (stopped from the app)`, c.id);
     let stateSaid = false;
     if (["exited", "dead", "restarting"].includes(c.state)) {
       stateSaid = true;
@@ -224,12 +234,18 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
   if (host) {
     const up = num(host.uptimeSeconds);
     const bootedAt = Date.parse(host.bootedAt) || (up != null ? now.getTime() - up * 1000 : NaN);
+    // rebootHost (the AVADO dashboard's Restart) is in the activity log from
+    // DAPPMANAGER 10.0.53, a moment before the boot it causes
     if (up != null && up < 86400) {
       const asked = (userActionLogs || []).some(l => {
         const t = Date.parse(l && l.timestamp);
         return /^rebootHost\b/.test(String((l && l.event) || "")) && t >= bootedAt - REBOOT_EXPLAINS_MS && t <= bootedAt + 5 * 60 * 1000;
       });
-      if (!asked) add("warning", `The box restarted by itself ${formatDuration(up)} ago (power loss or crash)`);
+      if (!asked)
+        add(
+          up < 6 * 3600 ? "warning" : "info",
+          `The box restarted ${formatDuration(up)} ago without a reboot from the AVADO dashboard (power loss, crash or a reboot from the terminal)`
+        );
     }
     const dmesg = host.dmesg || {};
     if ((dmesg.oom || []).length) add("warning", `The system killed processes for lack of memory (${dmesg.oom.length} times in the kernel log)`);
@@ -250,7 +266,7 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
     const title = titleOf(c.id, packages);
     const api = c.api || {};
     const container = byId[c.id];
-    const running = container ? container.state === "running" && !processesDown(container).length : true;
+    const running = container ? container.state === "running" && !processesDown(container).length && !processesStopped(container).length : true;
     if (api.reachable === false) {
       const what = c.role === "validator" ? "key manager" : "API";
       if (running) add("critical", `${title}'s ${what} does not answer${api.error ? ` (${scrub(api.error)})` : ""}`, c.id);
@@ -264,9 +280,9 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
     if (c.role === "execution" && s.synced === false)
       add("warning", `${title} is syncing (block ${num(s.currentBlock) ?? "?"} of ${num(s.highestBlock) ?? "?"})`, c.id);
     if (num(api.peers) != null && api.peers < 10) add("warning", `${title} has only ${api.peers} peers`, c.id);
-    // Any role: Teku, Nimbus and Lighthouse are beacon + validator in one
-    // package and report their keys too.
-    if (c.validators && c.validators.count === 0) add("warning", `${title} has no validator keys`, c.id);
+    // A validator client only (Prysm's eth2validator): Teku, Nimbus and
+    // Lighthouse report their keys too, but a beacon node without keys is normal.
+    if (c.role === "validator" && c.validators && c.validators.count === 0) add("warning", `${title} has no validator keys`, c.id);
   }
 
   const rank = s => (SEVERITY_ORDER.indexOf(s) === -1 ? SEVERITY_ORDER.length : SEVERITY_ORDER.indexOf(s));
