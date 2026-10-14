@@ -59,7 +59,8 @@ export const mockLostData = [
 ];
 
 // Scenarios for `yarn dev`: open the Admin with ?mock=<name> (in the address
-// before the #, or after it). Known: "ipfs-restarting".
+// before the #, or after it). Known: "ipfs-restarting", "teku-down" (the
+// diagnostics of ticket-0928, see pages/troubleshoot/diagnosticsApi.js).
 export function mockScenario() {
   if (typeof window === "undefined" || !window.location) return null;
   const { search = "", hash = "" } = window.location;
@@ -170,12 +171,12 @@ export const mockState = {
       state: "exited",
     },
     {
-      // 10.0.52: has the lost-data calls (see mockLostData above) and the
-      // IPFS reset (mockIpfsHealth).
+      // 10.0.53: has the lost-data calls (see mockLostData above), the
+      // IPFS reset (mockIpfsHealth) and getDiagnostics (the report).
       name: "dappmanager.dnp.dappnode.eth",
       isCore: true,
       isDnp: true,
-      version: "10.0.52",
+      version: "10.0.53",
       state: "running",
       running: true,
     },

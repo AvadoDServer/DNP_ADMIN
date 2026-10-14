@@ -9,6 +9,7 @@ import { chainSyncing, chainError, headBehind, lowPeers, missedAttestations } fr
 import { mevboostRelays } from "./mevboost";
 import { lostData } from "./lostData";
 import { ipfsRestarting } from "./ipfs";
+import { processDown, appOomKilled, appCrashLooping } from "./processes";
 
 // portsClosed, noUpnp and noNatLoopback (./access) are left out: the core no
 // longer sends the router params they read (DAPPMANAGER getParams has
@@ -26,4 +27,5 @@ export const ALL_RULES = [
   mevboostRelays,
   lostData,
   ipfsRestarting,
+  processDown, appOomKilled, appCrashLooping,
 ];
