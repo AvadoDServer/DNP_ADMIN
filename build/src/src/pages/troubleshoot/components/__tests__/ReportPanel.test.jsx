@@ -121,6 +121,23 @@ describe("ReportPanel", () => {
     }
   });
 
+  it("on a Help topic (compact) nothing is collected until Collect box details is pressed; then Refresh", async () => {
+    const { impl, calls } = deferredCalls();
+    renderPanel({ compact: true, fetchDiagnosticsImpl: impl });
+    expect(impl).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Download report" })).not.toBeDisabled();
+    showReport();
+    expect(reportText()).toContain("- Box details: not collected");
+
+    fireEvent.click(screen.getByRole("button", { name: "Collect box details" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Collecting box details…");
+    await waitFor(() => expect(impl).toHaveBeenCalledWith({}));
+    await act(async () => calls[0].resolve(ticket0928.diagnostics));
+    expect(reportText()).toContain("the teku process is not running");
+    expect(screen.getByRole("button", { name: "Refresh" })).not.toBeDisabled();
+  });
+
   it("never asks an older DAPPMANAGER: no Refresh, one line under Box", () => {
     const fetchDiagnosticsImpl = vi.fn();
     const packages = ticket0928.packages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.52" } : p));

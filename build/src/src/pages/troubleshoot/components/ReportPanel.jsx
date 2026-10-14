@@ -33,12 +33,16 @@ function buildVersions(packages, dappmanagerVersionData) {
  * The diagnostics report: what the app already knows plus, from a DAPPMANAGER
  * of 10.0.53 or newer, getDiagnostics (asked for on open and on Refresh,
  * every probe on, given up after 30 s). Shown to the user before it is copied
- * or sent. Never contains env values or the public IP; logs and settings come
+ * or sent. Only the Help home panel collects on open: the compact panel on
+ * each Help topic waits for "Collect box details" (a full collection is a
+ * privileged run and some 25 docker calls on the box). Never contains env
+ * values or the public IP; logs and settings come
  * scrubbed of secrets — see `health/report.js`. "Email support" keeps its
  * short body (findings only) and asks for the downloaded report.
  */
 export default function ReportPanel({
   compact = false,
+  collectOnOpen = !compact,
   fetchDiagnosticsImpl = getDiagnostics,
   timeoutMs = DIAGNOSTICS_TIMEOUT_MS,
 }) {
@@ -73,12 +77,12 @@ export default function ReportPanel({
     // The run counter itself (not a DOM node): bumping it on close drops an
     // answer that arrives after the panel closed.
     const runs = run;
-    if (allowed) collect();
+    if (allowed && collectOnOpen) collect();
     return () => {
       runs.current++;
     };
-  }, [allowed, collect]);
-  const loading = allowed && (diag.status === "loading" || diag.status === "idle");
+  }, [allowed, collectOnOpen, collect]);
+  const loading = allowed && (diag.status === "loading" || (collectOnOpen && diag.status === "idle"));
 
   const versions = buildVersions(packages, dappmanagerVersionData);
   const report = buildReport({
@@ -136,7 +140,7 @@ export default function ReportPanel({
           </Button>
           {allowed && (
             <Button variant="secondary" size="sm" onClick={collect} disabled={loading}>
-              Refresh
+              {diag.status === "idle" ? "Collect box details" : "Refresh"}
             </Button>
           )}
         </div>
