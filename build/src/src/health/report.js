@@ -235,7 +235,7 @@ export function buildReport({
   head.push(`- node id ${params.nodeid || "?"}`, `- internal IP ${params.internalip || params.internalIp || "?"}`);
   head.push(`- CPU ${stats.cpu || "?"}, memory ${stats.memory || "?"}, disk ${stats.disk || "?"} of ${stats.diskTotal || "?"}`);
   if (d) head.push(...boxLines(d));
-  else if (!canGetDiagnostics(packages)) head.push(`- Box details need DAPPMANAGER ${DIAGNOSTICS_SINCE} or newer`);
+  else if (!canGetDiagnostics(packages, versions && versions.dappmanager)) head.push(`- Box details need DAPPMANAGER ${DIAGNOSTICS_SINCE} or newer`);
   else if (diagnosticsError) head.push(`- Box details: could not be collected: ${scrub(diagnosticsError)}`);
   else if (diagnosticsLoading) head.push("- Box details: still collecting");
   else head.push("- Box details: not collected");

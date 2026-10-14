@@ -56,7 +56,7 @@ export default function ReportPanel({
   const [showReport, setShowReport] = useState(false);
   // getDiagnostics: { status: "idle"|"loading"|"ok"|"error", data, error }
   const [diag, setDiag] = useState({ status: "idle", data: null, error: null });
-  const allowed = canGetDiagnostics(packages);
+  const allowed = canGetDiagnostics(packages, dappmanagerVersionData && dappmanagerVersionData.version);
   const run = useRef(0);
   const fetchRef = useRef(fetchDiagnosticsImpl);
   fetchRef.current = fetchDiagnosticsImpl;

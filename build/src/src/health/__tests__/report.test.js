@@ -172,7 +172,12 @@ describe("buildReport with diagnostics (DAPPMANAGER 10.0.53)", () => {
 
 describe("buildReport without diagnostics", () => {
   it("an older DAPPMANAGER: one line under Box", () => {
-    const r = buildReport({ ...ticket0928, packages: ticket0928.packages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.52" } : p)), diagnostics: null });
+    const r = buildReport({
+      ...ticket0928,
+      packages: ticket0928.packages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.52" } : p)),
+      versions: { ...ticket0928.versions, dappmanager: "10.0.52" },
+      diagnostics: null,
+    });
     expect(r).toContain("- Box details need DAPPMANAGER 10.0.53 or newer");
     expect(r).toContain("What we found\n- box details not collected (see Box)");
     expect(r).not.toContain("\nNetwork\n");
@@ -196,7 +201,8 @@ describe("buildReport snapshots", () => {
   });
   it("ticket-0928 without diagnostics (older DAPPMANAGER)", () => {
     const packages = ticket0928.packages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.52" } : p));
-    expect(buildReport({ ...ticket0928, packages, diagnostics: null, ready: true })).toMatchSnapshot();
+    const versions = { ...ticket0928.versions, dappmanager: "10.0.52" };
+    expect(buildReport({ ...ticket0928, packages, versions, diagnostics: null, ready: true })).toMatchSnapshot();
   });
 });
 
@@ -249,6 +255,15 @@ describe("buildReport on the light variant", () => {
     expect(r).toContain("- host details not collected");
     expect(r).toContain("Clients\n- none found");
     expect(r).toContain("Logs\n- not collected");
+  });
+});
+
+describe("buildReport gate", () => {
+  it("a test build: the package list says 10.0.52, the DAPPMANAGER itself 10.0.53 — still collected, no 'need' line", () => {
+    const packages = ticket0928.packages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.52" } : p));
+    const r = buildReport({ ...ticket0928, packages, diagnostics: null, diagnosticsLoading: true });
+    expect(r).not.toContain("need DAPPMANAGER");
+    expect(r).toContain("- Box details: still collecting");
   });
 });
 

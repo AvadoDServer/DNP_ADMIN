@@ -99,19 +99,22 @@ export const DIAGNOSTICS_SINCE = "10.0.53";
  * True when the installed DAPPMANAGER is 10.0.53 or newer, the first one with
  * getDiagnostics. An older or unreadable version is false, so the call is
  * never sent to a core without it.
+ *
+ * `ownVersion`: the version the DAPPMANAGER reports itself (getVersionData,
+ * from its package.json). The package list's version is its image tag, which
+ * a test build deployed under the running tag does not change (the test box
+ * on 2026-10-14 ran the 10.0.53 code tagged 10.0.52): either one being new
+ * enough is.
  */
-export function canGetDiagnostics(packages) {
-  return dappmanagerAtLeast(packages, DIAGNOSTICS_SINCE);
+export function canGetDiagnostics(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, DIAGNOSTICS_SINCE) || versionAtLeast(ownVersion, DIAGNOSTICS_SINCE);
 }
 
-// The installed DAPPMANAGER (a core package in `packages`) is `since` or newer.
+// The installed DAPPMANAGER (a core package in `packages`) is `since` or
+// newer (versionAtLeast is below, with the storage-mode helpers).
 function dappmanagerAtLeast(packages, since) {
   const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
-  const have = versionParts(core && core.version);
-  const need = versionParts(since);
-  if (!have) return false;
-  for (let i = 0; i < 3; i++) if (have[i] !== need[i]) return have[i] > need[i];
-  return true;
+  return versionAtLeast(core && core.version, since);
 }
 
 const table = [

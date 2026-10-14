@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
-import { getDappnodeStats, getDappnodeParams } from "services/dappnodeStatus/selectors";
+import { getDappnodeStats, getDappnodeParams, getDappmanagerVersionData } from "services/dappnodeStatus/selectors";
 import { getChainData } from "services/chainData/selectors";
 import { getCoreUpdateAvailable } from "services/coreUpdate/selectors";
 import { getDiagnoses } from "pages/troubleshoot/selectors";
@@ -396,7 +396,9 @@ export function HealthProvider({
 
   // What runs inside each container, every minute while the tab is shown. A
   // failed read keeps the last answer and leaves a debug line.
-  const diagnosticsAllowed = canGetDiagnostics(packages);
+  // The DAPPMANAGER's own version too: see canGetDiagnostics
+  const dappmanagerVersionData = useSelector(getDappmanagerVersionData);
+  const diagnosticsAllowed = canGetDiagnostics(packages, dappmanagerVersionData && dappmanagerVersionData.version);
   useEffect(() => {
     if (!diagnosticsAllowed) {
       setDiagnostics(null);

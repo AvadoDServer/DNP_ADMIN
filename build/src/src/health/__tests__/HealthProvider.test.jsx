@@ -11,10 +11,15 @@ import { diskFillingUp } from "health/rules/storage";
 import { lostData } from "health/rules/lostData";
 import { ipfsRestarting } from "health/rules/ipfs";
 import { processDown, appOomKilled, appCrashLooping } from "health/rules/processes";
+import boxLight from "./fixtures/box-light-2026-10-14.json";
 import { fetchDiskTrend, DISK_QUERIES, resetPrometheusBase } from "health/prometheus";
 
 vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.packages }));
-vi.mock("services/dappnodeStatus/selectors", () => ({ getDappnodeStats: s => s.stats, getDappnodeParams: s => s.params }));
+vi.mock("services/dappnodeStatus/selectors", () => ({
+  getDappnodeStats: s => s.stats,
+  getDappnodeParams: s => s.params,
+  getDappmanagerVersionData: s => s.dappmanagerVersionData,
+}));
 vi.mock("services/chainData/selectors", () => ({ getChainData: () => [] }));
 vi.mock("services/coreUpdate/selectors", () => ({ getCoreUpdateAvailable: s => Boolean(s.coreUpdateAvailable) }));
 vi.mock("pages/troubleshoot/selectors", () => ({ getDiagnoses: () => [] }));
@@ -829,5 +834,44 @@ describe("HealthProvider diagnostics (programs inside the containers)", () => {
     } finally {
       debug.mockRestore();
     }
+  });
+});
+
+describe("HealthProvider with the test box's light getDiagnostics (2026-10-14)", () => {
+  // The `result` the DAPPMANAGER 10.0.53 returned for getDiagnostics(LIGHT)
+  // on the test box, Teku forced into FATAL. Packages as listPackages has them.
+  // As on the box: the DAPPMANAGER's image tag (the package list's version)
+  // says 10.0.52, its own getVersionData says 10.0.53 (a test build).
+  const boxPackages = boxLight.containers.map(c => ({
+    name: c.id,
+    version: c.version,
+    isCore: c.isCore,
+    state: c.state,
+    running: true,
+    manifest: { title: c.id === "teku.avado.dnp.dappnode.eth" ? "Teku Consensus Client" : c.id.split(".")[0] },
+  }));
+  const boxState = { ...state, packages: boxPackages, dappmanagerVersionData: { version: "10.0.53" } };
+  const base = { fetchStoreImpl: async () => ({ packages: [] }), fetchMetricsImpl: async () => null, fetchIpfsHealthImpl: async () => null };
+
+  it("finds Teku not running inside its container (the DAPPMANAGER says 10.0.53, its image tag 10.0.52)", async () => {
+    expect(boxPackages.find(p => p.name === "dappmanager.dnp.dappnode.eth").version).toBe("10.0.52");
+    const fetchDiagnosticsImpl = vi.fn(async () => JSON.parse(JSON.stringify(boxLight)));
+    renderWith({ ...base, fetchDiagnosticsImpl }, {}, boxState);
+    await waitFor(() => expect(screen.getByTestId("allids").textContent).toContain("process-down:teku.avado.dnp.dappnode.eth"));
+    expect(screen.getByTestId("ids").textContent).toContain("process-down:teku.avado.dnp.dappnode.eth");
+    expect(fetchDiagnosticsImpl).toHaveBeenCalledWith({ host: false, network: false, logs: false, clients: false });
+  });
+
+  it("the same with the package list at 10.0.53 and no version data yet", async () => {
+    const packages = boxPackages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.53" } : p));
+    renderWith({ ...base, fetchDiagnosticsImpl: async () => boxLight }, {}, { ...state, packages });
+    await waitFor(() => expect(screen.getByTestId("allids").textContent).toContain("process-down:teku.avado.dnp.dappnode.eth"));
+  });
+
+  it("both at 10.0.52: never asked", async () => {
+    const fetchDiagnosticsImpl = vi.fn(async () => boxLight);
+    renderWith({ ...base, fetchDiagnosticsImpl }, {}, { ...boxState, dappmanagerVersionData: { version: "10.0.52" } });
+    await waitFor(() => expect(screen.getByTestId("updates").textContent).toBe("ok"));
+    expect(fetchDiagnosticsImpl).not.toHaveBeenCalled();
   });
 });

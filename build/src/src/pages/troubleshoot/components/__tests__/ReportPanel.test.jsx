@@ -14,7 +14,7 @@ vi.mock("services/dnpInstalled/selectors", () => ({ getDnpInstalled: s => s.pack
 vi.mock("services/dappnodeStatus/selectors", () => ({
   getDappnodeStats: s => s.stats,
   getDappnodeParams: s => s.params,
-  getDappmanagerVersionData: () => ({ version: "10.0.53" }),
+  getDappmanagerVersionData: s => s.dappmanagerVersionData,
 }));
 vi.mock("services/chainData/selectors", () => ({ getChainData: s => s.chainData }));
 vi.mock("services/userActionLogs/selectors", () => ({ getUserActionLogs: s => s.userActionLogs }));
@@ -25,7 +25,9 @@ const stateWith = (packages = ticket0928.packages) => ({
   params: ticket0928.params,
   chainData: ticket0928.chainData,
   userActionLogs: ticket0928.userActionLogs,
+  dappmanagerVersionData: { version: dappmanagerOf(packages).version },
 });
+const dappmanagerOf = packages => packages.find(p => p.name === "dappmanager.dnp.dappnode.eth");
 const renderPanel = (props, state = stateWith()) =>
   render(
     <Provider store={createStore(() => state)}>
@@ -141,6 +143,13 @@ describe("ReportPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() => expect(impl).toHaveBeenCalledTimes(2));
     expect(impl).toHaveBeenLastCalledWith({ fresh: true });
+  });
+
+  it("asks a DAPPMANAGER whose own version is 10.0.53 while its image tag says 10.0.52 (a test build)", async () => {
+    const fetchDiagnosticsImpl = vi.fn(async () => ticket0928.diagnostics);
+    const packages = ticket0928.packages.map(p => (p.name === "dappmanager.dnp.dappnode.eth" ? { ...p, version: "10.0.52" } : p));
+    renderPanel({ fetchDiagnosticsImpl }, { ...stateWith(packages), dappmanagerVersionData: { version: "10.0.53" } });
+    await waitFor(() => expect(fetchDiagnosticsImpl).toHaveBeenCalledWith({}));
   });
 
   it("never asks an older DAPPMANAGER: no Refresh, one line under Box", () => {
