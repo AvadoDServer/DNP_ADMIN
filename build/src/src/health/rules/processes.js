@@ -31,7 +31,7 @@ export function processDown({ diagnostics, packages }) {
     if (!down.length) continue;
     const title = titleOf(c.id, packages);
     const client = isChainClient(c.id);
-    const err = lastError(c);
+    const err = lastError(c, down[0].name);
     out.push({
       id: `process-down:${c.id}`,
       severity: client ? "critical" : "warning",

@@ -1,5 +1,5 @@
 import { deriveProblems, scrub, lastError, clip, formatDuration, storeCause, processesDown } from "health/diagnostics";
-import { ticket0928, healthy } from "./fixtures-diagnostics";
+import { ticket0928, healthy, tekuOptionCrash } from "./fixtures-diagnostics";
 
 const clone = v => JSON.parse(JSON.stringify(v));
 const NOW = ticket0928.now;
@@ -220,6 +220,39 @@ describe("helpers", () => {
     expect(lastError(c).length).toBeLessThanOrEqual(160);
     expect(lastError({ log: { errors: ["x INFO gave up: teku entered FATAL state"] } })).toBe("x INFO gave up: teku entered FATAL state");
     expect(lastError({ log: null })).toBeNull();
+  });
+
+  it("lastError on the test box: the client's own complaint before supervisord's crash marker, not the monitor's polling", () => {
+    expect(lastError(tekuOptionCrash, "teku")).toBe("Invalid value for option '--p2p-peer-lower-bound': cannot convert 'null' to OptionalInt");
+    expect(lastError(tekuOptionCrash)).toBe("Invalid value for option '--p2p-peer-lower-bound': cannot convert 'null' to OptionalInt");
+    // The ticket's still is the checkpoint failure
+    expect(lastError(ticket0928.diagnostics.containers[0], "teku")).toMatch(/^FATAL - Exiting .*Connect timed out$/);
+  });
+
+  it("lastError when the marker has left the last lines: never the monitor's noise or jq", () => {
+    const noisy = {
+      log: {
+        lines: Array.from({ length: 40 }, (_, i) => `2026-10-14T14:${String(i).padStart(2, "0")}:00.000Z request failed: get https://teku.my.ava.do:5052/eth/v1/keystores`),
+        errors: [
+          "2026-10-14T13:02:13.611Z 2026-10-14 13:02:13,611 INFO gave up: teku entered FATAL state, too many start retries too quickly",
+          "2026-10-14T14:38:00.000Z request failed: get https://teku.my.ava.do:5052/eth/v1/keystores",
+          "2026-10-14T14:38:00.002Z jq: error (at <stdin>:0): Cannot iterate over null (null)",
+          "2026-10-14T14:39:00.000Z fetching validators returned 502",
+        ],
+      },
+    };
+    expect(lastError(noisy, "teku")).toBe("INFO gave up: teku entered FATAL state, too many start retries too quickly");
+    // Another program's marker is not this one's
+    const other = { log: { lines: ["boom error in teku", "INFO exited: monitor (exit status 1; not expected)"], errors: ["boom error in teku"] } };
+    expect(lastError(other, "teku")).toBe("boom error in teku");
+  });
+
+  it("the problem line quotes the test box's real cause", () => {
+    const d = JSON.parse(JSON.stringify(ticket0928.diagnostics));
+    d.containers[0] = JSON.parse(JSON.stringify(tekuOptionCrash));
+    const [first] = deriveProblems(d, ticket0928.packages, [], NOW);
+    expect(first.text).toContain(`Last error: "Invalid value for option '--p2p-peer-lower-bound': cannot convert 'null' to OptionalInt"`);
+    expect(first.text).not.toContain("request failed");
   });
 
   it("clip keeps both ends", () => {

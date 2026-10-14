@@ -300,6 +300,39 @@ export const ticket0928 = {
   versions: { admin: "10.0.67", dappmanager: "10.0.53", bind: "10.0.17", ipfs: "10.0.7" },
 };
 
+/* ---------------- Teku FATAL on the test box ---------------- */
+
+// The order of Teku's log on the test box (2026-10-14, Teku forced into
+// FATAL with a null p2p-peer-lower-bound): the client's own complaint, the
+// help hint, supervisord's crash markers, then the monitor polling the
+// stopped client every few minutes. Texts from the box; timestamps added.
+const KEYSTORE_NOISE = "request failed: get https://teku.my.ava.do:5052/eth/v1/keystores";
+const OPTION_LINES = [
+  "2026-10-14T13:02:10.101Z Invalid value for option '--p2p-peer-lower-bound': cannot convert 'null' to OptionalInt",
+  "2026-10-14T13:02:10.102Z To display full help:",
+  "2026-10-14T13:02:10.103Z teku [OPTIONS] [COMMAND]",
+  "2026-10-14T13:02:10.420Z 2026-10-14 13:02:10,420 WARN exited: teku (exit status 2; not expected)",
+  "2026-10-14T13:02:13.611Z 2026-10-14 13:02:13,611 INFO gave up: teku entered FATAL state, too many start retries too quickly",
+  `2026-10-14T13:05:00.010Z ${KEYSTORE_NOISE}`,
+  "2026-10-14T13:05:00.012Z jq: error (at <stdin>:0): Cannot iterate over null (null)",
+  `2026-10-14T13:10:00.010Z ${KEYSTORE_NOISE}`,
+  `2026-10-14T13:15:00.010Z ${KEYSTORE_NOISE}`,
+];
+// What the DAPPMANAGER returns: errors = the last 5 lines matching its
+// /error|fatal|panic|exception|failed|refused|timeout|out of memory/i
+const OPTION_ERRORS = OPTION_LINES.filter(l => /error|fatal|panic|exception|failed|refused|timeout|out of memory/i.test(l)).slice(-5);
+
+export const tekuOptionCrash = {
+  ...ticketDiagnostics.containers[0],
+  startedAt: "2026-10-14T13:01:40.000Z",
+  uptimeSeconds: 900,
+  processes: [
+    { name: "teku", state: "FATAL", description: "Exited too quickly (process log may have details)" },
+    { name: "monitor", state: "RUNNING", description: "pid 41, uptime 0:15:00" },
+  ],
+  log: { lines: OPTION_LINES, errors: OPTION_ERRORS, errorCount: OPTION_ERRORS.length },
+};
+
 /* ---------------- healthy ---------------- */
 
 const NIMBUS = "nimbus.avado.dnp.dappnode.eth";

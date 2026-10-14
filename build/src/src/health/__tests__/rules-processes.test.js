@@ -2,7 +2,7 @@ import { processDown, appOomKilled, appCrashLooping } from "health/rules/process
 import { ALL_RULES } from "health/rules";
 import { runChecksDetailed } from "health/engine";
 import { canGetDiagnostics, DIAGNOSTICS_SINCE } from "health/clients";
-import { ticket0928, healthy } from "./fixtures-diagnostics";
+import { ticket0928, healthy, tekuOptionCrash } from "./fixtures-diagnostics";
 import { snapshot } from "./fixtures";
 
 const clone = v => JSON.parse(JSON.stringify(v));
@@ -53,6 +53,14 @@ describe("processDown", () => {
     expect(processDown(s)).toEqual([]);
     const all = runChecksDetailed(snapshot({ ...s }), ALL_RULES).findings;
     expect(all.filter(f => f.appId === TEKU && f.fix && f.fix.action === "restartPackage")).toEqual([]);
+  });
+
+  it("the test box's Teku: the detail quotes its own complaint, not the monitor's polling", () => {
+    const s = ticketSnapshot();
+    s.diagnostics.containers[0] = clone(tekuOptionCrash);
+    const [f] = processDown(s);
+    expect(f.detail).toContain("Last error: Invalid value for option '--p2p-peer-lower-bound'");
+    expect(f.detail).not.toContain("request failed");
   });
 
   it("BACKOFF and EXITED count like FATAL", () => {

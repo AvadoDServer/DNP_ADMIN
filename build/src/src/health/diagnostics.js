@@ -78,24 +78,76 @@ const SUPERVISOR_LINE = /\b(INFO|WARN|CRIT) (exited|gave up|spawned|success|stop
 // "failed" or "timeout", like a helper's request log)
 const LEVEL_LINE = /\b(FATAL|ERROR|ERRO|ERR|CRIT|CRITICAL|PANIC|panic|Exception)\b/;
 
+// Noise that keeps coming after a crash: the app's own page (monitor)
+// polling a client that is down, and jq complaining about its answer.
+const NOISE_LINE = /request failed|fetching .* returned|returned en error/i;
+const JQ_LINE = /^jq: /;
+// A line that says something went wrong, said by the program itself or not
+// ("Invalid value for option …", "cannot convert …")
+const ERRORISH_LINE = /error|fatal|panic|exception|failed|refused|timeout|out of memory|invalid|cannot|could not|unable/i;
+// How far before supervisord's crash marker the cause is looked for
+const BEFORE_MARKER_LINES = 20;
+
+const isNoise = l => {
+  const text = stripTimestamps(l);
+  return NOISE_LINE.test(text) || JQ_LINE.test(text);
+};
+const escapeRe = v => String(v).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// supervisord's line for the crash of `name` (any program when not given)
+const crashMarker = name => {
+  const p = name ? escapeRe(name) : "\\S+";
+  return new RegExp(`\\b(gave up: ${p} entered FATAL state|exited: ${p} \\(exit status \\d+; not expected\\))`);
+};
+
+// The cause written just before supervisord's crash marker: the last
+// error-like line among the lines before its first marker of the last crash.
+function causeBeforeMarker(lines, name) {
+  const marker = crashMarker(name);
+  let at = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (marker.test(lines[i])) {
+      at = i;
+      // The crash's markers come in a row (exited:, then gave up:): start before the first
+      while (at > 0 && (marker.test(lines[at - 1]) || SUPERVISOR_LINE.test(lines[at - 1]))) at--;
+      break;
+    }
+  }
+  if (at < 0) return null;
+  const before = lines
+    .slice(Math.max(0, at - BEFORE_MARKER_LINES), at)
+    .filter(l => !SUPERVISOR_LINE.test(l) && !isNoise(l) && stripTimestamps(l).trim());
+  const levelled = before.filter(l => LEVEL_LINE.test(stripTimestamps(l)));
+  const errorish = before.filter(l => ERRORISH_LINE.test(stripTimestamps(l)));
+  return levelled[levelled.length - 1] || errorish[errorish.length - 1] || null;
+}
+
 /**
- * The app's last error line (scrubbed, without timestamps, ≤160 chars), or
- * null: the last one with an error level, else the last one that is not
- * supervisord's own bookkeeping, else the last one.
+ * The last error line of a program (scrubbed, without timestamps, ≤160
+ * chars), or null. When the log holds supervisord's crash marker for it
+ * ("exited: <name> (exit status N; not expected)", "gave up: <name> entered
+ * FATAL state"), the cause is the error line just before that marker, in the
+ * last log lines first, then in the error lines. Otherwise: the last error
+ * line with an error level, else the last that is not supervisord's own
+ * bookkeeping, else the last one. The monitor's polling of a client that is
+ * down ("request failed …") and jq's lines are never the cause.
  */
-export function lastError(container) {
-  const line = lastErrorLine(container);
+export function lastError(container, processName) {
+  const line = lastErrorLine(container, processName);
   return line ? clip(line) : null;
 }
 
 // lastError, not clipped
-function lastErrorLine(container) {
-  const errors = ((container && container.log && Array.isArray(container.log.errors) && container.log.errors) || []).filter(
-    l => typeof l === "string" && l
-  );
+function lastErrorLine(container, processName) {
+  const log = (container && container.log) || {};
+  const strings = list => (Array.isArray(list) ? list : []).filter(l => typeof l === "string" && l);
+  const lines = strings(log.lines);
+  const all = strings(log.errors);
+  const cause = causeBeforeMarker(lines, processName) || causeBeforeMarker(all, processName);
+  if (cause) return scrub(stripTimestamps(cause));
+  const errors = all.filter(l => !isNoise(l));
   const useful = errors.filter(l => !SUPERVISOR_LINE.test(l));
   const levelled = useful.filter(l => LEVEL_LINE.test(stripTimestamps(l)));
-  const line = levelled[levelled.length - 1] || useful[useful.length - 1] || errors[errors.length - 1];
+  const line = levelled[levelled.length - 1] || useful[useful.length - 1] || errors[errors.length - 1] || all[all.length - 1];
   return line ? scrub(stripTimestamps(line)) : null;
 }
 
@@ -190,7 +242,7 @@ export function deriveProblems(diagnostics, packages, userActionLogs, now = new 
     const title = titleOf(c.id, packages);
     const important = c.isCore || isChainClient(c.id);
     for (const p of processesDown(c)) {
-      const full = lastErrorLine(c);
+      const full = lastErrorLine(c, p.name);
       const err = full && clip(full);
       const checkpoint = c.settings && c.settings.initial_state;
       const aboutCheckpoint = full && checkpoint && /initial state|checkpoint/i.test(full);
