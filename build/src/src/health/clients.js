@@ -91,6 +91,19 @@ export function canResetIpfsData(packages) {
   return dappmanagerAtLeast(packages, IPFS_RESET_SINCE);
 }
 
+// The DAPPMANAGER that has getDiagnostics (the state inside each container,
+// the box, its network path to the AVADO store, the clients' own view).
+export const DIAGNOSTICS_SINCE = "10.0.53";
+
+/**
+ * True when the installed DAPPMANAGER is 10.0.53 or newer, the first one with
+ * getDiagnostics. An older or unreadable version is false, so the call is
+ * never sent to a core without it.
+ */
+export function canGetDiagnostics(packages) {
+  return dappmanagerAtLeast(packages, DIAGNOSTICS_SINCE);
+}
+
 // The installed DAPPMANAGER (a core package in `packages`) is `since` or newer.
 function dappmanagerAtLeast(packages, since) {
   const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);

@@ -494,6 +494,26 @@ export default {
   getIpfsHealth: {},
 
   /**
+   * [getDiagnostics]
+   * What support needs to find a fault: every DAppNode container with the
+   * programs running inside it (supervisord), the box (uptime, memory, disk,
+   * temperatures, kernel log), the network path to the internet and to the
+   * AVADO store, the clients' own view (sync, peers) and the last log errors.
+   * Read-only; never throws for one failed probe (it lands in `errors`);
+   * answers within 25 s. Log lines and settings are scrubbed of secrets
+   * before they leave the box. DAPPMANAGER 10.0.53 and newer.
+   *
+   * @param {bool} host     default true: uptime, memory, disk, temperatures, kernel log
+   * @param {bool} network  default true: interfaces, route, DNS, internet, IPFS, store
+   * @param {bool} logs     default true: last log lines and errors per container
+   * @param {bool} clients  default true: client APIs (sync, peers) and settings
+   * @returns {object} { collectedAt, durationMs, errors: string[], host|null,
+   *   network|null, containers: [...], clients: [...] }
+   *   (shape: health/__tests__/fixtures-diagnostics.js)
+   */
+  getDiagnostics: {},
+
+  /**
    * [resetIpfsData]
    * Stops IPFS, empties its data volume (a cache of downloaded app packages;
    * the volume itself, the export volume, every app and its data stay) and
