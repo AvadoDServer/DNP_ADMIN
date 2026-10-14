@@ -70,6 +70,8 @@ describe("ReportPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     expect(screen.getByRole("status")).toHaveTextContent("Collecting box details…");
     await waitFor(() => expect(impl).toHaveBeenCalledTimes(2));
+    // Refresh skips the DAPPMANAGER's 20 s cache
+    expect(impl).toHaveBeenLastCalledWith({ fresh: true });
     await act(async () => calls[1].resolve(healthy.diagnostics));
     expect(reportText()).toContain("What we found\n- nothing beyond the health findings");
   });
@@ -136,6 +138,9 @@ describe("ReportPanel", () => {
     await act(async () => calls[0].resolve(ticket0928.diagnostics));
     expect(reportText()).toContain("the teku process is not running");
     expect(screen.getByRole("button", { name: "Refresh" })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(impl).toHaveBeenCalledTimes(2));
+    expect(impl).toHaveBeenLastCalledWith({ fresh: true });
   });
 
   it("never asks an older DAPPMANAGER: no Refresh, one line under Box", () => {

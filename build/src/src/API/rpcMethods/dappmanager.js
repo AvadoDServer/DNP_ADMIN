@@ -507,6 +507,7 @@ export default {
    * @param {bool} network  default true: interfaces, route, DNS, internet, IPFS, store
    * @param {bool} logs     default true: last log lines and errors per container
    * @param {bool} clients  default true: client APIs (sync, peers) and settings
+   * @param {bool} fresh    default false: skip the full result kept for 20 s
    * @returns {object} { collectedAt, durationMs, errors: string[], host|null,
    *   network|null, containers: [...], clients: [...] }
    *   (shape: health/__tests__/fixtures-diagnostics.js)

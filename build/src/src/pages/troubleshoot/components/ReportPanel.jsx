@@ -61,11 +61,14 @@ export default function ReportPanel({
   const fetchRef = useRef(fetchDiagnosticsImpl);
   fetchRef.current = fetchDiagnosticsImpl;
 
-  const collect = useCallback(() => {
+  // `fresh`: the DAPPMANAGER keeps a full result for 20 s; Refresh (any
+  // collection after the first) skips it, so an app just restarted shows its
+  // new state. The first collection may use it.
+  const collect = useCallback((fresh = false) => {
     const id = ++run.current;
     setDiag({ status: "loading", data: null, error: null });
     withTimeout(
-      Promise.resolve().then(() => fetchRef.current({})),
+      Promise.resolve().then(() => fetchRef.current(fresh ? { fresh: true } : {})),
       timeoutMs
     ).then(
       data => id === run.current && setDiag({ status: "ok", data: data && typeof data === "object" ? data : null, error: null }),
@@ -139,7 +142,7 @@ export default function ReportPanel({
             Email support
           </Button>
           {allowed && (
-            <Button variant="secondary" size="sm" onClick={collect} disabled={loading}>
+            <Button variant="secondary" size="sm" onClick={() => collect(diag.status !== "idle")} disabled={loading}>
               {diag.status === "idle" ? "Collect box details" : "Refresh"}
             </Button>
           )}
