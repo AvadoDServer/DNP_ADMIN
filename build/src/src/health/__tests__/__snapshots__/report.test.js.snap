@@ -1,0 +1,184 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildReport snapshots > ticket-0928 with diagnostics 1`] = `
+"AVADO diagnostics report
+Created 2026-10-14T11:45:40.240Z
+
+Health: Needs attention
+- [warning] MEV-Boost relays need a look
+    Why: Some relays you use are offline or retired.
+    Fix: Review relays
+- [info] Can't check for updates
+    Why: Your AVADO could not reach the AVADO store. Check that it is connected to the internet; your apps keep running meanwhile.
+    Fix: Check that the network cable is plugged in and your router has internet.
+
+What we found
+- [critical] Teku Consensus Client: the teku process is not running (FATAL: Exited too quickly (process log may have details)). Last error: "FATAL - Exiting due to fatal error in BeaconChainController: Failed to load init…nc-mainnet.beaconcha.in/eth/v2/debug/beacon/states/finalized: Connect timed out". Checkpoint URL in use: https://sync-mainnet.beaconcha.in
+- [warning] Can't check for updates because IPFS is not connected to the AVADO store nodes (peers: 3)
+- [warning] The box uses Wi-Fi (wlan0) for its internet connection; the Ethernet port has no link
+
+Versions
+- admin 10.0.67
+- dappmanager 10.0.53
+- bind 10.0.17
+- ipfs 10.0.7
+
+Box
+- node id 0xA4f8CE154452040E41A278ee7c9741A675c9Fd70
+- internal IP 192.168.20.2
+- CPU 8%, memory 45%, disk 43% of 3.67 TB
+- up 5 days 3 h, booted at 2026-10-09T08:22:14.000Z
+- load 1.21 1.08 0.94 on 8 cores
+- memory 14.0 GB used of 31.1 GB, swap 12 MB used of 976 MB
+- system disk 1577 GB used of 3667 GB (1904 GB free)
+- Debian GNU/Linux 12 (bookworm), kernel 6.1.0-26-amd64
+- temperatures: k10temp Tctl 61.4 °C
+- kernel log, out of memory: nothing
+- kernel log, hardware: nothing
+- kernel log, network: 2 lines
+    [Tue Oct 14 07:58:40 2026] wlan0: disconnect from AP 5c:a6:e6:11:22:33 for new auth to 5c:a6:e6:11:22:33
+    [Tue Oct 14 07:58:41 2026] wlan0: associated
+- could not read: temperatures: no hwmon sensor for the NVMe
+- collected at 2026-10-14T11:45:31.880Z in 8360 ms
+
+Network
+- enp2s0 ethernet down no link
+- wlan0 wifi up link 192.168.20.2/24
+- docker0 other down no link 172.17.0.1/16
+- br-4c1f2a9e1d3b other up link 172.33.0.1/16
+- default route via wlan0 (gateway 192.168.20.1)
+- DNS: bo.ava.do ok 38 ms, iso.ava.do ok 41 ms
+- internet https://bo.ava.do/: ok (200, 412 ms)
+- IPFS running, restarts 0 (0 in the last hour), peers 3, AVADO store nodes 0 of 2
+- store catalogue: failed after 8003 ms (ipfs cat timed out after 8000 ms)
+
+Apps
+- Teku Consensus Client (teku.avado.dnp.dappnode.eth) 0.0.77 running, Up About an hour, restarts 0, exit 0, disk 1.0 GB
+- bind (bind.dnp.dappnode.eth) 10.0.17 running, Up 2 days, restarts 0, exit 0 [system], disk 15.3 kB
+- Dappmanager (dappmanager.dnp.dappnode.eth) 10.0.53 running, Up 5 days, restarts 0, exit 0 [system], disk 7.6 kB
+- Administration web UI (admin.dnp.dappnode.eth) 10.0.67 running, Up 5 days, restarts 0, exit 0 [system], disk 0 B
+- ETH Staking MEV-Boost (mevboost.avado.dnp.dappnode.eth) 0.0.19 running, Up 5 days, restarts 0, exit 0, disk 0 B
+- Remote Access (remoteconnect.avado.dnp.dappnode.eth) 0.0.53 running, Up 5 days, restarts 0, exit 0 [system], disk 16.2 kB
+- Nethermind Execution Client (avado-dnp-nethermind.public.dappnode.eth) 0.0.72 running, Up 5 days, restarts 0, exit 0, disk 1.6 TB
+- wifi (wifi.dnp.dappnode.eth) 10.0.1 running, Up 5 days, restarts 0, exit 0 [system], disk 0 B
+- ipfs (ipfs.dnp.dappnode.eth) 10.0.7 running, Up 47 hours, restarts 0, exit 0 [system], disk 10.2 GB
+- wamp (wamp.dnp.dappnode.eth) 0.2.2 running, Up 5 days, restarts 0, exit 0 [system], disk 0 B
+
+Processes
+- Teku Consensus Client
+    teku FATAL Exited too quickly (process log may have details)
+    monitor RUNNING pid 41, uptime 1:09:20
+    nginx RUNNING pid 42, uptime 1:09:20
+    reload-certs RUNNING pid 43, uptime 1:09:20
+- Nethermind Execution Client
+    nethermind RUNNING pid 12, uptime 5 days, 3:22:41
+    monitor RUNNING pid 13, uptime 5 days, 3:22:41
+
+Clients
+- Teku Consensus Client: beacon (teku, mainnet), API not answering (connect ECONNREFUSED 172.33.0.7:5051)
+    execution client (execution_engine): avado-dnp-nethermind.public.dappnode.eth
+    execution endpoint (ee_endpoint): http://avado-dnp-nethermind.my.ava.do:8551
+    checkpoint URL (initial_state): https://sync-mainnet.beaconcha.in
+    fee recipient (validators_proposer_default_fee_recipient): 0x4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f70
+    MEV-Boost (mev_boost): true
+- Nethermind Execution Client: execution (nethermind, mainnet), Nethermind/v1.33.1+5c8d3a1b/linux-x64/dotnet9.0.9, synced, block 23571234 of 23571234, 50 peers
+
+Chains
+- Avado-dnp-nethermind: synced
+
+Logs
+- Teku Consensus Client (teku.avado.dnp.dappnode.eth): 47 error lines in the last 500
+    last errors:
+      2026-10-14T10:36:52.341Z 2026-10-14 10:36:52.341 ERROR - Failed to download initial state: Connect timed out
+      2026-10-14T10:36:52.341901234Z 2026-10-14 10:36:52.341 FATAL - Exiting due to fatal error in BeaconChainController: Failed to load initial state from https://sync-mainnet.beaconcha.in/eth/v2/debug/beacon/states/finalized: Connect timed out
+      2026-10-14T10:36:52.402Z 2026-10-14 10:36:52,402 INFO exited: teku (exit status 2; not expected)
+      2026-10-14T10:37:30.118Z 2026-10-14 10:37:30,118 INFO gave up: teku entered FATAL state, too many start retries too quickly
+      2026-10-14T11:40:02.551Z [monitor] GET /rest/eth/v1/node/syncing -> connect ECONNREFUSED 127.0.0.1:5051
+    last lines:
+      2026-10-14T10:36:11.020Z 2026-10-14 10:36:11,020 INFO spawned: 'teku' with pid 40
+      2026-10-14T10:36:11.024Z 2026-10-14 10:36:11,024 INFO spawned: 'monitor' with pid 41
+      2026-10-14T10:36:12.101Z Execution engine: avado-dnp-nethermind.public.dappnode.eth (answering)
+      2026-10-14T10:36:14.880Z 2026-10-14 10:36:14.880 INFO  - Teku version: teku/v26.9.1/linux-x86_64/-eclipseadoptium-openjdk64bitservervm-java-21
+      2026-10-14T10:36:14.910Z keystore password=<redacted>
+      2026-10-14T10:36:15.402Z 2026-10-14 10:36:15.402 INFO  - Loading initial state from https://sync-mainnet.beaconcha.in/eth/v2/debug/beacon/states/finalized
+      2026-10-14T10:36:52.341901234Z 2026-10-14 10:36:52.341 FATAL - Exiting due to fatal error in BeaconChainController: Failed to load initial state from https://sync-mainnet.beaconcha.in/eth/v2/debug/beacon/states/finalized: Connect timed out
+      2026-10-14T10:36:52.402Z 2026-10-14 10:36:52,402 INFO exited: teku (exit status 2; not expected)
+      2026-10-14T10:37:30.118Z 2026-10-14 10:37:30,118 INFO gave up: teku entered FATAL state, too many start retries too quickly
+      2026-10-14T11:40:02.551Z [monitor] GET /rest/eth/v1/node/syncing -> connect ECONNREFUSED 127.0.0.1:5051
+- Dappmanager (dappmanager.dnp.dappnode.eth): 12 error lines in the last 500
+    last errors:
+      2026-10-14T11:35:40.112Z info Store catalogue: could not fetch the store manifest: ipfs cat timed out after 8000 ms
+    last lines:
+      2026-10-14T11:35:40.112Z info Store catalogue: could not fetch the store manifest: ipfs cat timed out after 8000 ms
+      2026-10-14T11:45:31.880Z info Call getDiagnostics
+- ETH Staking MEV-Boost (mevboost.avado.dnp.dappnode.eth): 0 error lines in the last 500
+    last lines:
+      2026-10-14T11:45:00.004Z time="2026-10-14T11:45:00Z" level=info msg="http: GET /eth/v1/builder/status 200"
+- Nethermind Execution Client (avado-dnp-nethermind.public.dappnode.eth): 0 error lines in the last 500
+    last lines:
+      2026-10-14T11:45:12.003Z 14 Oct 11:45:12 | Received new block:  23571234 (0x8f2e1a…)
+      2026-10-14T11:45:12.410Z 14 Oct 11:45:12 | Processed           23571234     |     41.2 ms  |  slot      7,812 ms |
+      2026-10-14T11:45:13.000Z <12+ words redacted>
+- ipfs (ipfs.dnp.dappnode.eth): 0 error lines in the last 500
+    last lines:
+      2026-10-12T13:07:12.000Z Daemon is ready
+
+Recent activity
+- 2026-10-14T10:36:08.898Z info restartPackage: Restarted package: teku.avado.dnp.dappnode.eth
+- 2026-10-12T14:12:47.614Z info resetBeaconData: Deleted 833 GB of beacon data from Teku. It is syncing again from its checkpoint.
+- 2026-10-12T13:06:57.296Z info restartPackageVolumes: Restarted bind.dnp.dappnode.eth volumes
+- 2026-08-27T23:25:41.409Z info setAutoUpdate: Enabled auto-updates for admin.dnp.dappnode.eth
+- 2026-03-06T12:02:32.864Z info restartPackage: Restarted package: teku.avado.dnp.dappnode.eth
+- 2025-10-10T22:00:59.576Z info installPackage: Installed mevboost.avado.dnp.dappnode.eth@QmQpaYKKVZH1FURqcYCaG7Bz9Ti7hTuo6VSPDwrUXLfR5Q"
+`;
+
+exports[`buildReport snapshots > ticket-0928 without diagnostics (older DAPPMANAGER) 1`] = `
+"AVADO diagnostics report
+Created 2026-10-14T11:45:40.240Z
+
+Health: Needs attention
+- [warning] MEV-Boost relays need a look
+    Why: Some relays you use are offline or retired.
+    Fix: Review relays
+- [info] Can't check for updates
+    Why: Your AVADO could not reach the AVADO store. Check that it is connected to the internet; your apps keep running meanwhile.
+    Fix: Check that the network cable is plugged in and your router has internet.
+
+What we found
+- box details not collected (see Box)
+
+Versions
+- admin 10.0.67
+- dappmanager 10.0.53
+- bind 10.0.17
+- ipfs 10.0.7
+
+Box
+- node id 0xA4f8CE154452040E41A278ee7c9741A675c9Fd70
+- internal IP 192.168.20.2
+- CPU 8%, memory 45%, disk 43% of 3.67 TB
+- Box details need DAPPMANAGER 10.0.53 or newer
+
+Apps
+- Teku Consensus Client (teku.avado.dnp.dappnode.eth) 0.0.77 running, disk 1.0 GB
+- bind (bind.dnp.dappnode.eth) 10.0.17 running [system], disk 15.3 kB
+- Dappmanager (dappmanager.dnp.dappnode.eth) 10.0.52 running [system], disk 7.6 kB
+- Administration web UI (admin.dnp.dappnode.eth) 10.0.67 running [system], disk 0 B
+- ETH Staking MEV-Boost (mevboost.avado.dnp.dappnode.eth) 0.0.19 running, disk 0 B
+- Remote Access (remoteconnect.avado.dnp.dappnode.eth) 0.0.53 running [system], disk 16.2 kB
+- Nethermind Execution Client (avado-dnp-nethermind.public.dappnode.eth) 0.0.72 running, disk 1.6 TB
+- wifi (wifi.dnp.dappnode.eth) 10.0.1 running [system], disk 0 B
+- ipfs (ipfs.dnp.dappnode.eth) 10.0.7 running [system], disk 10.2 GB
+- wamp (wamp.dnp.dappnode.eth) 0.2.2 running [system], disk 0 B
+
+Chains
+- Avado-dnp-nethermind: synced
+
+Recent activity
+- 2026-10-14T10:36:08.898Z info restartPackage: Restarted package: teku.avado.dnp.dappnode.eth
+- 2026-10-12T14:12:47.614Z info resetBeaconData: Deleted 833 GB of beacon data from Teku. It is syncing again from its checkpoint.
+- 2026-10-12T13:06:57.296Z info restartPackageVolumes: Restarted bind.dnp.dappnode.eth volumes
+- 2026-08-27T23:25:41.409Z info setAutoUpdate: Enabled auto-updates for admin.dnp.dappnode.eth
+- 2026-03-06T12:02:32.864Z info restartPackage: Restarted package: teku.avado.dnp.dappnode.eth
+- 2025-10-10T22:00:59.576Z info installPackage: Installed mevboost.avado.dnp.dappnode.eth@QmQpaYKKVZH1FURqcYCaG7Bz9Ti7hTuo6VSPDwrUXLfR5Q"
+`;
