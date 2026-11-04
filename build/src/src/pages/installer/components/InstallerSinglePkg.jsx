@@ -11,6 +11,8 @@ import { isEmpty } from "lodash";
 import * as s from "../selectors";
 import * as a from "../actions";
 import ProgressLogs from "./InstallCardComponents/ProgressLogs";
+import SetupFields from "./InstallCardComponents/SetupFields";
+import { getSetupFields } from "../parsers/setupFields";
 import confirmSecondValidatorApp from "./confirmSecondValidatorApp";
 import { getClient, keyHolders } from "health/clients";
 // Selectors
@@ -35,6 +37,7 @@ function InstallerInterface({
     install,
     clearUserSet,
     fetchPackageRequest,
+    updateUserSetEnvs = () => {},
     // Extra
     packages,
     history
@@ -43,9 +46,12 @@ function InstallerInterface({
     const [options, setOptions] = useState({});
     const [installedPackage, setInstalledPackage] = useState();
     const [showedPackage, setShowedPackage] = useState();
+    // What the user typed in the package's setup fields: { ENV: value }
+    const [setupValues, setSetupValues] = useState({});
 
     useEffect(() => {
         clearUserSet();
+        setSetupValues({});
         fetchPackageRequest(id);
     }, [id]);
 
@@ -148,6 +154,16 @@ function InstallerInterface({
     }
     const hasWizard = manifest && manifest.links && manifest.links.OnboardingWizard;
 
+    // Setup fields (manifest setupWizard), asked on a new install only: an
+    // update keeps the values already set
+    const isInstalled = (packages || []).some(p => manifest && p.name === manifest.name);
+    const setupFields = !isInstalled ? getSetupFields(manifest) : [];
+    const missingRequired = setupFields.some(f => f.required && !(setupValues[f.env] || "").trim());
+    const onSetupChange = (env, value) => {
+        setSetupValues(v => ({ ...v, [env]: value }));
+        updateUserSetEnvs({ dnpName: name, key: env, value: value.trim() });
+    };
+
     // A new app that can hold validator keys, next to one that already can on
     // the same network: say first that each key may run in one app only.
     // Updates install straight away.
@@ -247,6 +263,8 @@ function InstallerInterface({
                         </div>
                     )}
 
+                    <SetupFields fields={setupFields} values={setupValues} onChange={onSetupChange} />
+
                     {installedPackage && (
                         <p className="mt-4 text-sm text-fg-muted">
                             Installed version{" "}
@@ -259,7 +277,7 @@ function InstallerInterface({
                     {/* Actions */}
                     <div className="mt-5 flex flex-wrap gap-3">
                         {actionButtonTxt && isEmpty(progressLogs) && (
-                            <Button variant="primary" onClick={onInstall}>
+                            <Button variant="primary" onClick={onInstall} disabled={missingRequired}>
                                 {actionButtonTxt}
                             </Button>
                         )}
@@ -276,6 +294,9 @@ function InstallerInterface({
                             </>
                         )}
                     </div>
+                    {missingRequired && actionButtonTxt && isEmpty(progressLogs) && (
+                        <p className="mb-0 mt-2 text-xs text-fg-subtle">Fill in the fields above to install.</p>
+                    )}
                 </div>
             </Card>
         </div>
@@ -305,7 +326,8 @@ const mapStateToProps = createStructuredSelector({
 const mapDispatchToProps = {
     install: a.install,
     clearUserSet: a.clearUserSet,
-    fetchPackageRequest: a.fetchPackageRequest
+    fetchPackageRequest: a.fetchPackageRequest,
+    updateUserSetEnvs: a.updateUserSetEnvs
 };
 
 export default compose(
