@@ -24,3 +24,25 @@ describe("hideUserSetEnvs", () => {
     expect(hideUserSetEnvs(undefined)).toBe(undefined);
   });
 });
+
+describe("hideUserSetEnvs: app Settings (updatePackageEnv)", () => {
+  it("hides the values sent from the Settings tab, keeps the names", () => {
+    const log = {
+      level: "info",
+      event: "updatePackageEnv.dappmanager.dnp.dappnode.eth",
+      message: "Updated envs of vaultwarden.avado.dnp.dappnode.eth and restarted",
+      kwargs: { id: "vaultwarden.avado.dnp.dappnode.eth", envs: { ADMIN_TOKEN: "s3cret-token", SIGNUPS_ALLOWED: "false" }, restart: true }
+    };
+    const out = hideUserSetEnvs(log);
+    expect(JSON.stringify(out)).not.toContain("s3cret-token");
+    expect(out.kwargs.envs).toEqual({ ADMIN_TOKEN: "********", SIGNUPS_ALLOWED: "********" });
+    expect(out.kwargs.id).toBe(log.kwargs.id);
+    expect(out.kwargs.restart).toBe(true);
+    expect(log.kwargs.envs.ADMIN_TOKEN).toBe("s3cret-token");
+  });
+
+  it("works on an already redacted line from a newer DAPPMANAGER", () => {
+    const log = { event: "updatePackageEnv", kwargs: { id: "x", envs: { A: "********" }, restart: true } };
+    expect(hideUserSetEnvs(log).kwargs.envs).toEqual({ A: "********" });
+  });
+});

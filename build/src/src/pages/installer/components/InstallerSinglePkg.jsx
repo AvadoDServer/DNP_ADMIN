@@ -13,6 +13,7 @@ import * as a from "../actions";
 import ProgressLogs from "./InstallCardComponents/ProgressLogs";
 import SetupFields from "./InstallCardComponents/SetupFields";
 import { getSetupFields } from "../parsers/setupFields";
+import parseManifestEnvs from "../parsers/parseManifestEnvs";
 import confirmSecondValidatorApp from "./confirmSecondValidatorApp";
 import { getClient, keyHolders } from "health/clients";
 // Selectors
@@ -158,7 +159,11 @@ function InstallerInterface({
     // update keeps the values already set
     const isInstalled = (packages || []).some(p => manifest && p.name === manifest.name);
     const setupFields = !isInstalled ? getSetupFields(manifest) : [];
-    const missingRequired = setupFields.some(f => f.required && !(setupValues[f.env] || "").trim());
+    // A switch or a drop-down starts at the package's default (sent only when changed)
+    const setupDefaults = setupFields.length ? parseManifestEnvs(manifest) : {};
+    const setupValueOf = f =>
+        setupValues[f.env] !== undefined ? setupValues[f.env] : f.kind === "boolean" || f.kind === "select" ? setupDefaults[f.env] || "" : "";
+    const missingRequired = setupFields.some(f => f.required && !String(setupValueOf(f)).trim());
     const onSetupChange = (env, value) => {
         setSetupValues(v => ({ ...v, [env]: value }));
         updateUserSetEnvs({ dnpName: name, key: env, value: value.trim() });
@@ -263,7 +268,7 @@ function InstallerInterface({
                         </div>
                     )}
 
-                    <SetupFields fields={setupFields} values={setupValues} onChange={onSetupChange} />
+                    <SetupFields fields={setupFields} values={setupValues} defaults={setupDefaults} onChange={onSetupChange} />
 
                     {installedPackage && (
                         <p className="mt-4 text-sm text-fg-muted">

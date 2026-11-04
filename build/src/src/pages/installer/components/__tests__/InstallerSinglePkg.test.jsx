@@ -177,6 +177,37 @@ describe("InstallerInterface: setup fields (manifest setupWizard)", () => {
     expect(screen.queryByText("Fill in the fields above to install.")).not.toBeInTheDocument();
   });
 
+  it("a true/false field is a switch and a list is a drop-down, both starting at the package default; nothing is sent until changed", () => {
+    const m = {
+      ...tsManifest([
+        { id: "exit", target: { type: "environment", name: "EXIT_NODE" }, title: "Use as exit node", enum: ["true", "false"] },
+        { id: "lang", target: { type: "environment", name: "LANG" }, title: "Language", enum: ["eng", "deu"] },
+      ]),
+      image: { size: 1, environment: ["EXIT_NODE=false", "LANG=deu"] },
+    };
+    const p = props(m);
+    render(<InstallerInterface {...p} />);
+    const sw = screen.getByRole("switch", { name: "Use as exit node" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByLabelText(/Language/)).toHaveValue("deu");
+    fireEvent.click(screen.getByRole("button", { name: "Install" }));
+    expect(p.updateUserSetEnvs).not.toHaveBeenCalled();
+    fireEvent.click(sw);
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    expect(p.updateUserSetEnvs).toHaveBeenLastCalledWith({ dnpName: TS, key: "EXIT_NODE", value: "true" });
+    fireEvent.change(screen.getByLabelText(/Language/), { target: { value: "eng" } });
+    expect(p.updateUserSetEnvs).toHaveBeenLastCalledWith({ dnpName: TS, key: "LANG", value: "eng" });
+  });
+
+  it("a required drop-down without a default blocks Install until a value is chosen", () => {
+    const p = props(tsManifest([{ id: "lang", target: { type: "environment", name: "LANG" }, title: "Language", enum: ["eng", "deu"], required: true }]));
+    render(<InstallerInterface {...p} />);
+    expect(screen.getByRole("button", { name: "Install" })).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Choose…" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Language/), { target: { value: "eng" } });
+    expect(screen.getByRole("button", { name: "Install" })).not.toBeDisabled();
+  });
+
   it("is not asked on an update", () => {
     const p = props(tsManifest(), [{ name: TS, version: "0.0.9" }]);
     render(<InstallerInterface {...p} />);
