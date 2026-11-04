@@ -1,4 +1,4 @@
-import React, { useId, useState } from "react";
+import { useId, useState } from "react";
 import { useSelector } from "react-redux";
 import { Link, useHistory } from "react-router-dom";
 import { getDnpInstalled } from "services/dnpInstalled/selectors";
@@ -239,7 +239,7 @@ export function DefaultPasswordNotice({ checkImpl }) {
       as="section"
       aria-labelledby="password-notice-title"
       padding="md"
-      className="flex flex-col gap-3 border-l-4 border-warning sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
     >
       <div className="min-w-0">
         <h2 id="password-notice-title" className="mb-1 font-display text-base font-semibold text-fg">
