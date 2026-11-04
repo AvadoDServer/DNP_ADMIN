@@ -110,6 +110,30 @@ export function canGetDiagnostics(packages, ownVersion) {
   return dappmanagerAtLeast(packages, DIAGNOSTICS_SINCE) || versionAtLeast(ownVersion, DIAGNOSTICS_SINCE);
 }
 
+// The DAPPMANAGER that has passwordChange and passwordIsSecure (the box's
+// `avado` login password).
+export const BOX_PASSWORD_SINCE = "10.0.57";
+
+/**
+ * True when the installed DAPPMANAGER is 10.0.57 or newer, the first one that
+ * can change the box's login password. `ownVersion` as for canGetDiagnostics.
+ */
+export function canChangeBoxPassword(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, BOX_PASSWORD_SINCE) || versionAtLeast(ownVersion, BOX_PASSWORD_SINCE);
+}
+
+/**
+ * True once the package list holds the DAPPMANAGER and it is older than
+ * 10.0.57 (and it does not report a newer version itself): the box must be
+ * updated before its password can be changed here. False while the list is
+ * still loading.
+ */
+export function boxPasswordNeedsUpdate(packages, ownVersion) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  if (!core || !versionParts(core.version)) return false;
+  return !canChangeBoxPassword(packages, ownVersion);
+}
+
 // The installed DAPPMANAGER (a core package in `packages`) is `since` or
 // newer (versionAtLeast is below, with the storage-mode helpers).
 function dappmanagerAtLeast(packages, since) {

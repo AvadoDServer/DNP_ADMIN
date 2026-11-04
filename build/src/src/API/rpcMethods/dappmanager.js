@@ -533,6 +533,27 @@ export default {
   resetIpfsData: {},
 
   /**
+   * [passwordChange]
+   * Changes the password of the box's login user `avado` (SSH). The current
+   * password is checked on the box first; refusals are plain sentences
+   * ("The current password is wrong."). The passwords are never logged.
+   * No manadatoryKwargs on purpose: assertKwargs would put the kwargs in its
+   * error message. DAPPMANAGER 10.0.57 and newer.
+   *
+   * @param {string} currentPassword
+   * @param {string} newPassword at least 8 characters, not "avado"
+   */
+  passwordChange: {},
+
+  /**
+   * [passwordIsSecure]
+   * true when the `avado` user no longer has the factory password `avado`,
+   * false while it does, null when it cannot tell. DAPPMANAGER 10.0.57 and
+   * newer.
+   */
+  passwordIsSecure: {},
+
+  /**
    * [restartPackageVolumes]
    * Removes a package volumes. The re-ups the package
    *
