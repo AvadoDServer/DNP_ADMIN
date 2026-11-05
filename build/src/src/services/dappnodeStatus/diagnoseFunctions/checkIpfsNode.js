@@ -1,4 +1,5 @@
 import { retryable } from "utils/functions";
+import { isSecurePage, ipfsGateway } from "utils/boxUrls";
 
 // This construction prevents ipfs from auto initialize when imported
 // If this happens tests can fail and trigger nasty effects
@@ -12,7 +13,11 @@ const url = `${protocol}://${host}:${port}/api/v0/cat?arg=${hash}`;
 // Attempts to cat the readme file and expect it to contain 'Hello and Welcome to IPFS!'
 const checkIpfsConnection = retryable(async () => {
   try {
-    const file = await fetchWithTimeout(url, { method: 'POST' }).then(res => res.text());
+    // A secure page (https://admin.my.ava.do) cannot reach the IPFS API over
+    // http; it reads the same file through the Admin's /ipfs/ gateway proxy
+    const file = isSecurePage()
+      ? await fetchWithTimeout(`${ipfsGateway()}${hash}`, { method: "GET" }).then(res => res.text())
+      : await fetchWithTimeout(url, { method: 'POST' }).then(res => res.text());
     if (!file.includes(expectedString)) throw Error("Error parsing file");
   } catch (e) {
     e.message = `Error verifying IPFS: ${e.message}`;
