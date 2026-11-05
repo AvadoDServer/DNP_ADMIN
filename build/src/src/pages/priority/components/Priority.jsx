@@ -369,7 +369,7 @@ function Priority({ dappnodeParams = {} }) {
                     {trialEligible ? "Billed yearly after the free trial, save €24" : "Billed yearly, save €24"}
                   </div>
                 </div>
-                <Badge variant="accent">Best value</Badge>
+                <Badge variant="accent" className="flex-shrink-0 whitespace-nowrap">Best value</Badge>
               </div>
               <Button
                 className="mt-auto w-full"

@@ -32,7 +32,8 @@ const VARIANTS = {
 const PILL_VARIANTS = new Set(["primary", "secondary"]);
 
 const SIZES = {
-  sm: "h-8 px-3.5 text-[0.8125rem] gap-1.5",
+  // 40px tall on phones (a finger-sized target), 32px from sm up.
+  sm: "h-10 px-3.5 text-[0.8125rem] gap-1.5 sm:h-8",
   md: "h-11 px-5 text-sm gap-2",
   lg: "h-12 px-6 text-base gap-2.5",
 };

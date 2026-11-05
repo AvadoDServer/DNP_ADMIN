@@ -12,6 +12,8 @@ import { mountPoint as notificationsMountPoint } from "services/notifications/da
 import { mountPoint as userActionLogsMountPoint } from "services/userActionLogs/data";
 // MEV-Boost: its manifest defaults are the recommended live relays and no minimum (package 0.0.19).
 import relayList from "pages/packages/apps/mevboost/relays.bundled.json";
+// The newer AVADO apps, for checking their package pages (see mockPackages.js).
+import { mockPackages } from "./mockPackages";
 
 const relayUrl = id => relayList.relays.find(r => r.id === id).url;
 const mevBoostDefaultRelays = relayList.relays
@@ -171,12 +173,14 @@ export const mockState = {
       state: "exited",
     },
     {
-      // 10.0.53: has the lost-data calls (see mockLostData above), the
-      // IPFS reset (mockIpfsHealth) and getDiagnostics (the report).
+      // 10.0.59: has the lost-data calls (see mockLostData above), the
+      // IPFS reset (mockIpfsHealth), getDiagnostics (the report), the box
+      // password, the backup calls (pages/system/backupApi.js mock) and
+      // push alerts.
       name: "dappmanager.dnp.dappnode.eth",
       isCore: true,
       isDnp: true,
-      version: "10.0.53",
+      version: "10.0.59",
       state: "running",
       running: true,
     },
@@ -225,6 +229,7 @@ export const mockState = {
         image: { environment: ["NETWORK=mainnet", `RELAYS=${mevBoostDefaultRelays}`, "EXTRA_OPTS="] },
       },
     },
+    ...mockPackages,
   ],
 
   /* isInstallingLogs */

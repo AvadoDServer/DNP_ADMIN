@@ -533,6 +533,57 @@ export default {
   resetIpfsData: {},
 
   /**
+   * [passwordChange]
+   * Changes the password of the box's login user `avado` (SSH). The current
+   * password is checked on the box first; refusals are plain sentences
+   * ("The current password is wrong."). The passwords are never logged.
+   * No manadatoryKwargs on purpose: assertKwargs would put the kwargs in its
+   * error message. DAPPMANAGER 10.0.57 and newer.
+   *
+   * @param {string} currentPassword
+   * @param {string} newPassword at least 8 characters, not "avado"
+   */
+  passwordChange: {},
+
+  /**
+   * [passwordIsSecure]
+   * true when the `avado` user no longer has the factory password `avado`,
+   * false while it does, null when it cannot tell. DAPPMANAGER 10.0.57 and
+   * newer.
+   */
+  passwordIsSecure: {},
+
+  /**
+   * Push alerts (DAPPMANAGER 10.0.59 and newer, see src/pwa/pushApi.js).
+   * No manadatoryKwargs on purpose: assertKwargs would put the phone's push
+   * address in its error message.
+   *
+   * [pushGetKey] -> { publicKey } the box's VAPID public key
+   * [pushSubscribe] { subscription, name } -> { devices }
+   * [pushUnsubscribe] { endpoint } -> { removed }
+   * [pushStatus] { endpoint } -> { subscribed, devices }
+   * [pushTest] { endpoint } sends a test alert to that device only
+   */
+  pushGetKey: {},
+  pushSubscribe: {},
+  pushUnsubscribe: {},
+  pushStatus: {},
+  pushTest: {},
+
+  /**
+   * Encrypted backups to the owner's USB disk or NAS. DAPPMANAGER 10.0.58
+   * and newer (pages/system/backupApi.js). No manadatoryKwargs: assertKwargs
+   * would put the passphrase in its error message.
+   */
+  backupStatus: {},
+  backupTargets: {},
+  backupSetup: {},
+  backupOptions: {},
+  backupNow: {},
+  backupFind: {},
+  backupRestore: {},
+
+  /**
    * [restartPackageVolumes]
    * Removes a package volumes. The re-ups the package
    *

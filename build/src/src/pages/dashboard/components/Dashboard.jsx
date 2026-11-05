@@ -14,6 +14,8 @@ import ResourcesStrip from "./ResourcesStrip";
 import ChainStatus from "./ChainStatus";
 import EthPrice from "./EthPrice";
 import NewsCard from "./NewsCard";
+import { DefaultPasswordNotice } from "pages/system/components/BoxPassword";
+import { HomeScreenHint } from "pwa/PhoneAlerts";
 // UI kit
 import Card from "components/ui/Card";
 import Button from "components/ui/Button";
@@ -89,6 +91,14 @@ function Dashboard({
           one oversized space instead of an even 24 px between sections. */}
       <div className="flex flex-col gap-7">
         <ChainStatus />
+
+        {/* While the box still has the factory password avado; closes with
+            "Not now" or once the password is changed */}
+        <DefaultPasswordNotice />
+
+        {/* Phones only: add AVADO to the home screen, then turn on alerts
+            (src/pwa). Closes with "Not now". */}
+        <HomeScreenHint />
 
         {/* Compact hero: health verdict on the left, ETH price and box
             readings on the right. (User feedback 2026-09-25: the device

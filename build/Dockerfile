@@ -18,6 +18,8 @@ FROM --platform=linux/amd64 nginx:1.23.1-alpine
 RUN mkdir -p /usr/www/adminui 
 COPY --from=build-deps-adminui /usr/src/app/build /usr/www/adminui
 COPY build/nginx.conf /etc/nginx/nginx.conf
+COPY build/admin-locations.conf /etc/nginx/admin-locations.conf
+COPY build/https.conf.template /etc/nginx/https.conf.template
 
 RUN apk add --no-cache nodejs-current npm docker
 
@@ -28,7 +30,9 @@ RUN npm i
 
 # entrypoint
 COPY build/entrypoint.sh /usr/src/app/entrypoint.sh
-RUN chmod +x /usr/src/app/entrypoint.sh
+COPY build/https-cert.sh /usr/src/app/https-cert.sh
+COPY build/check-cert.js /usr/src/app/check-cert.js
+RUN chmod +x /usr/src/app/entrypoint.sh /usr/src/app/https-cert.sh
 
-EXPOSE 80
+EXPOSE 80 443
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]

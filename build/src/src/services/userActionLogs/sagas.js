@@ -3,6 +3,7 @@ import { rootWatcher } from "utils/redux";
 import api from "API/rpcMethods";
 import * as a from "./actions";
 import * as t from "./actionTypes";
+import hideUserSetEnvs from "./hideUserSetEnvs";
 import { CONNECTION_OPEN } from "services/connectionStatus/actionTypes";
 
 /**
@@ -44,7 +45,7 @@ export function* fetchUserActionLogs() {
       .filter(s => s.trim())
       .forEach((stringifiedLog, i) => {
         try {
-          userActionLogs.push(JSON.parse(stringifiedLog));
+          userActionLogs.push(hideUserSetEnvs(JSON.parse(stringifiedLog)));
         } catch (e) {
           console.warn(
             `Error parsing userActionLog #${i}: ${e.message}. StringifiedLog: `,

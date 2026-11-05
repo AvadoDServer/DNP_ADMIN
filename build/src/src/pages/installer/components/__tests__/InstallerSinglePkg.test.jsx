@@ -98,3 +98,135 @@ describe("InstallerInterface: a second validator app on the same network", () =>
     expect(mockConfirmSecond).not.toHaveBeenCalled();
   });
 });
+
+describe("InstallerInterface: setup fields (manifest setupWizard)", () => {
+  const TS = "tailscale.avado.dnp.dappnode.eth";
+  const field = {
+    id: "TS_AUTHKEY",
+    target: { type: "environment", name: "TS_AUTHKEY", service: "tailscale" },
+    title: "Tailscale auth key",
+    description: "Make a reusable key in your [Tailscale settings](https://login.tailscale.com/admin/settings/keys) and paste it here.",
+    secret: true
+  };
+  const tsManifest = (fields = [field]) => ({
+    name: TS, title: "Tailscale", version: "0.1.0", image: { size: 1 }, description: "Tailscale.",
+    setupWizard: { version: "2", fields }
+  });
+  const props = (manifest, packages = []) => ({
+    ...baseProps,
+    id: manifest.name,
+    dnp: { loading: false, manifest },
+    install: vi.fn(),
+    updateUserSetEnvs: vi.fn(),
+    packages,
+  });
+
+  it("shows a labelled, masked, optional input with one line of help and a real link", () => {
+    render(<InstallerInterface {...props(tsManifest())} />);
+    const input = screen.getByLabelText(/Tailscale auth key/);
+    expect(input).toHaveAttribute("type", "password");
+    expect(input).not.toBeRequired();
+    expect(screen.getByText("(optional)")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Tailscale settings" });
+    expect(link).toHaveAttribute("href", "https://login.tailscale.com/admin/settings/keys");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(input).toHaveAccessibleDescription(/Make a reusable key/);
+  });
+
+  it("Show / Hide toggles the secret", () => {
+    render(<InstallerInterface {...props(tsManifest())} />);
+    const input = screen.getByLabelText(/Tailscale auth key/);
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+    expect(input).toHaveAttribute("type", "text");
+    fireEvent.click(screen.getByRole("button", { name: "Hide" }));
+    expect(input).toHaveAttribute("type", "password");
+  });
+
+  it("sends the typed value (trimmed) through updateUserSetEnvs and installs", () => {
+    const p = props(tsManifest());
+    render(<InstallerInterface {...p} />);
+    fireEvent.change(screen.getByLabelText(/Tailscale auth key/), { target: { value: "  tskey-auth-abc \n" } });
+    expect(p.updateUserSetEnvs).toHaveBeenLastCalledWith({ dnpName: TS, key: "TS_AUTHKEY", value: "tskey-auth-abc" });
+    fireEvent.click(screen.getByRole("button", { name: "Install" }));
+    expect(p.install).toHaveBeenCalledWith(TS, {});
+  });
+
+  it("an optional field left empty does not block Install", () => {
+    const p = props(tsManifest());
+    render(<InstallerInterface {...p} />);
+    fireEvent.click(screen.getByRole("button", { name: "Install" }));
+    expect(p.install).toHaveBeenCalledWith(TS, {});
+    expect(p.updateUserSetEnvs).not.toHaveBeenCalled();
+  });
+
+  it("a required field blocks Install until it is filled", () => {
+    const p = props(tsManifest([{ ...field, title: "Name", secret: false, required: true }]));
+    render(<InstallerInterface {...p} />);
+    const input = screen.getByLabelText(/Name/);
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toBeRequired();
+    expect(screen.queryByText("(optional)")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Install" })).toBeDisabled();
+    expect(screen.getByText("Fill in the fields above to install.")).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "   " } });
+    expect(screen.getByRole("button", { name: "Install" })).toBeDisabled();
+    fireEvent.change(input, { target: { value: "box" } });
+    expect(screen.getByRole("button", { name: "Install" })).toBeEnabled();
+    expect(screen.queryByText("Fill in the fields above to install.")).not.toBeInTheDocument();
+  });
+
+  it("a true/false field is a switch and a list is a drop-down, both starting at the package default; nothing is sent until changed", () => {
+    const m = {
+      ...tsManifest([
+        { id: "exit", target: { type: "environment", name: "EXIT_NODE" }, title: "Use as exit node", enum: ["true", "false"] },
+        { id: "lang", target: { type: "environment", name: "LANG" }, title: "Language", enum: ["eng", "deu"] },
+      ]),
+      image: { size: 1, environment: ["EXIT_NODE=false", "LANG=deu"] },
+    };
+    const p = props(m);
+    render(<InstallerInterface {...p} />);
+    const sw = screen.getByRole("switch", { name: "Use as exit node" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByLabelText(/Language/)).toHaveValue("deu");
+    fireEvent.click(screen.getByRole("button", { name: "Install" }));
+    expect(p.updateUserSetEnvs).not.toHaveBeenCalled();
+    fireEvent.click(sw);
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    expect(p.updateUserSetEnvs).toHaveBeenLastCalledWith({ dnpName: TS, key: "EXIT_NODE", value: "true" });
+    fireEvent.change(screen.getByLabelText(/Language/), { target: { value: "eng" } });
+    expect(p.updateUserSetEnvs).toHaveBeenLastCalledWith({ dnpName: TS, key: "LANG", value: "eng" });
+  });
+
+  it("a required drop-down without a default blocks Install until a value is chosen", () => {
+    const p = props(tsManifest([{ id: "lang", target: { type: "environment", name: "LANG" }, title: "Language", enum: ["eng", "deu"], required: true }]));
+    render(<InstallerInterface {...p} />);
+    expect(screen.getByRole("button", { name: "Install" })).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Choose…" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Language/), { target: { value: "eng" } });
+    expect(screen.getByRole("button", { name: "Install" })).not.toBeDisabled();
+  });
+
+  it("is not asked on an update", () => {
+    const p = props(tsManifest(), [{ name: TS, version: "0.0.9" }]);
+    render(<InstallerInterface {...p} />);
+    expect(screen.queryByLabelText(/Tailscale auth key/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Update to 0.1.0" }));
+    expect(p.install).toHaveBeenCalledWith(TS, {});
+  });
+
+  it("a package without fields shows no inputs", () => {
+    const { container } = render(<InstallerInterface {...props(manifest)} />);
+    expect(container.querySelector("input")).toBeNull();
+    expect(screen.getByRole("button", { name: "Install" })).toBeEnabled();
+    expect(screen.queryByText("Fill in the fields above to install.")).not.toBeInTheDocument();
+  });
+
+  it("shows no raw HTML from the description", () => {
+    const { container } = render(<InstallerInterface {...props(tsManifest([{ ...field, description: "Paste <img src=x onerror=alert(1)> it [bad](javascript:alert(1))" }]))} />);
+    expect(container.querySelector("img[src='x']")).toBeNull();
+    expect(screen.queryByRole("link", { name: "bad" })).not.toBeInTheDocument();
+    expect(screen.getByText(/bad/)).toBeInTheDocument();
+  });
+});

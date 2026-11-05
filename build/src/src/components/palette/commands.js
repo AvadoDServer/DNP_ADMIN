@@ -33,6 +33,11 @@ export function buildCommands({ nav = [], advancedNav = [], packages = [], store
     { id: "page:updates", group: "Pages", label: "Updates", keywords: "system upgrade version", to: "/system/updates", restricted: restrictedInSimple },
     { id: "page:storage", group: "Pages", label: "Storage", keywords: "disk space full", to: "/system/storage", restricted: restrictedInSimple },
     { id: "page:history", group: "Pages", label: "History", keywords: "activity log", to: "/system/history", restricted: restrictedInSimple },
+    // Not restricted: the password page is meant for Simple mode too
+    { id: "page:backup", group: "Pages", label: "Backup", keywords: "backup restore usb disk nas encrypted copy validator keys", to: "/system/backup" },
+    { id: "page:password", group: "Pages", label: "Box password", keywords: "change password ssh login security avado", to: "/system/password" },
+    // Not restricted either: alerts are for Simple mode too
+    { id: "page:alerts", group: "Pages", label: "Alerts on this phone", keywords: "alerts push notifications phone home screen app install", to: "/system/alerts" },
 
     ...nonCore.map(p => ({ id: `app:${p.name}`, group: "Your apps", label: appTitle(p), keywords: p.name, to: `/packages/${p.name}` })),
 

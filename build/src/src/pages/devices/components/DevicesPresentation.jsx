@@ -40,4 +40,4 @@ export function EmptyState({ icon, title, children, action, tone = "accent" }) {
 
 /** Shared icon-button chrome used by row actions. */
 export const iconBtn =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-accent focus:outline-none focus-visible:shadow-focus";
+  "inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-accent focus:outline-none focus-visible:shadow-focus sm:h-8 sm:w-8";

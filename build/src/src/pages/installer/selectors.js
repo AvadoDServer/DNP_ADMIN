@@ -18,6 +18,7 @@ import {
 import parseInstallTag from "./parsers/parseInstallTag";
 import stringifyUserSetPorts from "./parsers/stringifyUserSetPorts";
 import stringifyUserSetVols from "./parsers/stringifyUserSetVols";
+import { dropEmptyEnvs } from "./parsers/setupFields";
 // Utils
 import _ from "lodash";
 
@@ -202,7 +203,8 @@ export const getUserSetFormatted = createSelector(
     getUserSetPorts,
     getUserSetVols,
     (envs, ports, vols) => ({
-        userSetEnvs: envs,
+        // An empty setup field keeps the package's own default
+        userSetEnvs: dropEmptyEnvs(envs),
         userSetPorts: stringifyUserSetPorts(ports),
         userSetVols: stringifyUserSetVols(vols)
     })

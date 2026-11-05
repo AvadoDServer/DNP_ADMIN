@@ -10,15 +10,19 @@ import { SectionHeader } from "../PackagePresentation";
 // Utils
 import parseManifestEnvs from "pages/installer/parsers/parseManifestEnvs";
 
-function parseEnvs(dnp) {
-  return {
+function parseEnvs(dnp, exclude) {
+  const envs = {
     ...parseManifestEnvs(dnp.manifest),
     ...(dnp.envs || {}),
   };
+  // Left out (e.g. secret setup fields, edited in the form above): not shown,
+  // not sent, so the DAPPMANAGER keeps their current values
+  for (const key of exclude || []) delete envs[key];
+  return envs;
 }
 
-function Envs({ dnp, updateEnvs }) {
-  const dnpEnvs = parseEnvs(dnp);
+function Envs({ dnp, updateEnvs, exclude }) {
+  const dnpEnvs = parseEnvs(dnp, exclude);
   const [envs, setEnvs] = useState(dnpEnvs);
   useEffect(() => {
     setEnvs(dnpEnvs);

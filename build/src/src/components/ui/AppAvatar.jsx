@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { cn } from "./cn";
 import { getClient } from "health/clients";
+import { ipfsGateway } from "utils/boxUrls";
 
 // The generic AVADO logo that many package manifests ship as their avatar.
 export const PLACEHOLDER_AVATARS = ["/ipfs/QmYRmFCtdXvqq3drc6kBXxeWiiMatTfKVpVrmLX883cQbR"];
@@ -19,8 +20,9 @@ const ROLE_TINT = {
 
 const monogram = pkg => {
   const title = (pkg && pkg.manifest && pkg.manifest.title) || ((pkg && pkg.name) || "?").split(".")[0];
-  const words = title.replace(/[-_]/g, " ").split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? words[0][0] + words[1][0] : title.slice(0, 2);
+  // Letters and digits only: "Immich (photos)" is IP, not I(
+  const words = title.replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/).filter(Boolean);
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || title).slice(0, 2);
   return letters.toUpperCase();
 };
 
@@ -32,7 +34,7 @@ export default function AppAvatar({ pkg, size = 40, className }) {
   if (usable)
     return (
       <img
-        src={`http://ipfs.my.ava.do:8080/ipfs/${avatar.replace("/ipfs/", "")}`}
+        src={`${ipfsGateway()}${avatar.replace("/ipfs/", "")}`}
         alt=""
         style={style}
         onError={() => setFailed(true)}

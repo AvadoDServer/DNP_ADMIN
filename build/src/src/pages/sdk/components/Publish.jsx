@@ -23,8 +23,9 @@ import { rootPath as installerRootPath } from "pages/installer";
 import Title from "components/Title";
 import SubTitle from "components/SubTitle";
 import Card from "components/Card";
+import { ipfsGateway as boxIpfsGateway } from "utils/boxUrls";
 
-const ipfsGateway = "http://ipfs.my.ava.do:8080/ipfs/";
+const ipfsGateway = boxIpfsGateway();
 
 // Necessary code to refresh the userAddress
 // when user interacts with the metamask extension

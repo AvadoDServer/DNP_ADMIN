@@ -104,7 +104,7 @@ export default function EthPrice() {
             type="button"
             aria-pressed={currency === c}
             onClick={() => choose(c)}
-            className={cn("px-2.5 py-0.5", currency === c ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg")}
+            className={cn("px-2.5 py-[0.75rem] sm:py-0.5", currency === c ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg")}
           >
             {c.toUpperCase()}
           </button>

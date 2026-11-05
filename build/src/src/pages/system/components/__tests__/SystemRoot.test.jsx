@@ -14,6 +14,7 @@ vi.mock("../SystemStorage", () => ({ default: () => <p>storage tab</p> }));
 vi.mock("../SystemHistory", () => ({ default: () => <p>history tab</p> }));
 vi.mock("../SystemUpdate", () => ({ default: () => <p>core update flow</p> }));
 vi.mock("pages/packages/components/AppPage", () => ({ default: () => <p>core app page</p> }));
+vi.mock("../BoxPassword", () => ({ BoxPasswordPage: () => <p>box password page</p> }));
 const { TAB_PATHS } = vi.hoisted(() => ({
   TAB_PATHS: ["/system", "/system/updates", "/system/storage", "/system/history"],
 }));
@@ -76,6 +77,14 @@ describe("SystemRoot", () => {
     expect(screen.queryByRole("heading", { name: "System" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.getByText("core app page")).toBeInTheDocument();
+  });
+
+  it("shows the box password page in simple mode without the 'Advanced page' note, header or tab bar", () => {
+    renderAtInMode("/system/password", "simple");
+    expect(screen.getByText("box password page")).toBeInTheDocument();
+    expect(screen.queryByText("core app page")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
   });
 
   it("shows the 'Advanced page' note on a tab page reached in simple mode", () => {

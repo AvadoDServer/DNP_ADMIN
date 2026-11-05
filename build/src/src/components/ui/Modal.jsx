@@ -96,7 +96,7 @@ const Modal = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="-mr-2 -mt-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-fg-subtle transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus"
+                className="-mr-2 -mt-1 inline-flex h-10 w-10 items-center justify-center rounded-md text-fg-subtle transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus sm:h-8 sm:w-8"
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M18 6 6 18M6 6l12 12" />

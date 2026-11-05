@@ -241,7 +241,7 @@ export default function CommandPalette() {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
             placeholder="Search pages, apps, help topics and actions…"
-            className="w-full min-w-0 bg-transparent py-3.5 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
+            className="w-full min-w-0 bg-transparent py-3.5 text-base text-fg placeholder:text-fg-subtle focus:outline-none sm:text-sm"
           />
         </div>
 

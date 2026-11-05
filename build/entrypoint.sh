@@ -11,8 +11,20 @@
 HELPERS=""
 trap 'nginx -s quit 2>/dev/null; [ -n "$HELPERS" ] && kill $HELPERS 2>/dev/null; exit 0' QUIT TERM INT
 
-# start admin UI
+# start admin UI (http; the https server is added below once possible)
+mkdir -p /etc/nginx/https.d
 nginx -c /etc/nginx/nginx.conf
+
+# Secure address https://admin.my.ava.do (installable Admin, push alerts):
+# the box's *.my.ava.do certificate, checked every 12 hours, every 5 minutes
+# until it is there (https-cert.sh)
+(
+  sleep 5
+  while true; do
+    if /usr/src/app/https-cert.sh; then sleep 43200; else sleep 300; fi
+  done
+) &
+HTTPS_LOOP=$!
 
 # Startup helpers (bounded so a hang can never pin this container):
 # - update the dappmanager if needed
@@ -26,7 +38,7 @@ nginx -c /etc/nginx/nginx.conf
   timeout 300 docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host  busybox  chroot /host /bin/bash -c "docker-compose -f /usr/src/dappnode/DNCORE/docker-compose-dappmanager.yml up -d"
   timeout 300 docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host  busybox  chroot /host /bin/bash -c "docker-compose -f /usr/src/dappnode/DNCORE/docker-compose-bind.yml up -d"
 ) &
-HELPERS=$!
+HELPERS="$! $HTTPS_LOOP"
 
 # Backgrounded so the trap above can run while we wait
 sleep infinity &

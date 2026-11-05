@@ -21,7 +21,8 @@ import { cn } from "components/ui/cn";
 import AdvancedNote from "components/AdvancedNote";
 import AppOverview from "./AppOverview";
 import SetupFrame from "./SetupFrame";
-import Envs from "./PackageViews/Envs";
+import PackageSettings from "./PackageViews/Settings";
+import { getSetupFields } from "pages/installer/parsers/setupFields";
 import FileManager from "./PackageViews/FileManager";
 import Logs from "./PackageViews/Logs";
 import NoDnpInstalled from "./NoDnpInstalled";
@@ -50,7 +51,7 @@ export function tabsFor(hasSetup) {
 }
 
 const menuBtnCls =
-  "inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-border text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus";
+  "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-border text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus sm:h-9 sm:w-9";
 
 /**
  * The header's overflow menu ("⋮"): a small accessible menu button.
@@ -156,10 +157,14 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
   // link such as `?tab=logs` still opens its content in Simple mode (never
   // a 404), just with an "Advanced page" note instead of a selected pill —
   // see `active` below, which is resolved against the full `tabs` list.
-  const visibleTabs = tabsForMode(tabs, mode);
+  // A package with setup fields (manifest setupWizard) shows them as plain
+  // settings, so its Settings tab is offered in Simple mode too.
+  const plainSettings = getSetupFields(dnp.manifest).length > 0;
+  const modeTabs = tabsForMode(tabs, mode);
+  const visibleTabs = plainSettings ? tabs.filter(t => modeTabs.includes(t) || t.id === "settings") : modeTabs;
   const requested = new URLSearchParams(location.search).get("tab");
   const active = tabs.some(t => t.id === requested) ? requested : visibleTabs[0].id;
-  const showAdvancedNote = mode === "simple" && ADVANCED_TABS.includes(active);
+  const showAdvancedNote = mode === "simple" && ADVANCED_TABS.includes(active) && !(plainSettings && active === "settings");
   const ownFindings = findings.filter(f => f.appId === dnp.name && f.severity !== "info").length;
   const shownTabs = visibleTabs.map(t => (t.id === "overview" && ownFindings ? { ...t, badge: ownFindings } : t));
   const setTab = tab => history.replace({ pathname: location.pathname, search: `?tab=${tab}` });
@@ -220,7 +225,7 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={appStatus(dnp, { findings, updates })} />
-          {isAdvanced && dnp.version && <span className="font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
+          {isAdvanced && dnp.version && <span className="min-w-0 break-all font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
           {showOpen &&
             (external ? (
               <Button as="a" href={external} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
@@ -256,7 +261,7 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
       {active === "setup" && url && <SetupFrame url={url} title={title} />}
       {active === "overview" && <AppOverview dnp={dnp} isCore={isCore} />}
       {active === "logs" && <Logs id={dnp.name} />}
-      {active === "settings" && <Envs dnp={dnp} />}
+      {active === "settings" && <PackageSettings dnp={dnp} />}
       {active === "files" && <FileManager dnp={dnp} />}
     </div>
   );

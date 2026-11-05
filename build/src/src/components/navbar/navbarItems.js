@@ -7,6 +7,7 @@ import Folder from "Icons/Folder";
 import NewFolder from "Icons/NewFolder";
 import Settings from "Icons/Settings";
 import Priority from "Icons/Priority";
+import Lock from "Icons/Lock";
 
 export const sidenavItems = [
   {
@@ -49,6 +50,11 @@ export const sidenavItems = [
     package: "remoteconnect.avado.dnp.dappnode.eth",
     advanced: true,
     simpleIfInstalled: true
+  },
+  {
+    name: "Backup",
+    href: "/system/backup",
+    icon: Lock
   },
   {
     name: "Priority",

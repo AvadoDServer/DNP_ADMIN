@@ -80,7 +80,7 @@ function Logs({ id }) {
     <section>
       <SectionHeader title="Logs" />
       <Card padding="lg" className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:[&>.switch+.switch]:ml-0">
           <Switch
             checked={autoRefresh}
             onToggle={setAutoRefresh}

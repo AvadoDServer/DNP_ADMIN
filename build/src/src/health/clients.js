@@ -110,6 +110,60 @@ export function canGetDiagnostics(packages, ownVersion) {
   return dappmanagerAtLeast(packages, DIAGNOSTICS_SINCE) || versionAtLeast(ownVersion, DIAGNOSTICS_SINCE);
 }
 
+// The DAPPMANAGER that has passwordChange and passwordIsSecure (the box's
+// `avado` login password).
+export const BOX_PASSWORD_SINCE = "10.0.57";
+
+/**
+ * True when the installed DAPPMANAGER is 10.0.57 or newer, the first one that
+ * can change the box's login password. `ownVersion` as for canGetDiagnostics.
+ */
+export function canChangeBoxPassword(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, BOX_PASSWORD_SINCE) || versionAtLeast(ownVersion, BOX_PASSWORD_SINCE);
+}
+
+// The DAPPMANAGER with the backup calls (backupStatus, backupSetup, ...)
+export const BACKUP_SINCE = "10.0.58";
+
+/** True when the installed DAPPMANAGER can make encrypted backups */
+export function canBackup(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, BACKUP_SINCE) || versionAtLeast(ownVersion, BACKUP_SINCE);
+}
+
+/** True once the package list shows a DAPPMANAGER older than 10.0.58 */
+export function backupNeedsUpdate(packages, ownVersion) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  if (!core || !versionParts(core.version)) return false;
+  return !canBackup(packages, ownVersion);
+}
+
+/**
+ * True once the package list holds the DAPPMANAGER and it is older than
+ * 10.0.57 (and it does not report a newer version itself): the box must be
+ * updated before its password can be changed here. False while the list is
+ * still loading.
+ */
+export function boxPasswordNeedsUpdate(packages, ownVersion) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  if (!core || !versionParts(core.version)) return false;
+  return !canChangeBoxPassword(packages, ownVersion);
+}
+
+// The DAPPMANAGER that sends push alerts (pushGetKey, pushSubscribe, ...)
+export const PUSH_ALERTS_SINCE = "10.0.59";
+
+/** True when the installed DAPPMANAGER can send push alerts (10.0.59+) */
+export function canUsePushAlerts(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, PUSH_ALERTS_SINCE) || versionAtLeast(ownVersion, PUSH_ALERTS_SINCE);
+}
+
+/** The package list has an older DAPPMANAGER: update before alerts work */
+export function pushAlertsNeedUpdate(packages, ownVersion) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  if (!core || !versionParts(core.version)) return false;
+  return !canUsePushAlerts(packages, ownVersion);
+}
+
 // The installed DAPPMANAGER (a core package in `packages`) is `since` or
 // newer (versionAtLeast is below, with the storage-mode helpers).
 function dappmanagerAtLeast(packages, since) {
