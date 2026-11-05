@@ -15,6 +15,7 @@ import Button from "components/ui/Button";
 // Components
 import { SectionHeader, Dialog, confirmSignedCmd } from "./SystemPresentation";
 import BoxPasswordCard from "./BoxPassword";
+import { AlertsCard } from "pwa/PhoneAlerts";
 
 const PackageList = packages.components.PackageList;
 
@@ -149,6 +150,9 @@ const SystemHome = ({ rebootHost, runSignedCmd }) => {
 
       <SectionHeader title="Security" />
       <BoxPasswordCard />
+
+      <SectionHeader title="Alerts" />
+      <AlertsCard />
 
       <SectionHeader title="Maintenance" />
       <Card padding="none">

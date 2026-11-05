@@ -7,6 +7,7 @@ import { cleanObj } from "utils/objects";
 import api from "./API";
 import App from "./App";
 import store from "./store";
+import { registerServiceWorker } from "./pwa/device";
 import ThemeProvider, {
   applyTheme,
   resolveInitialTheme
@@ -64,6 +65,9 @@ if (import.meta.env.REACT_APP_MOCK_DATA) {
     .catch((e) => console.log(`Error loading mockContent: ${e.stack}`));
 } else {
   api.start();
+  // Installable Admin and push alerts: only on the secure address
+  // (https://admin.my.ava.do); a no-op on http://my.ava.do
+  registerServiceWorker();
 }
 
 // Statically inlined by Vite from REACT_APP_* env (getVersionData.sh writes

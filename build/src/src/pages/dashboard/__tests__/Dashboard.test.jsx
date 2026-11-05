@@ -11,6 +11,7 @@ vi.mock("pages/dashboard/components/EthPrice", () => ({ default: () => <div data
 vi.mock("pages/dashboard/components/NewsCard", () => ({ default: () => <div data-testid="news-card" /> }));
 // The factory-password notice asks the DAPPMANAGER through redux; its own tests are in boxPassword.test.jsx.
 vi.mock("pages/system/components/BoxPassword", () => ({ DefaultPasswordNotice: () => <div data-testid="password-notice" /> }));
+vi.mock("pwa/PhoneAlerts", () => ({ HomeScreenHint: () => <div data-testid="home-screen-hint" /> }));
 
 const baseProps = {
   dappnodeStats: {},

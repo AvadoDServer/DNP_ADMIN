@@ -9,6 +9,7 @@ import SystemHistory from "./SystemHistory";
 import SystemUpdate from "./SystemUpdate";
 import SystemTabs, { isTabPath } from "./SystemTabs";
 import { BoxPasswordPage } from "./BoxPassword";
+import { AlertsPage, ALERTS_PATH } from "pwa/PhoneAlerts";
 import AppPage from "pages/packages/components/AppPage";
 import { PageHeader } from "components/ui/PageHeader";
 import AdvancedNote from "components/AdvancedNote";
@@ -56,6 +57,8 @@ const SystemRoot = ({ location }) => {
         {/* Box password: also for Simple mode (Home's notice, Help), so no
             "advanced page" note and no tab bar */}
         <Route path={PASSWORD_PATH} component={BoxPasswordPage} />
+        {/* Alerts on this phone: also Simple mode (Home's hint, Help) */}
+        <Route path={ALERTS_PATH} component={AlertsPage} />
         <Route path={rootPath + "/:id"} render={props => <AppPage {...props} isCore />} />
       </Switch>
     </>

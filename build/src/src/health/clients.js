@@ -134,6 +134,21 @@ export function boxPasswordNeedsUpdate(packages, ownVersion) {
   return !canChangeBoxPassword(packages, ownVersion);
 }
 
+// The DAPPMANAGER that sends push alerts (pushGetKey, pushSubscribe, ...)
+export const PUSH_ALERTS_SINCE = "10.0.59";
+
+/** True when the installed DAPPMANAGER can send push alerts (10.0.59+) */
+export function canUsePushAlerts(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, PUSH_ALERTS_SINCE) || versionAtLeast(ownVersion, PUSH_ALERTS_SINCE);
+}
+
+/** The package list has an older DAPPMANAGER: update before alerts work */
+export function pushAlertsNeedUpdate(packages, ownVersion) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  if (!core || !versionParts(core.version)) return false;
+  return !canUsePushAlerts(packages, ownVersion);
+}
+
 // The installed DAPPMANAGER (a core package in `packages`) is `since` or
 // newer (versionAtLeast is below, with the storage-mode helpers).
 function dappmanagerAtLeast(packages, since) {

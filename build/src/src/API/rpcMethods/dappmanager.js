@@ -554,6 +554,23 @@ export default {
   passwordIsSecure: {},
 
   /**
+   * Push alerts (DAPPMANAGER 10.0.59 and newer, see src/pwa/pushApi.js).
+   * No manadatoryKwargs on purpose: assertKwargs would put the phone's push
+   * address in its error message.
+   *
+   * [pushGetKey] -> { publicKey } the box's VAPID public key
+   * [pushSubscribe] { subscription, name } -> { devices }
+   * [pushUnsubscribe] { endpoint } -> { removed }
+   * [pushStatus] { endpoint } -> { subscribed, devices }
+   * [pushTest] { endpoint } sends a test alert to that device only
+   */
+  pushGetKey: {},
+  pushSubscribe: {},
+  pushUnsubscribe: {},
+  pushStatus: {},
+  pushTest: {},
+
+  /**
    * [restartPackageVolumes]
    * Removes a package volumes. The re-ups the package
    *

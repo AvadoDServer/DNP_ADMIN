@@ -35,6 +35,8 @@ export function buildCommands({ nav = [], advancedNav = [], packages = [], store
     { id: "page:history", group: "Pages", label: "History", keywords: "activity log", to: "/system/history", restricted: restrictedInSimple },
     // Not restricted: the password page is meant for Simple mode too
     { id: "page:password", group: "Pages", label: "Box password", keywords: "change password ssh login security avado", to: "/system/password" },
+    // Not restricted either: alerts are for Simple mode too
+    { id: "page:alerts", group: "Pages", label: "Alerts on this phone", keywords: "alerts push notifications phone home screen app install", to: "/system/alerts" },
 
     ...nonCore.map(p => ({ id: `app:${p.name}`, group: "Your apps", label: appTitle(p), keywords: p.name, to: `/packages/${p.name}` })),
 
