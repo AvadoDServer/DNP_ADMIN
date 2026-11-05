@@ -21,9 +21,9 @@ function PackageDetails({ dnp }) {
             <span className="text-fg-subtle">Status</span>
             <StateBadge state={state} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <span className="text-fg-subtle">Version</span>
-            <span className="font-medium text-fg">
+            <span className="min-w-0 break-all font-medium text-fg">
               {version} {origin || ""}
             </span>
           </div>

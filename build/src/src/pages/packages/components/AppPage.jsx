@@ -220,7 +220,7 @@ export function AppPage({ dnp, id, loading, history, location, isCore: isCorePro
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill status={appStatus(dnp, { findings, updates })} />
-          {isAdvanced && dnp.version && <span className="font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
+          {isAdvanced && dnp.version && <span className="min-w-0 break-all font-mono text-xs text-fg-subtle">v{dnp.version}</span>}
           {showOpen &&
             (external ? (
               <Button as="a" href={external} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
