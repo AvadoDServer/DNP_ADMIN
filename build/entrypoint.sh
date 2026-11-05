@@ -36,7 +36,17 @@ HTTPS_LOOP=$!
   DAPPMANAGER_VERSION=`docker ps | grep DAppNodeCore-dappmanager.dnp.dappnode.eth | sed -n 's/^.*:\([^ ]*\).*$/\1/p'` timeout 300 node /launchcmd/index.js
   sleep 10
   timeout 300 docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host  busybox  chroot /host /bin/bash -c "docker-compose -f /usr/src/dappnode/DNCORE/docker-compose-dappmanager.yml up -d"
-  timeout 300 docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host  busybox  chroot /host /bin/bash -c "docker-compose -f /usr/src/dappnode/DNCORE/docker-compose-bind.yml up -d"
+  # bind: only when it is not running the image its compose file names. The
+  # DAPPMANAGER creates bind with its own docker-compose; the host's older one
+  # sees other labels and recreated a healthy bind on every Admin start (a DNS
+  # gap and a cold cache). Unreadable file or unknown state: run it as before.
+  BIND_WANT=$(timeout 60 docker run --rm --volume /usr/src/dappnode/DNCORE:/dncore:ro busybox cat /dncore/docker-compose-bind.yml 2>/dev/null | sed -n "s/^[[:space:]]*image:[[:space:]]*['\"]*\([^'\" ]*\).*/\1/p" | head -n 1)
+  BIND_HAVE=$(timeout 30 docker inspect -f '{{.State.Running}} {{.Config.Image}}' DAppNodeCore-bind.dnp.dappnode.eth 2>/dev/null)
+  if [ -n "$BIND_WANT" ] && [ "$BIND_HAVE" = "true $BIND_WANT" ]; then
+    echo "bind: already running $BIND_WANT, left as it is"
+  else
+    timeout 300 docker run --rm --privileged  --net=host --pid=host --ipc=host --volume /:/host  busybox  chroot /host /bin/bash -c "docker-compose -f /usr/src/dappnode/DNCORE/docker-compose-bind.yml up -d"
+  fi
 ) &
 HELPERS="$! $HTTPS_LOOP"
 
