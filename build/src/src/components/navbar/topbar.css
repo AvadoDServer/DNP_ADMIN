@@ -18,7 +18,10 @@
   padding: 0.5rem;
   opacity: 0.7;
   /* Increase clickable area */
-  min-height: calc(var(--topbar-height) / 2);
+  min-height: 44px;
+  /* A finger-sized target (only shown below 1024 px) */
+  min-width: 44px;
+  justify-content: center;
   /* Center icon vertically */
   display: flex;
   align-items: center;

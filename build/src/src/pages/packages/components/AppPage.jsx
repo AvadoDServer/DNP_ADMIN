@@ -50,7 +50,7 @@ export function tabsFor(hasSetup) {
 }
 
 const menuBtnCls =
-  "inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-border text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus";
+  "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-border text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-fg focus:outline-none focus-visible:shadow-focus sm:h-9 sm:w-9";
 
 /**
  * The header's overflow menu ("⋮"): a small accessible menu button.

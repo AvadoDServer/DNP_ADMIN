@@ -36,9 +36,10 @@ const xnor = (a, b) => Boolean(a) === Boolean(b);
 export const getAutoUpdateState = dnp => isAutoUpdateOn(dnp);
 
 const iconBtn =
-    "inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning-text focus:outline-none focus-visible:shadow-focus";
+    "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-fg/[0.06] hover:text-warning-text focus:outline-none focus-visible:shadow-focus sm:h-8 sm:w-8";
 
-const linkCls = "text-sm font-medium text-accent transition-colors hover:underline";
+// min-h-10: a finger-sized target on phones; from sm up the row is as before.
+const linkCls = "inline-flex min-h-10 items-center text-sm font-medium text-accent transition-colors hover:underline sm:min-h-0";
 
 // The confirming WAMP push re-lists every package, which runs `docker system
 // df` on the box. That walks every volume and can be slow on a box with a
@@ -186,7 +187,7 @@ const PackagesList = ({
                                     )
                                 )}
 
-                                <Link to={`${base}/${name}`} className="text-sm font-medium text-fg-muted transition-colors hover:text-fg">
+                                <Link to={`${base}/${name}`} className="inline-flex min-h-10 items-center text-sm font-medium text-fg-muted transition-colors hover:text-fg sm:min-h-0">
                                     Manage
                                 </Link>
 
