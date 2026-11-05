@@ -9,6 +9,7 @@ import { updateDevices } from "services/devices/actions";
 import { updateDnpDirectory } from "services/dnpDirectory/actions";
 import { updateDnpInstalled } from "services/dnpInstalled/actions";
 import { pushUserActionLog } from "services/userActionLogs/actions";
+import hideUserSetEnvs from "services/userActionLogs/hideUserSetEnvs";
 import { updateIsInstallingLog } from "services/isInstallingLogs/actions";
 
 export default function subscriptions(session) {
@@ -49,8 +50,10 @@ export default function subscriptions(session) {
    * }
    */
   subscribe("logUserAction.dappmanager.dnp.dappnode.eth", userActionLog => {
-    Joi.assert(userActionLog, schemas.userActionLog);
-    store.dispatch(pushUserActionLog(userActionLog));
+    // Values typed in the installer (e.g. an auth key) are not kept here
+    const log = hideUserSetEnvs(userActionLog);
+    Joi.assert(log, schemas.userActionLog);
+    store.dispatch(pushUserActionLog(log));
   });
 
   /**

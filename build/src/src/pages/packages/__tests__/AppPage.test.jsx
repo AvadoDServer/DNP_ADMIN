@@ -254,6 +254,35 @@ describe("app page modes", () => {
     }
   );
 
+  const dnpWithFields = {
+    ...dnpWithSetup,
+    manifest: {
+      ...dnpWithSetup.manifest,
+      setupWizard: { version: "2", fields: [{ id: "s", target: { type: "environment", name: "SIGNUPS_ALLOWED" }, title: "New accounts allowed", enum: ["true", "false"] }] },
+    },
+    envs: { SIGNUPS_ALLOWED: "true" },
+  };
+
+  it("simple mode: a package with setup fields also offers Settings, with the plain fields and no Advanced note", () => {
+    mockMode = "simple";
+    render(
+      <Provider store={createStore(() => ({}))}>
+        <AppPage dnp={dnpWithFields} {...baseProps} location={{ pathname: "/packages/x", search: "?tab=settings" }} isCore={false} />
+      </Provider>
+    );
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["Setup", "Overview", "Settings"]);
+    expect(screen.getByRole("switch", { name: "New accounts allowed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and restart" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch to advanced mode" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Environment variables")).not.toBeInTheDocument();
+  });
+
+  it("advanced mode: a package with setup fields keeps the usual tab order", () => {
+    mockMode = "advanced";
+    render(<AppPage dnp={dnpWithFields} {...baseProps} location={{ pathname: "/packages/x", search: "" }} isCore={false} />);
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["Setup", "Overview", "Logs", "Settings", "Files"]);
+  });
+
   it("advanced mode + ?tab=logs: no Advanced-page note (Logs is already a first-class tab there)", () => {
     mockMode = "advanced";
     render(
