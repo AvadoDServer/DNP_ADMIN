@@ -71,7 +71,7 @@ function To({ id, copyFileTo }) {
 
       {/* TO, choose destination path */}
       <form
-        className="flex items-stretch gap-2"
+        className="flex flex-col gap-2 sm:flex-row sm:items-stretch"
         onSubmit={(e) => {
           e.preventDefault();
           uploadFile();

@@ -48,7 +48,7 @@ function From({ id }) {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold text-fg">Download from DApp</h3>
       <form
-        className="flex items-stretch gap-2"
+        className="flex flex-col gap-2 sm:flex-row sm:items-stretch"
         onSubmit={(e) => {
           e.preventDefault();
           if (fromPath) downloadFile();
