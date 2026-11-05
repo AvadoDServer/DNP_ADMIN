@@ -58,6 +58,7 @@ export const TOPICS = [
       { title: "Open the peer-to-peer ports", body: "Turn on UPnP in your router, or forward the ports listed on each client's Overview tab to your AVADO's internal IP." },
       { title: "Reaching it from away", body: "Remote Connect gives you secure access from anywhere.", action: { label: "Open Remote Connect", to: "/packages/remoteconnect.avado.dnp.dappnode.eth" } },
       { title: "Get alerts on your phone", body: "Add AVADO to your phone's home screen and get an alert when something needs you, wherever you are.", action: { label: "Set up alerts", to: "/system/alerts" } },
+      { title: "Back up your apps and keys", body: "Keep an encrypted copy of your apps' data and validator keys on your own USB disk.", action: { label: "Open Backup", to: "/system/backup" } },
       { title: "Change your AVADO's password", body: "Every AVADO starts with the password avado. Choose your own so no one else can log in to it.", action: { label: "Change box password", to: "/system/password" } },
     ],
   },

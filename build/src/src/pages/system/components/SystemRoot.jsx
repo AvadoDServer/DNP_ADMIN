@@ -10,6 +10,7 @@ import SystemUpdate from "./SystemUpdate";
 import SystemTabs, { isTabPath } from "./SystemTabs";
 import { BoxPasswordPage } from "./BoxPassword";
 import { AlertsPage, ALERTS_PATH } from "pwa/PhoneAlerts";
+import { BackupPage } from "./Backup";
 import AppPage from "pages/packages/components/AppPage";
 import { PageHeader } from "components/ui/PageHeader";
 import AdvancedNote from "components/AdvancedNote";
@@ -19,6 +20,7 @@ const UPDATES_PATH = `${rootPath}/updates`;
 const STORAGE_PATH = `${rootPath}/storage`;
 const HISTORY_PATH = `${rootPath}/history`;
 const PASSWORD_PATH = `${rootPath}/password`;
+const BACKUP_PATH = `${rootPath}/backup`;
 
 const SystemRoot = ({ location }) => {
   const { isAdvanced } = useMode();
@@ -59,6 +61,8 @@ const SystemRoot = ({ location }) => {
         <Route path={PASSWORD_PATH} component={BoxPasswordPage} />
         {/* Alerts on this phone: also Simple mode (Home's hint, Help) */}
         <Route path={ALERTS_PATH} component={AlertsPage} />
+        {/* Backup: in the sidebar for Simple mode too */}
+        <Route path={BACKUP_PATH} component={BackupPage} />
         <Route path={rootPath + "/:id"} render={props => <AppPage {...props} isCore />} />
       </Switch>
     </>
