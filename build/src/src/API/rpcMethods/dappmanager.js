@@ -554,6 +554,19 @@ export default {
   passwordIsSecure: {},
 
   /**
+   * Encrypted backups to the owner's USB disk or NAS. DAPPMANAGER 10.0.58
+   * and newer (pages/system/backupApi.js). No manadatoryKwargs: assertKwargs
+   * would put the passphrase in its error message.
+   */
+  backupStatus: {},
+  backupTargets: {},
+  backupSetup: {},
+  backupOptions: {},
+  backupNow: {},
+  backupFind: {},
+  backupRestore: {},
+
+  /**
    * [restartPackageVolumes]
    * Removes a package volumes. The re-ups the package
    *

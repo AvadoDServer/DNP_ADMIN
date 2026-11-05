@@ -6,7 +6,7 @@ const names = items => items.map(i => i.name);
 describe("visibleNavItems", () => {
   it("simple mode: core pages only (Priority included — it's the paid support offer, not an advanced tool), Remote Connect absent when not installed", () => {
     const visible = visibleNavItems(sidenavItems, { mode: "simple", installedNames: [] });
-    expect(names(visible)).toEqual(["Home", "DappStore", "My DApps", "Staking setup", "Priority", "Help"]);
+    expect(names(visible)).toEqual(["Home", "DappStore", "My DApps", "Staking setup", "Backup", "Priority", "Help"]);
   });
 
   it("simple mode: Remote Connect stays visible once its package is installed", () => {
@@ -20,6 +20,7 @@ describe("visibleNavItems", () => {
       "My DApps",
       "Staking setup",
       "Remote Connect",
+      "Backup",
       "Priority",
       "Help",
     ]);
@@ -45,6 +46,7 @@ describe("visibleNavItems", () => {
       "DappStore",
       "My DApps",
       "Staking setup",
+      "Backup",
       "Priority",
       "Help",
       "System",

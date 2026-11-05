@@ -122,6 +122,21 @@ export function canChangeBoxPassword(packages, ownVersion) {
   return dappmanagerAtLeast(packages, BOX_PASSWORD_SINCE) || versionAtLeast(ownVersion, BOX_PASSWORD_SINCE);
 }
 
+// The DAPPMANAGER with the backup calls (backupStatus, backupSetup, ...)
+export const BACKUP_SINCE = "10.0.58";
+
+/** True when the installed DAPPMANAGER can make encrypted backups */
+export function canBackup(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, BACKUP_SINCE) || versionAtLeast(ownVersion, BACKUP_SINCE);
+}
+
+/** True once the package list shows a DAPPMANAGER older than 10.0.58 */
+export function backupNeedsUpdate(packages, ownVersion) {
+  const core = (packages || []).find(p => p && p.name === DAPPMANAGER_PACKAGE);
+  if (!core || !versionParts(core.version)) return false;
+  return !canBackup(packages, ownVersion);
+}
+
 /**
  * True once the package list holds the DAPPMANAGER and it is older than
  * 10.0.57 (and it does not report a newer version itself): the box must be

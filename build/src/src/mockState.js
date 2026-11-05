@@ -171,12 +171,13 @@ export const mockState = {
       state: "exited",
     },
     {
-      // 10.0.53: has the lost-data calls (see mockLostData above), the
-      // IPFS reset (mockIpfsHealth) and getDiagnostics (the report).
+      // 10.0.58: has the lost-data calls (see mockLostData above), the
+      // IPFS reset (mockIpfsHealth), getDiagnostics (the report), the box
+      // password and the backup calls (pages/system/backupApi.js mock).
       name: "dappmanager.dnp.dappnode.eth",
       isCore: true,
       isDnp: true,
-      version: "10.0.53",
+      version: "10.0.58",
       state: "running",
       running: true,
     },
