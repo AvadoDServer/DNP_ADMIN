@@ -20,8 +20,9 @@ const ROLE_TINT = {
 
 const monogram = pkg => {
   const title = (pkg && pkg.manifest && pkg.manifest.title) || ((pkg && pkg.name) || "?").split(".")[0];
-  const words = title.replace(/[-_]/g, " ").split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? words[0][0] + words[1][0] : title.slice(0, 2);
+  // Letters and digits only: "Immich (photos)" is IP, not I(
+  const words = title.replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/).filter(Boolean);
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || title).slice(0, 2);
   return letters.toUpperCase();
 };
 
