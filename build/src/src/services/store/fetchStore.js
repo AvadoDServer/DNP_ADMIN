@@ -1,8 +1,10 @@
 import axios from "axios";
 import JsonRpcClient from "react-jsonrpc-client";
 
-const IPFS_GATEWAY = "http://ipfs.my.ava.do:8080/ipfs/";
-const IPFS_API = "http://ipfs.my.ava.do:5001/api/v0/swarm/connect?arg=";
+import { ipfsGateway, ipfsSwarmConnectUrl } from "utils/boxUrls";
+
+const IPFS_GATEWAY = ipfsGateway();
+const IPFS_API = ipfsSwarmConnectUrl();
 const RPC_TIMEOUT_MS = 20000;
 
 function peerConnect(peer) {

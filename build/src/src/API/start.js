@@ -1,6 +1,7 @@
 import autobahn from "autobahn-browser";
 import store from "../store";
 import subscriptions from "./subscriptions";
+import { wampUrl } from "utils/boxUrls";
 import {
   connectionOpen,
   connectionClose
@@ -11,7 +12,9 @@ import {
 // const url = 'ws://localhost:8080/ws';
 // const realm = 'realm1';
 // Produccion
-const url = "ws://wamp.my.ava.do:8080/ws";
+// On the secure address the WAMP is reached through the Admin's own nginx
+// (utils/boxUrls)
+const url = wampUrl();
 const realm = "dappnode_admin";
 
 let sessionCache;

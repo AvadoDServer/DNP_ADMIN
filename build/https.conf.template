@@ -1,0 +1,20 @@
+# The Admin on its secure address, https://admin.my.ava.do (any *.my.ava.do
+# name that points at the Admin). Written to /etc/nginx/https.d/ by
+# entrypoint.sh only once the box's *.my.ava.do certificate (fetched by the
+# DAPPMANAGER from iso.ava.do, served at http://dappmanager.my.ava.do) is
+# there and valid; without it the Admin stays http only, as before.
+server {
+    listen       443 ssl http2;
+
+    ssl_certificate     /etc/nginx/certs/my.ava.do.crt;
+    ssl_certificate_key /etc/nginx/certs/my.ava.do.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:adminssl:1m;
+
+    include /etc/nginx/admin-locations.conf;
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
