@@ -273,3 +273,69 @@ describe("ChainStatus — epoch strip layout", () => {
     expect(cells.children).toHaveLength(32);
   });
 });
+
+describe("ChainStatus — one row per consensus client", () => {
+  const tekuGnosis = { name: "teku-gnosis.avado.dnp.dappnode.eth" };
+  const tekuPrater = { name: "teku-prater.avado.dnp.dappnode.eth" };
+
+  it("shows Ethereum and Gnosis when both clients are installed, mainnet first", () => {
+    useHealthMock.mockReturnValue(
+      health({
+        // Gnosis listed first, as the box's package list can be in any order
+        packages: [tekuGnosis, nimbus],
+        chainData: [
+          { name: "Teku-gnosis", syncing: true },
+          { name: "Nimbus", syncing: false },
+        ],
+      })
+    );
+    render(<ChainStatus />);
+    const rows = screen.getAllByTestId("chain-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Following Ethereum mainnet");
+    expect(rows[0]).toHaveTextContent("Nimbus is synced.");
+    expect(rows[1]).toHaveTextContent("Following Gnosis chain");
+    expect(rows[1]).toHaveTextContent("Teku (Gnosis) is syncing with the network.");
+    expect(screen.getAllByRole("button", { name: "Show details" })).toHaveLength(2);
+    expect(screen.getAllByRole("region", { name: "Chain status" })).toHaveLength(1);
+  });
+
+  it("opens details only for the row whose Show details was clicked", () => {
+    useHealthMock.mockReturnValue(
+      health({
+        packages: [nimbus, tekuGnosis],
+        chainData: [
+          { name: "Nimbus", syncing: false },
+          { name: "Teku-gnosis", syncing: false },
+        ],
+      })
+    );
+    render(<ChainStatus />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Show details" })[0]);
+    expect(screen.getAllByRole("button", { name: "Hide details" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Show details" })).toHaveLength(1);
+  });
+
+  it("keeps a single client on one row, as before", () => {
+    useHealthMock.mockReturnValue(health({ chainData: [{ name: "Nimbus", syncing: false }] }));
+    render(<ChainStatus />);
+    expect(screen.getAllByTestId("chain-row")).toHaveLength(1);
+    expect(screen.getByText("Following Ethereum mainnet")).toBeInTheDocument();
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+  });
+
+  it("leaves out a client on a retired network when a live one is installed", () => {
+    useHealthMock.mockReturnValue(health({ packages: [tekuPrater, nimbus] }));
+    render(<ChainStatus />);
+    expect(screen.getAllByTestId("chain-row")).toHaveLength(1);
+    expect(screen.queryByText(/Goerli/)).not.toBeInTheDocument();
+    expect(screen.getByText("Following Ethereum mainnet")).toBeInTheDocument();
+  });
+
+  it("still shows a retired-network client when it is the only one", () => {
+    useHealthMock.mockReturnValue(health({ packages: [tekuPrater] }));
+    render(<ChainStatus />);
+    expect(screen.getAllByTestId("chain-row")).toHaveLength(1);
+    expect(screen.getByText(/Goerli/)).toBeInTheDocument();
+  });
+});
