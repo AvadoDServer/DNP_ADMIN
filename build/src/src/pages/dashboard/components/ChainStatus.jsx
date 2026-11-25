@@ -93,29 +93,30 @@ function EpochStrip({ progress, networkLabel, clientLabel, peers }) {
   );
 }
 
-/**
- * ChainStatus — Home's chain line (replaces ChainLine on Home).
- *
- * Simple: one line — status light, "Following <network>", a plain sentence,
- * and a "Show details" link that expands the strip inline for this visit
- * only (component state — it does not switch the global Simple/Advanced
- * mode).
- * Advanced (global mode, or expanded via "Show details"): the epoch strip,
- * "N slots behind"/"In step with the network", and peers — or, when
- * Prometheus metrics aren't available, the simple line plus a note to
- * install monitoring.
- *
- * Hidden entirely when no consensus client is installed.
- */
-export default function ChainStatus() {
-  const { packages, chainData, metrics, metricsFetchedAt, checkedAt } = useHealth();
-  const { isAdvanced } = useMode();
+
+// Mainnet first, then Gnosis, then the rest in install order.
+const NETWORK_ORDER = ["mainnet", "gnosis"];
+function networkRank(network) {
+  const i = NETWORK_ORDER.indexOf(network);
+  return i === -1 ? NETWORK_ORDER.length : i;
+}
+
+// Every installed consensus client gets its own row (a box can follow
+// Ethereum and Gnosis at the same time). Clients on retired networks are
+// left out, unless they are all the box has.
+export function chainClients(packages) {
+  const all = clientsByRole(packages, ROLES.CONSENSUS);
+  const live = all.filter(({ client }) => !(NETWORKS[client.network] && NETWORKS[client.network].retired));
+  const shown = live.length > 0 ? live : all.slice(0, 1);
+  return shown
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => networkRank(a.entry.client.network) - networkRank(b.entry.client.network) || a.index - b.index)
+    .map(({ entry }) => entry);
+}
+
+function ChainRow({ pkg, client, chainData, metrics, metricsFetchedAt, checkedAt, isAdvanced }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const primary = clientsByRole(packages, ROLES.CONSENSUS)[0] || null;
-  if (!primary) return null;
-
-  const { pkg, client } = primary;
   const networkLabel = (NETWORKS[client.network] && NETWORKS[client.network].label) || client.network;
   const chainEntry = findChainEntry(chainData, pkg.name);
   const headSample = metrics && findSample(metrics.headSlot, client);
@@ -143,10 +144,7 @@ export default function ChainStatus() {
   );
 
   return (
-    <section
-      aria-label="Chain status"
-      className="flex flex-col gap-4 rounded-xl bg-surface px-6 py-[18px] shadow-[0_1px_0_rgb(var(--border))] dark:border dark:border-border dark:shadow-none"
-    >
+    <div className="flex flex-col gap-4" data-testid="chain-row">
       {!expanded ? (
         <div className="flex flex-wrap items-center gap-3.5">
           {simpleLine}
@@ -188,6 +186,53 @@ export default function ChainStatus() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * ChainStatus — Home's chain line (replaces ChainLine on Home).
+ *
+ * Simple: one line — status light, "Following <network>", a plain sentence,
+ * and a "Show details" link that expands the strip inline for this visit
+ * only (component state — it does not switch the global Simple/Advanced
+ * mode).
+ * Advanced (global mode, or expanded via "Show details"): the epoch strip,
+ * "N slots behind"/"In step with the network", and peers — or, when
+ * Prometheus metrics aren't available, the simple line plus a note to
+ * install monitoring.
+ *
+ * One row per installed consensus client (e.g. Ethereum mainnet and Gnosis
+ * on the same box), each with its own "Show details". Clients on retired
+ * networks are left out unless they are the only ones. Hidden entirely when
+ * no consensus client is installed.
+ */
+export default function ChainStatus() {
+  const { packages, chainData, metrics, metricsFetchedAt, checkedAt } = useHealth();
+  const { isAdvanced } = useMode();
+
+  const clients = chainClients(packages);
+  if (clients.length === 0) return null;
+
+  return (
+    <section
+      aria-label="Chain status"
+      className="flex flex-col gap-4 rounded-xl bg-surface px-6 py-[18px] shadow-[0_1px_0_rgb(var(--border))] dark:border dark:border-border dark:shadow-none"
+    >
+      {clients.map(({ pkg, client }, i) => (
+        <React.Fragment key={pkg.name}>
+          {i > 0 && <hr className="m-0 border-border" />}
+          <ChainRow
+            pkg={pkg}
+            client={client}
+            chainData={chainData}
+            metrics={metrics}
+            metricsFetchedAt={metricsFetchedAt}
+            checkedAt={checkedAt}
+            isAdvanced={isAdvanced}
+          />
+        </React.Fragment>
+      ))}
     </section>
   );
 }
