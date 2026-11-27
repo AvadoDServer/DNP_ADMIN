@@ -157,6 +157,26 @@ export default {
   getStats: {},
 
   /**
+   * [getTemperatures]
+   * The box's temperature sensors (/sys/class/hwmon): processor, NVMe drives,
+   * memory when it has a sensor. Read-only and cheap. DAPPMANAGER 10.0.62 and
+   * newer (canGetTemperatures).
+   *
+   * @returns {object} {
+   *   sensors: [{
+   *     chip: "k10temp", {string} hwmon driver (k10temp, coretemp, nvme, ...)
+   *     device: "0000:01:00.0", {string|null} parent device
+   *     label: "Tctl", {string|null}
+   *     celsius: 69.5, {number}
+   *     high: null, {number|null} the sensor's own "too hot" mark
+   *     crit: null, {number|null} the sensor's own critical mark
+   *   }],
+   *   readAt: "2026-11-27T10:00:00.000Z" {string|null}
+   * }
+   */
+  getTemperatures: {},
+
+  /**
    * [getUserActionLogs]
    * Returns the user action logs. This logs are stored in a different
    * file and format, and are meant to ease user support

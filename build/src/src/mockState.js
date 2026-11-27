@@ -62,12 +62,30 @@ export const mockLostData = [
 
 // Scenarios for `yarn dev`: open the Admin with ?mock=<name> (in the address
 // before the #, or after it). Known: "ipfs-restarting", "teku-down" (the
-// diagnostics of ticket-0928, see pages/troubleshoot/diagnosticsApi.js).
+// diagnostics of ticket-0928, see pages/troubleshoot/diagnosticsApi.js),
+// "hot" (a box running hot, see mockTemperatures).
 export function mockScenario() {
   if (typeof window === "undefined" || !window.location) return null;
   const { search = "", hash = "" } = window.location;
   const fromHash = hash.includes("?") ? hash.slice(hash.indexOf("?")) : "";
   return new URLSearchParams(search).get("mock") || new URLSearchParams(fromHash).get("mock") || null;
+}
+
+// Temperatures (DAPPMANAGER 10.0.62 getTemperatures), served by
+// pages/dashboard/temperatures.js in mock mode: an AMD box with two NVMe
+// drives (ticket-0932's). "hot": that box one minute after boot, before its
+// owner gave it room to breathe (processor 90 °C, a drive at its own limit).
+export function mockTemperatures(scenario) {
+  const hot = scenario === "hot";
+  const sensors = [
+    { chip: "nvme", device: "0000:01:00.0", label: "Composite", celsius: hot ? 58.9 : 47.9, high: 117.9, crit: 149.9 },
+    { chip: "acpitz", device: null, label: null, celsius: 27.8, high: null, crit: 110 },
+    { chip: "k10temp", device: "0000:00:18.3", label: "Tctl", celsius: hot ? 90.1 : 68.5, high: null, crit: null },
+    { chip: "nvme", device: "0000:06:00.0", label: "Composite", celsius: hot ? 90.2 : 41.9, high: 89.9, crit: 93.9 },
+    { chip: "nvme", device: "0000:06:00.0", label: "Sensor 1", celsius: hot ? 95.9 : 57.9, high: null, crit: null },
+    { chip: "iwlwifi_1", device: null, label: null, celsius: 52, high: null, crit: null },
+  ];
+  return Promise.resolve({ sensors, readAt: new Date().toISOString() });
 }
 
 // IPFS health (DAPPMANAGER 10.0.52 getIpfsHealth), served by

@@ -1,13 +1,16 @@
 import PropTypes from "prop-types";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { connect } from "react-redux";
 import { createStructuredSelector } from "reselect";
 import { Link } from "react-router-dom";
 import { fetchDappnodeStats } from "services/dappnodeStatus/actions";
 // Selectors
-import { getDappnodeStats } from "services/dappnodeStatus/selectors";
+import { getDappnodeStats, getDappmanagerVersionData } from "services/dappnodeStatus/selectors";
+import { getDnpInstalled } from "services/dnpInstalled/selectors";
 import { getConnectionStatus } from "services/connectionStatus/selectors";
 import { useHealth } from "health/HealthProvider";
+import { canGetTemperatures } from "health/clients";
+import { pickTemperatures, useTemperatures } from "../temperatures";
 // Own module
 import VerdictPanel from "./VerdictPanel";
 import ResourcesStrip from "./ResourcesStrip";
@@ -53,9 +56,18 @@ function Dashboard({
   connection,
   fetchDappnodeStats,
   installedpackages,
+  dnps = [],
+  dappmanagerVersionData = null,
   history,
 }) {
   const { ready, refreshLostData } = useHealth();
+
+  // Box temperatures, from DAPPMANAGER 10.0.62 on (none shown before that)
+  const temperaturesAllowed =
+    Boolean(import.meta.env.REACT_APP_MOCK_DATA) ||
+    canGetTemperatures(dnps, dappmanagerVersionData && dappmanagerVersionData.version);
+  const sensors = useTemperatures(temperaturesAllowed);
+  const temperatures = useMemo(() => pickTemperatures(sensors), [sensors]);
 
   // Look for app data in unused storage volumes again on each Home visit
   // (DAPPMANAGER 10.0.51 and newer; HealthProvider skips an older one).
@@ -108,7 +120,7 @@ function Dashboard({
           <VerdictPanel />
           <div className="flex flex-col gap-4">
             <EthPrice />
-            <ResourcesStrip stats={dappnodeStats} />
+            <ResourcesStrip stats={dappnodeStats} temperatures={temperatures} />
           </div>
         </Card>
 
@@ -161,6 +173,9 @@ const mapStateToProps = createStructuredSelector({
   dappnodeStats: getDappnodeStats,
   connection: getConnectionStatus,
   installedpackages: s.getFilteredPackages,
+  // Which DAPPMANAGER runs (canGetTemperatures)
+  dnps: getDnpInstalled,
+  dappmanagerVersionData: getDappmanagerVersionData,
 });
 
 // Uses bindActionCreators to wrap action creators with dispatch

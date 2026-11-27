@@ -122,6 +122,18 @@ export function canChangeBoxPassword(packages, ownVersion) {
   return dappmanagerAtLeast(packages, BOX_PASSWORD_SINCE) || versionAtLeast(ownVersion, BOX_PASSWORD_SINCE);
 }
 
+// The DAPPMANAGER that has getTemperatures (the box's temperature sensors).
+export const TEMPERATURES_SINCE = "10.0.62";
+
+/**
+ * True when the installed DAPPMANAGER is 10.0.62 or newer, the first one that
+ * reads the box's temperatures. `ownVersion` as for canGetDiagnostics. An
+ * older or unreadable version is false: Home then shows no temperatures.
+ */
+export function canGetTemperatures(packages, ownVersion) {
+  return dappmanagerAtLeast(packages, TEMPERATURES_SINCE) || versionAtLeast(ownVersion, TEMPERATURES_SINCE);
+}
+
 // The DAPPMANAGER with the backup calls (backupStatus, backupSetup, ...)
 export const BACKUP_SINCE = "10.0.58";
 

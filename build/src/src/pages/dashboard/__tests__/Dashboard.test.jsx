@@ -12,6 +12,9 @@ vi.mock("pages/dashboard/components/NewsCard", () => ({ default: () => <div data
 // The factory-password notice asks the DAPPMANAGER through redux; its own tests are in boxPassword.test.jsx.
 vi.mock("pages/system/components/BoxPassword", () => ({ DefaultPasswordNotice: () => <div data-testid="password-notice" /> }));
 vi.mock("pwa/PhoneAlerts", () => ({ HomeScreenHint: () => <div data-testid="home-screen-hint" /> }));
+// Temperatures come from the DAPPMANAGER over WAMP; its own tests are in temperatures.test.jsx.
+const { useTemperaturesMock } = vi.hoisted(() => ({ useTemperaturesMock: vi.fn(() => null) }));
+vi.mock("pages/dashboard/temperatures", async importOriginal => ({ ...(await importOriginal()), useTemperatures: useTemperaturesMock }));
 
 const baseProps = {
   dappnodeStats: {},
@@ -162,5 +165,43 @@ describe("Dashboard lost data", () => {
       </MemoryRouter>
     );
     expect(refreshLostData).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Dashboard temperatures", () => {
+  const healthy = {
+    findings: [],
+    updates: {},
+    verdict: { level: "ok", label: "All good" },
+    checkedAt: new Date(0),
+    refresh: () => {},
+    checksPassed: 5,
+    ready: true,
+  };
+  const core = version => [{ name: "dappmanager.dnp.dappnode.eth", version, isCore: true }];
+
+  it("an older DAPPMANAGER is never asked, and no temperatures are shown", () => {
+    useHealthMock.mockReturnValue(healthy);
+    useTemperaturesMock.mockClear();
+    renderDashboard({ dnps: core("10.0.61") });
+    expect(useTemperaturesMock).toHaveBeenCalledWith(false);
+    expect(screen.queryByRole("group", { name: "Temperature" })).not.toBeInTheDocument();
+  });
+
+  it("DAPPMANAGER 10.0.62: shows them next to processor, memory and disk", () => {
+    useHealthMock.mockReturnValue(healthy);
+    useTemperaturesMock.mockClear();
+    useTemperaturesMock.mockReturnValue([
+      { chip: "k10temp", device: "0000:00:18.3", label: "Tctl", celsius: 68.5, high: null, crit: null },
+      { chip: "nvme", device: "0000:01:00.0", label: "Composite", celsius: 47.9, high: 117.9, crit: null },
+    ]);
+    renderDashboard({ dnps: core("10.0.62") });
+    expect(useTemperaturesMock).toHaveBeenCalledWith(true);
+    const readings = screen.getByRole("region", { name: "Box readings" });
+    const temps = screen.getByRole("group", { name: "Temperature" });
+    expect(readings).toContainElement(temps);
+    expect(temps).toHaveTextContent("Processor69 °C");
+    expect(temps).toHaveTextContent("Disk48 °C");
+    useTemperaturesMock.mockReturnValue(null);
   });
 });
